@@ -1,0 +1,619 @@
+================================================================================
+PRODUCT REQUIREMENTS DOCUMENT (PRD) — MVP
+Progressively Disclosed MCP Server & MCP Registry
+Spike Land Platform (spike-vinext / Cloudflare Workers Edge Implementation)
+================================================================================
+
+Document Version : 1.0 (MVP Specification)
+Target File      : ./prds/mcp-mvp-prd.txt
+Date             : 2026-10-13
+Author           : Antigravity / Spike Land Engineering
+Status           : Proposed / Approved for MVP Implementation
+Target Runtime   : Cloudflare Workers (vinext / Vite + RSC + Workers Edge runtime)
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+ 1. Executive Summary & Vision
+ 2. Problem Statement & Background
+ 3. MVP Scope, Non-Goals & Core Hypotheses
+ 4. Target Personas & Use Cases
+ 5. Architecture & System Overview
+ 6. Feature Spec: Progressive Context Disclosure MCP Server
+    6.1 Gateway Handshake & Bootstrap (5 Gateway Tools)
+    6.2 Discovery, Semantic Search & Tool Activation
+    6.3 Schema Hydration & `notifications/tools/list_changed` Protocol
+    6.4 Execution & Fallback Handlers
+ 7. Feature Spec: Multi-Registry MCP Integration
+    7.1 Aggregated Registry Search (Official, Smithery, Glama)
+    7.2 Server Inspection & Manifest Parsing
+    7.3 Automated Configuration (.mcp.json Generation & Proxy Mounting)
+    7.4 Installed Server Management
+ 8. Feature Spec: Interactive Web UI & Playground
+    8.1 Live Playground & Interactive Schema Try-It
+    8.2 Quick Connect Wizard (Claude Desktop, Claude Code, Cursor, HTTP)
+    8.3 Category & Registry Browser
+ 9. Security, Authentication & Permissions
+    9.1 API Key Lifecycle & Masking
+    9.2 Permission Tiers (Public Free vs. Workspace Protected)
+    9.3 Sandboxing & Credential Isolation
+10. Protocol & API Interface Specifications
+    10.1 MCP Transport Endpoints (HTTP POST & SSE)
+    10.2 JSON-RPC 2.0 Method Signatures
+    10.3 REST Registry Endpoints
+11. MVP Data Models & Schemas
+12. Technical Stack & Deployment Constraints
+13. Phased Implementation Roadmap (Sprints 1 - 3)
+14. Success Metrics & Performance Criteria
+15. Risks, Mitigations & Open Questions
+
+================================================================================
+1. EXECUTIVE SUMMARY & VISION
+================================================================================
+As AI coding agents (Claude Code, Cursor, Windsurf, Roo Code, custom LangChain/
+LlamaIndex swarms) integrate dozens of external capabilities, providing all tool 
+definitions upfront catastrophically bloats the LLM context window. Providing 
+hundreds of tool schemas wastes 30k-100k+ tokens on every single turn, causes 
+hallucinations, increases latency, and quickly hits context window limits.
+
+The Spike Land MVP delivers a lean, high-performance edge-native MCP Gateway that 
+solves this via **Progressive Context Disclosure**:
+1. Agents connect and see only **5 minimal Gateway Meta-Tools** (< 1.5k tokens).
+2. Agents discover tools on-demand via keywords or semantic task intent.
+3. Relevant schemas and categories are dynamically activated into the session 
+   without restarting or reconfiguring the client.
+4. Agents can search, inspect, and mount third-party MCP servers from global 
+   ecosystem registries (Smithery, Glama, Official MCP Registry) directly through 
+   the gateway.
+
+This turns Spike Land into the default tool router for AI agents—fast, context-
+efficient, and capable of scaling from 5 tools to 1,000+ without degrading agent 
+intelligence.
+
+================================================================================
+2. PROBLEM STATEMENT & BACKGROUND
+================================================================================
+Current MCP client configurations (e.g., in `.cursor/mcp.json` or 
+`claude_desktop_config.json`) require loading every configured server's entire 
+schema definition at initialization:
+
+1. **Context Window Exhaustion:**
+   - Loading 50-100 typical MCP tools consumes between 25,000 and 70,000 tokens of 
+     system prompt overhead on EVERY prompt/completion cycle.
+2. **Model Confusion & Tool Selection Degradation:**
+   - When models are presented with 50+ tools with overlapping descriptions, 
+     tool call accuracy drops precipitously; models frequently hallucinate 
+     parameters or invoke incorrect tools.
+3. **Fragmented Server Ecosystem:**
+   - Discovering, verifying, and configuring third-party MCP servers (from GitHub, 
+     Smithery, Glama, Docker) requires tedious manual editing of config files, 
+     API keys, and local environment variables.
+4. **Edge Latency & Multi-Device Synchronization:**
+   - Local STDIO servers fail in cloud-hosted, mobile, or multi-agent environments. 
+     A unified, globally distributed HTTP/SSE edge proxy is required.
+
+================================================================================
+3. MVP SCOPE, NON-GOALS & CORE HYPOTHESES
+================================================================================
+
+3.1 In-Scope for MVP
+- **Edge MCP Server (`/api/mcp` and `/api/mcp/sse`):**
+  A standard JSON-RPC 2.0 MCP server implementing tools/list, tools/call, 
+  and progressive disclosure.
+- **5 Gateway Meta-Tools:**
+  `search_tools`, `list_categories`, `enable_category`, `get_balance`, `get_status`.
+- **Progressive Tool Registry:**
+  Curated catalogue of tool categories (starting with Development, AI & Creative, 
+  Filesystem, Web & HTTP, and Registry management).
+- **MCP Registry Search & Install:**
+  Querying external registries (Smithery, Glama, Official), inspecting schemas, 
+  and exporting `.mcp.json` configurations or proxying calls.
+- **Interactive Web Interface:**
+  A web playground for developers to test progressive disclosure, execute mock 
+  or live tool runs, and copy 1-click configuration snippets for Claude, Cursor, 
+  and Claude Code.
+
+3.2 Non-Goals for MVP (Deferred to v2)
+- Complex multi-agent peer-to-peer swarms (AI Orchestrator swarm tools).
+- Heavyweight full-stack app generation pipelines (`/create` autonomous app generation).
+- Social media autopilot scheduling & Ad Allocator integrations (Orbit legacy suite).
+- Native desktop binary clients (web browser + standard MCP clients only).
+- Billing paywalls & Stripe metering (mock/free quota in MVP).
+
+3.3 Core Hypotheses
+- **H1:** Progressive disclosure reduces agent initial token consumption by > 90% 
+  compared to static tool catalogues.
+- **H2:** Developers can connect an external client (Claude Desktop / Cursor) in 
+  < 60 seconds using the generated configuration snippet.
+- **H3:** Agents can discover and call an unlisted tool via `search_tools` in a 
+  single autonomous turn without human intervention.
+
+================================================================================
+4. TARGET PERSONAS & USE CASES
+================================================================================
+
+4.1 Personas
+- **The Claude Code / Cursor Power Developer ("Alex"):**
+  Wants access to database, scraping, and file tools without blowing out the 
+  prompt cache or spending $0.15 on system tokens on every turn.
+- **The Agentic Workflow Builder ("Jordan"):**
+  Builds autonomous background agent loops that need to discover capabilities 
+  on-the-fly (e.g. "I need an image upscaler now; search for one and run it").
+- **The MCP Server Creator ("Sam"):**
+  Publishes MCP servers and wants their tools indexable, discoverable, and easily 
+  testable via an interactive web interface.
+
+4.2 Primary User Journeys
+- **Journey 1: Zero-Config Client Connection**
+  Alex visits `/mcp`, selects "Cursor", copies the one-line `.cursor/mcp.json` 
+  snippet pointing to `https://spike.land/api/mcp/sse`. Cursor boots instantly with 
+  5 gateway tools.
+- **Journey 2: Dynamic Tool Discovery During Coding**
+  Alex asks Claude: "Scrape this documentation site and summarize it." Claude 
+  has no scraping tool loaded. It calls `search_tools("scrape web page")`, 
+  receives `scrape_page` with its schema, calls it, and completes the task.
+- **Journey 3: Discovering Third-Party Server from Registry**
+  Jordan asks Claude: "Find a GitHub MCP server to check PR issues." Claude calls 
+  `mcp_registry_search("github pull request")`, inspects the configuration, and 
+  returns the setup command.
+
+================================================================================
+5. ARCHITECTURE & SYSTEM OVERVIEW
+================================================================================
+
+The MVP is built on the **spike-vinext** architecture running on Cloudflare 
+Workers with edge streaming:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        AI Client / Agent Layer                         │
+│       (Claude Desktop, Cursor, Claude Code, Python SDK, Web UI)        │
+└───────────────────▲────────────────────────────────▲───────────────────┘
+                    │ MCP over SSE (GET /api/mcp/sse) │ MCP JSON-RPC 2.0 (POST /api/mcp)
+                    │                                │
+┌───────────────────▼────────────────────────────────▼───────────────────┐
+│               Cloudflare Workers Edge Gateway (spike-vinext)           │
+│                                                                        │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │                    MCP Protocol Engine                         │   │
+│   │   - JSON-RPC 2.0 Dispatcher (initialize, tools/list, call)     │   │
+│   │   - Session Store & Activated Category State                   │   │
+│   │   - Progressive Disclosure Schema Resolver                     │   │
+│   └───────────────────────────────┬────────────────────────────────┘   │
+│                                   │                                    │
+│   ┌───────────────────────────────▼────────────────────────────────┐   │
+│   │                      Core Gateway Router                       │   │
+│   │  [5 Gateway Tools] ── [Internal Catalog] ── [Registry Service] │   │
+│   └───────┬───────────────────────┬────────────────────────┬───────┘   │
+└───────────┼───────────────────────┼────────────────────────┼───────────┘
+            │                       │                        │
+            ▼                       ▼                        ▼
+   ┌────────────────┐      ┌────────────────┐       ┌────────────────┐
+   │ Cloudflare KV  │      │ Internal Tool  │       │ Third-Party    │
+   │  Session State │      │ Execution      │       │ MCP Registries │
+   │  & API Keys    │      │ Handlers       │       │ - Smithery     │
+   └────────────────┘      │ (Edge Workers) │       │ - Glama        │
+                           └────────────────┘       │ - Official     │
+                                                    └────────────────┘
+```
+
+================================================================================
+6. FEATURE SPEC: PROGRESSIVELY DISCLOSED MCP SERVER
+================================================================================
+
+6.1 Gateway Handshake & Bootstrap
+When any MCP client connects and issues `initialize` followed by `tools/list`, 
+the server MUST return ONLY the 5 Gateway Meta-Tools.
+
+Gateway Tool Definitions:
+1. **`search_tools`**
+   - *Description:* "Search across all 455 tools by semantic query or keyword with progressive schema loading."
+   - *Parameters:*
+     - `query` (string, required): Search query or task intent (e.g. "resize image", "git commit").
+     - `category` (string, optional): Specific category filter.
+     - `limit` (number, optional, default: 5): Maximum tools to return.
+   - *Returns:* Matched tools with schema definitions, category, and relevance score. Automatically adds matched tools to the active session context.
+
+2. **`list_categories`**
+   - *Description:* "List all available tool categories with descriptions, tool counts, and activation status."
+   - *Parameters:*
+     - `enabledOnly` (boolean, optional, default: false): Filter to only active categories.
+   - *Returns:* Array of categories with metadata (`id`, `name`, `toolCount`, `isEnabled`, `icon`, `description`).
+
+3. **`enable_category`**
+   - *Description:* "Dynamically mount all schemas and endpoints for a specific category into active session context."
+   - *Parameters:*
+     - `category` (string, required): Category ID or exact name.
+   - *Returns:* Confirmation message, count of newly exposed tools, and list of tool names.
+
+4. **`get_balance`**
+   - *Description:* "Check current API token/credit balance, usage limits, and tier status."
+   - *Parameters:* None.
+   - *Returns:* Object containing `balance`, `currency`, `tier`, `monthlyQuotaRemaining`, `rateLimit`.
+
+5. **`get_status`**
+   - *Description:* "Retrieve health, edge region, latency, and available feature status."
+   - *Parameters:* None.
+   - *Returns:* Object with server version, edge datacenter (e.g., LHR, SFO), active categories, and total available tools count.
+
+6.2 Dynamic Tool Resolution & Schema Hydration
+- **Session-Based Tool Scope:**
+  - Each connection (identified by SSE session ID or client Authorization header) 
+    maintains an active tool table in memory / Cloudflare KV.
+  - Initial state: `[search_tools, list_categories, enable_category, get_balance, get_status]`.
+- **Search-Triggered Hydration:**
+  - When `search_tools` is called, any matched tools are temporarily registered into 
+    the active session's tool table.
+  - The tool returns the full JSON Schema of the matching tools so the LLM can 
+    immediately call them in the next turn.
+- **Category-Triggered Hydration:**
+  - Calling `enable_category("AI & Creative")` expands the active tool table with all 
+    60 tools in that category.
+  - If supported by the transport, the server triggers an MCP protocol notification:
+    `notifications/tools/list_changed` to alert the client to re-request `tools/list`.
+
+6.3 Execution & Fallback Handlers
+- When `tools/call` is executed for a tool:
+  - If tool is already activated in session -> execute handler immediately.
+  - If tool is valid in the platform catalogue but NOT yet explicitly enabled -> 
+    Auto-hydrate: dynamically execute the tool and return its result along with a 
+    system notice: `"[Info: Tool 'foo' was auto-mounted into active session context]"`.
+  - If tool does not exist -> return standard JSON-RPC error `-32601` ("Method/tool not found") 
+    with a helpful hint: `"Tool not found. Use search_tools to discover available capabilities."`
+
+================================================================================
+7. FEATURE SPEC: MULTI-REGISTRY MCP INTEGRATION
+================================================================================
+
+The MCP Registry module allows AI agents to act as autonomous tooling architects: 
+finding, vetting, and installing tools from the broader MCP ecosystem.
+
+7.1 Aggregated Registry Search
+Expose the following MCP tools under the `mcp-registry` category:
+
+1. **`mcp_registry_search`**
+   - *Description:* "Search across Smithery, Official MCP Registry, and Glama for MCP servers by keyword."
+   - *Parameters:*
+     - `query` (string, required): Keywords (e.g. "postgres", "brave search", "slack").
+     - `registry` (enum: `all`, `official`, `smithery`, `glama`, optional, default: `all`).
+     - `limit` (number, optional, default: 10).
+   - *Returns:* List of servers containing:
+     - `id`: Unique identifier (e.g., `@smithery/sqlite` or `modelcontextprotocol/server-postgres`).
+     - `name`: Human-readable title.
+     - `description`: Server capability overview.
+     - `registrySource`: `official` | `smithery` | `glama`.
+     - `downloads` / `stars` / `verifiedStatus`.
+     - `transportType`: `stdio` | `sse` | `http`.
+
+2. **`mcp_registry_get`**
+   - *Description:* "Get detailed information about a specific MCP server including connection configuration, required environment variables, and tool list."
+   - *Parameters:*
+     - `serverId` (string, required): The ID returned from registry search.
+   - *Returns:*
+     - Full README / manifest.
+     - Environment variable requirements (`env`: e.g. `GITHUB_TOKEN`, `DATABASE_URL`).
+     - Available tools inside the package.
+     - Sample configuration snippet for Cursor / Claude Desktop.
+
+3. **`mcp_registry_install`**
+   - *Description:* "Generate auto-configured client snippet or mount an MCP server via proxy."
+   - *Parameters:*
+     - `serverId` (string, required).
+     - `clientType` (enum: `cursor`, `claude_desktop`, `claude_code`, `http`, default: `cursor`).
+     - `envVariables` (record<string, string>, optional).
+   - *Returns:*
+     - Ready-to-copy JSON block to insert into `.mcp.json` or `claude_desktop_config.json`.
+     - Direct proxy URL if hosted through Spike Land.
+
+4. **`mcp_registry_list_installed`**
+   - *Description:* "List all currently configured or proxy-mounted MCP servers in the current workspace."
+   - *Parameters:* None.
+   - *Returns:* Active server list with connection status and latency.
+
+7.2 Registry Caching & Fallbacks
+- Cache registry search results in edge KV with a 1-hour TTL.
+- If upstream registry (e.g., Smithery API) is rate-limited or down, fallback to 
+  the cached Official MCP GitHub catalogue snapshot.
+
+================================================================================
+8. FEATURE SPEC: INTERACTIVE WEB UI & PLAYGROUND
+================================================================================
+
+The web interface is located at `/mcp` (with deep links to `/docs/tools` and `/store`).
+
+8.1 Hero & Progressive Disclosure Explainer
+- **Hero Title:** "455 AI Tools. One Protocol."
+- **Visual Flow Banner:** Interactive 3-step visualization:
+  - Step 1: Connect (5 tools exposed).
+  - Step 2: Discover (`search_tools("image")` expands to 8 tools).
+  - Step 3: Activate (`enable_category` unlocks full 60 tools).
+- **Live Counter:** Real-time badge showing `455 Tools · 88 Categories · 5 Gateway Tools`.
+
+8.2 Interactive Web Playground (`components/mcp-playground.tsx`)
+- **Super-Category Selector:**
+  Platform Core (47), Development (69), AI & Creative (60), Content & Media (55), 
+  Marketing & Growth (50), Commerce & Admin (44), First-Party Apps (62), Agents & Automation (60).
+- **Sub-Category / Tool List:**
+  Displays tools with tags (`free` or `workspace`), parameter badges, and descriptions.
+- **Schema Inspector & Test Execution Panel:**
+  - Auto-generated input fields matching parameter JSON schema types.
+  - "Run Tool" / "Test Execution" button.
+  - JSON response viewer with syntax highlighting and latency timer (ms).
+  - In unauthenticated mode: displays mock simulation responses.
+  - In authenticated mode: executes live edge tool handler.
+
+8.3 1-Click Client Configuration Tabs (`components/client-configs.tsx`)
+Tabbed selector offering copy-paste configs:
+- **Cursor (`.cursor/mcp.json`):**
+  ```json
+  {
+    "mcpServers": {
+      "spike-land": {
+        "url": "https://next.spike.land/api/mcp/sse",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY"
+        }
+      }
+    }
+  }
+  ```
+- **Claude Desktop (`claude_desktop_config.json`):**
+  Provides standard SSE URL or npx wrapper command.
+- **Claude Code CLI:**
+  CLI command: `claude mcp add spike-land https://next.spike.land/api/mcp/sse`
+- **Raw HTTP / JSON-RPC:**
+  cURL command demonstrating `tools/list` and `tools/call`.
+
+================================================================================
+9. SECURITY, AUTHENTICATION & PERMISSIONS
+================================================================================
+
+9.1 Authentication
+- **Anonymous Tier:**
+  - Open access to the 5 Gateway tools and read-only search across platform tools 
+    and MCP registries.
+  - Rate limit: 60 requests/minute per IP.
+- **Bearer API Key Tier:**
+  - Authenticated requests pass `Authorization: Bearer sk_spike_...` in HTTP headers.
+  - Keys can be created at `/settings` or programmatically via `settings_create_api_key`.
+  - Keys are masked after initial display (`sk_spike_****...****`).
+  - Rate limit: 600 requests/minute.
+
+9.2 Tool Execution Sandboxing
+- High-risk operations (file writes, code evaluation, external HTTP webhooks) MUST 
+  be validated against permissions:
+  - Read-only tools (`search_tools`, `get_status`, `learnit_get_topic`) require no special approval.
+  - Mutating tools (`filesystem_write`, `deploy_project`) require explicit client-side 
+    approval or workspace elevated tokens.
+- Secret isolation: Keys passed to registry tools are NEVER echoed back in logs or tool results.
+
+================================================================================
+10. PROTOCOL & API INTERFACE SPECIFICATIONS
+================================================================================
+
+10.1 MCP Transport Endpoints
+- **Streamable HTTP POST Endpoint:** `/api/mcp`
+  - Accepts standard JSON-RPC 2.0 requests.
+  - Headers: `Content-Type: application/json`.
+- **Server-Sent Events (SSE) Endpoint:** `/api/mcp/sse`
+  - Long-lived connection for bi-directional messaging and dynamic notifications.
+  - `GET /api/mcp/sse` establishes stream; returns `endpoint` event containing message POST URI.
+
+10.2 JSON-RPC 2.0 Method Payloads
+
+**Request 1: `initialize`**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": { "listChanged": true }
+    },
+    "clientInfo": { "name": "Cursor", "version": "0.45.0" }
+  }
+}
+```
+
+**Response 1: `initialize`**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": { "listChanged": true }
+    },
+    "serverInfo": {
+      "name": "spike-land-gateway",
+      "version": "1.0.0-mvp"
+    }
+  }
+}
+```
+
+**Request 2: `tools/list` (Initial State)**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+```
+
+**Response 2: `tools/list` (Only Gateway Meta-Tools Returned)**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "search_tools",
+        "description": "Search across all 455 tools by semantic query or keyword with progressive schema loading.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "Search query or task requirement" },
+            "category": { "type": "string", "description": "Optional category filter" }
+          },
+          "required": ["query"]
+        }
+      },
+      {
+        "name": "list_categories",
+        "description": "List all 88 tool categories with available tool counts and enablement status.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "enabledOnly": { "type": "boolean" }
+          }
+        }
+      },
+      {
+        "name": "enable_category",
+        "description": "Dynamically mount all schemas and endpoints for a specific category into active context.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "category": { "type": "string", "description": "Category name or ID" }
+          },
+          "required": ["category"]
+        }
+      },
+      {
+        "name": "get_balance",
+        "description": "Check your current credit quota, rate limits, and API consumption tier.",
+        "inputSchema": { "type": "object", "properties": {} }
+      },
+      {
+        "name": "get_status",
+        "description": "Retrieve health, latency, and edge worker deployment status.",
+        "inputSchema": { "type": "object", "properties": {} }
+      }
+    ]
+  }
+}
+```
+
+================================================================================
+11. MVP DATA MODELS & SCHEMAS
+================================================================================
+
+```typescript
+// Core Tool Types (TypeScript / Zod)
+export interface ToolParameter {
+  type: "string" | "number" | "boolean" | "object" | "array";
+  description: string;
+  required?: boolean;
+  enum?: string[];
+  default?: unknown;
+}
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  category: string;
+  tier: "free" | "workspace";
+  inputSchema: {
+    type: "object";
+    properties: Record<string, ToolParameter>;
+    required?: string[];
+  };
+  handler?: (args: Record<string, unknown>, ctx: RequestContext) => Promise<unknown>;
+}
+
+export interface CategoryDefinition {
+  id: string;
+  name: string;
+  count: number;
+  icon: string;
+  description: string;
+  tools: ToolDefinition[];
+}
+
+// Registry Search Result
+export interface RegistryServerRecord {
+  id: string;
+  name: string;
+  description: string;
+  homepage?: string;
+  repository?: string;
+  registrySource: "official" | "smithery" | "glama";
+  transport: "stdio" | "sse" | "http";
+  installCount?: number;
+  tags: string[];
+  configTemplate: Record<string, unknown>;
+}
+
+// Session State in Edge KV
+export interface MCPSessionState {
+  sessionId: string;
+  createdAt: number;
+  lastActiveAt: number;
+  activatedCategories: string[];
+  activatedTools: string[]; // Dynamically hydrated tools
+  clientInfo?: { name: string; version: string };
+}
+```
+
+================================================================================
+12. TECHNICAL STACK & DEPLOYMENT CONSTRAINTS
+================================================================================
+- **Framework:** `vinext` (Vite + React Server Components for Cloudflare Workers).
+- **Edge Runtime:** Cloudflare Workers (V8 isolates), zero Node.js native dependencies.
+- **State & Caching:** Cloudflare KV for session tool tables & registry search caches.
+- **Styling & UI:** Tailwind CSS, Lucide icons, Radix UI primitives.
+- **Test Framework:** Vitest + React Testing Library + `@cloudflare/workers-response-store`.
+- **Latency Requirement:** Edge JSON-RPC overhead < 15ms globally.
+
+================================================================================
+13. PHASED IMPLEMENTATION ROADMAP
+================================================================================
+
+### Sprint 1: Core Gateway & Progressive Handshake (Week 1)
+- [ ] Implement JSON-RPC 2.0 handler at `/app/api/mcp/route.ts` (POST) supporting `initialize`, `tools/list`, and `tools/call`.
+- [ ] Implement `/app/api/mcp/sse/route.ts` for SSE streaming clients.
+- [ ] Implement the 5 gateway meta-tools (`search_tools`, `list_categories`, `enable_category`, `get_balance`, `get_status`).
+- [ ] Connect progressive disclosure logic: `tools/list` returns only the 5 tools; calling `enable_category` or `search_tools` dynamically expands session toolset.
+- [ ] Write unit & integration tests in `test/mcp-gateway.test.ts`.
+
+### Sprint 2: Multi-Registry Integration & Mock Handlers (Week 2)
+- [ ] Implement `mcp-registry` category tools (`mcp_registry_search`, `mcp_registry_get`, `mcp_registry_install`, `mcp_registry_list_installed`).
+- [ ] Connect external search against Smithery & Official MCP GitHub registry index with 1-hr KV caching.
+- [ ] Implement schema validation & config generator for `.cursor/mcp.json` and `claude_desktop_config.json`.
+- [ ] Seed catalogue with top 5 categories: Development (Git, Filesystem), AI Creative, Platform Core, Web/HTTP, and Registry.
+
+### Sprint 3: Web UI Polish & Interactive Playground (Week 3)
+- [ ] Enhance `/mcp` page with live interactive playground (`components/mcp-playground.tsx`).
+- [ ] Connect "Try it" forms with real execution against `/api/mcp`.
+- [ ] Implement copyable 1-click config snippet components for Cursor, Claude Desktop, and Claude Code.
+- [ ] Verify complete E2E workflow with Cursor and Claude Code connecting to local/preview worker.
+
+================================================================================
+14. SUCCESS METRICS & PERFORMANCE CRITERIA
+================================================================================
+- **Token Efficiency:** Initial handshake uses ≤ 1,500 tokens (vs. 35,000+ tokens for full catalogue).
+- **Execution Latency:**
+  - `tools/list` returns in < 25 ms at edge.
+  - `search_tools` returns in < 50 ms.
+- **Client Compatibility:** 100% compliance with MCP specification (tested against Claude Desktop, Cursor 0.45+, and official MCP Inspector).
+- **Error Rate:** < 0.05% on standard JSON-RPC dispatches.
+
+================================================================================
+15. RISKS, MITIGATIONS & OPEN QUESTIONS
+================================================================================
+- **Risk 1: Client Doesn't Support `notifications/tools/list_changed`:**
+  - *Mitigation:* The Gateway supports *Auto-Hydration*. If an agent infers a tool name from `search_tools` and immediately calls it via `tools/call` without re-requesting `tools/list`, the server automatically recognizes and executes it.
+- **Risk 2: Rate Limiting on External Registries (Smithery/Glama):**
+  - *Mitigation:* Maintain a bundled static fallback registry manifest deployed directly within the worker bundle.
+- **Open Question 1:** Should third-party MCP servers discovered in the registry be proxied through Cloudflare Workers (hosted SSE proxy) or strictly configured for client-side STDIO?
+  - *MVP Decision:* Return client-side configuration blocks for STDIO; offer hosted proxy for public HTTP/SSE endpoints.
+
+================================================================================
+END OF PRD — MVP PROGRESSIVE MCP SERVER & REGISTRY
+================================================================================

@@ -1,0 +1,1060 @@
+================================================================================
+PRODUCT REQUIREMENTS DOCUMENT (PRD)
+spike.land — Open-Source AI-Powered Development Platform
+Reference deployment: https://next.spike.land/   (canonical: https://spike.land)
+================================================================================
+
+Document version : 1.0
+Date             : 2026-10-13
+Owner            : SPIKE LAND LTD (UK Company No. 16906682), founder Zoltan Erdos
+Source of truth  : I crawled the live site: all 70 sitemap URLs plus about 140
+                   more pages found by following links. I also read the public
+                   docs (/docs, /docs/tools, /docs/api, /docs/guides/features/*).
+Purpose          : This document describes every feature the current site
+                   offers. It is meant as the spec for rebuilding or porting
+                   the site (e.g. the vinext / Cloudflare Workers port in this
+                   repository).
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+ 1. Product overview & positioning
+ 2. Goals, non-goals, success metrics
+ 3. Personas
+ 4. Information architecture & sitemap
+ 5. Global shell (header, footer, search, theming, SEO)
+ 6. Feature: Landing page (/)
+ 7. Feature: Vibe Coding / AI App Builder (/create, /create/*, any unknown path)
+ 8. Feature: MCP Server & Tools (/mcp, /docs/tools)
+ 9. Feature: App Store (/store, /apps, /store/[slug])
+10. Feature: Skills Registry (/store/skills, /store/skills/[slug])
+11. Feature: First-party apps (17 store apps, specs per app)
+12. Feature: Pixel — AI image enhancement & PhotoMix (/pixel, /apps/pixel)
+13. Feature: Orbit — Social media command center (/orbit)
+14. Feature: AI Prompt Arena (/connect)
+15. Feature: LearnIt — AI wiki (/learnit)
+16. Feature: Blog (/blog) & BAZDMEG manifesto (/bazdmeg)
+17. Feature: Documentation portal (/docs)
+18. Feature: Design system / Storybook (/storybook)
+19. Feature: Pricing (/pricing), billing, credits, tokens, vouchers, referrals
+20. Feature: Authentication & account (/auth/signin, /profile, /settings)
+21. Feature: Admin console (/admin/*)
+22. Feature: Static / legal pages (/about, /terms, /privacy, /cookies)
+23. Public REST API surface
+24. Non-functional requirements
+25. Technical architecture (reference)
+26. Content/data inconsistencies observed (to resolve)
+27. Open questions
+28. Appendix A: Full MCP tool category catalogue
+29. Appendix B: Crawled route inventory
+
+================================================================================
+1. PRODUCT OVERVIEW & POSITIONING
+================================================================================
+
+Tagline (H1)   : "Ship faster with AI agents."
+Meta title     : "Spike Land - Open-Source AI-Powered Development Platform"
+Meta desc.     : "Open-source AI development platform with 600+ MCP tools, an
+                  AI-powered app store, and a live code editor. Ship faster
+                  with AI agents."
+Badge          : "Open Source Developer Platform"
+Value props    : - 600+ MCP tools usable from Claude, Cursor or any MCP client
+                 - An AI-powered App Store of first-party apps, "regenerated
+                   daily with the latest models"
+                 - A live React code editor (CodeSpace) and a one-shot
+                   prompt-to-app builder
+                 - A Claude Code Skills registry
+                 - 100% open source (github.com/zerdos/spike.land)
+
+Business model (from /pricing): "Most of spike.land is free." Vibe coding, MCP
+tools, Pixel image enhancement (free tier) and the LearnIt wiki cost nothing.
+Revenue comes from Orbit social-media plans (Pro $29/mo, Business $99/mo),
+Pixel token packs/subscriptions, and merch.
+
+Core pillars:
+  P1  Build:    AI app builder (/create) + CodeSpace editor
+  P2  Connect:  MCP server that uses Progressive Context Disclosure
+  P3  Discover: App Store + Skills Registry
+  P4  Learn:    LearnIt wiki, Blog, Docs, BAZDMEG method
+  P5  Monetize: Orbit (social media), Pixel (images), Merch
+
+================================================================================
+2. GOALS, NON-GOALS, SUCCESS METRICS
+================================================================================
+
+Goals
+  G1  A visitor goes from an idea to a live, shareable React app in under
+      60 seconds, with no sign-up.
+  G2  A developer connects any MCP client to spike.land with one config
+      snippet and discovers tools progressively, without bloating context.
+  G3  Show off the platform through first-party apps that are themselves
+      built from MCP tools.
+  G4  Keep the core free; monetize power users (Orbit, Pixel, credits).
+  G5  Establish thought leadership (BAZDMEG, blog, LearnIt) to bring in
+      organic traffic.
+
+Non-goals
+  - Native mobile apps (a PWA is enough)
+  - A full photo-editing suite (Pixel focuses on AI enhancement only)
+  - Self-hosted enterprise deployments (beyond the open-source repo)
+
+Success metrics (suggested)
+  - Time to first generated app (TTFA) p50 < 30 s
+  - % of /create generations reaching "Published" > 80%
+  - Weekly active MCP connections; number of tool calls per session
+  - Free → paid Orbit conversion within 30 days
+  - Skill installs; app views (shown on cards, e.g. "167 views")
+  - Performance targets from the docs: 99.9% uptime, API p50 < 200 ms,
+    p95 < 500 ms, AI drafts < 3 s, error rate < 0.1%
+
+================================================================================
+3. PERSONAS
+================================================================================
+
+  Agentic Developer   Uses Claude Code / Cursor and wants MCP tools, skills
+                      and quality gates (BAZDMEG).
+  Vibe Coder / Maker  Non- or semi-technical; types a prompt, gets an app,
+                      shares it.
+  Prompt Engineer     Competes in the AI Prompt Arena for ELO.
+  Learner             Uses LearnIt to generate tutorials on any topic.
+  Solo Content Creator (25-35)        Orbit Pro, 3-5 social accounts.
+  SMB Marketing Manager (28-45)       Orbit Business, ROI reporting, brand safety.
+  Freelance Social Media Manager      Several workspaces, one per client.
+  Consumer / Family user              Pixel photo restoration, PhotoMix.
+  Platform Admin                      Users, credits, vouchers, system health.
+
+================================================================================
+4. INFORMATION ARCHITECTURE & SITEMAP
+================================================================================
+
+Public, indexable (sitemap.xml):
+  /                       Landing
+  /pricing                Pricing
+  /blog, /blog/[slug]     Engineering blog (13 posts)
+  /store                  App Store
+  /store/skills           Skill Store
+  /store/[slug]           17 app detail pages
+  /apps, /apps/pixel, /apps/display
+  /auth/signin
+  /terms, /privacy, /cookies
+  /docs, /docs/tools, /docs/api, /docs/guides, /docs/components, /docs/sitemap
+  /storybook/*            Design system pages
+  /profile, /settings, /referrals   (auth required)
+  /admin/*                (admin only; disallowed in robots.txt)
+
+Additional public routes found:
+  /mcp                    MCP server landing + playground
+  /create, /create/[...path]   AI app builder + generated app viewer
+  /connect, /connect/leaderboard   AI Prompt Arena
+  /learnit, /learnit/[slug]        AI wiki
+  /pixel                  Pixel marketing page
+  /apps/pixel/mix         PhotoMix
+  /orbit                  Orbit (auth-gated)
+  /bazdmeg                BAZDMEG manifesto
+  /about                  About / founder story
+  /store/skills/[slug]    e.g. /store/skills/bazdmeg
+  /docs/tools/[category]  88 category pages
+  /docs/guides/[...path]  168 guides
+
+Catch-all behaviour: any unknown top-level path (e.g. /careers, /chess,
+/dashboard, /tools, /my-apps) is treated as an app prompt. The page title
+becomes "<path> | Spike Land AI" and the page shows "Building your app...
+Generating /<path>" with the generation pipeline stages (see §7).
+
+robots.txt:  Allow /; Disallow /admin/, /api/, /settings.
+             Sitemap: https://spike.land/sitemap.xml
+
+================================================================================
+5. GLOBAL SHELL
+================================================================================
+
+5.1 Header (fixed, translucent, backdrop blur, bottom border)
+  - Logo: lightning-bolt ("zap") icon + lowercase wordmark "spike.land" → /
+  - Nav (desktop >= md):
+      Docs (book icon) → /docs
+      MCP Tools (terminal icon) → /mcp
+      Store ▾ (dropdown menu, aria-label "Store menu"): links into the Store,
+        Skills, and featured apps
+      Pricing → /pricing
+      Search button "Search...  Cmd+K" (opens the command palette)
+      GitHub icon → https://github.com/zerdos/spike.land (new tab)
+      Primary CTA "Start Building" (rocket icon, green→teal gradient) → /create
+      Secondary "Sign In" → /auth/signin (replaced by user menu when signed in)
+  - Mobile (< md): hamburger "Open menu" opens a Radix Sheet/dialog with the
+    same items.
+
+5.2 Command palette (Cmd/Ctrl+K)
+  - Global search across pages, apps, MCP tools, docs and blog posts.
+  - Keyboard: Cmd+K to open, Esc to close, arrow keys + Enter to navigate.
+
+5.3 Footer (on every marketing page)
+  - Brand: "Spike Land — Open-source AI development platform."
+  - Newsletter: "Subscribe to updates — Get developer updates, new tools, and
+    platform news." Email input + "Subscribe" (backed by the newsletter MCP
+    tool / /api/newsletter).
+  - Columns:
+      Developers: Docs, MCP Tools, App Store, Skills, API Reference
+      Company:    Blog, About, Pricing, GitHub
+      Legal:      Privacy Policy, Terms of Service
+  - "© 2026 Spike Land. All rights reserved."
+
+5.4 Theming
+  - Dark by default (theme-color #0b0e14; next-themes with data-theme,
+    default "dark", supports light/dark/system).
+  - Extra named themes from localStorage 'selected-theme', applied as the
+    class "theme-<name>" before first paint (wrapped in try/catch for Safari
+    private mode).
+  - Visual language: zinc-950 background, cyan/purple/pink gradients, aurora
+    green/teal CTAs, glass-morphism cards, blurred floating orbs, shimmer
+    badges, marquee carousels, entrance animations (fade + translateY).
+
+5.5 SEO & metadata
+  - Per-page <title> and meta description; OpenGraph and Twitter
+    summary_large_image (1200x630 og image from /opengraph-image).
+  - JSON-LD @graph: Organization (SPIKE LAND LTD, hello@spike.land,
+    sameAs Twitter + GitHub), SoftwareApplication (price 0 GBP), WebApplication
+    "Spike Land App Builder" (/create).
+  - Favicon .ico, icon.svg, apple-icon.png.
+  - Keywords: AI development platform, AI agents, coding agents, context
+    engineering, Claude Code, CI/CD automation, open source.
+
+5.6 Observability
+  - Sentry tracing (sentry-trace/baggage meta tags), Vercel Analytics.
+  - CSP with nonces on all inline scripts.
+
+================================================================================
+6. FEATURE: LANDING PAGE (/)
+================================================================================
+
+Sections, in order:
+  6.1 Hero
+      - Shimmer badge "Open Source Developer Platform"
+      - H1 "Ship faster with / AI agents." (gradient text)
+      - Sub-copy: "An open-source platform with 600+ MCP tools, an AI-powered
+        app store, and a live code editor. Build production apps from a
+        single prompt."
+      - CTAs: "Start Building" → /create ; "Explore MCP Tools" → /mcp
+      - Stats strip: "600+ MCP Tools | 16+ Apps | 100% Open Source"
+      - Animated bouncing scroll-down chevron
+  6.2 Three pillar cards
+      - MCP Tools — "600+ tools organized by category. Connect Claude, Cursor,
+        or any MCP client." → /mcp ("Browse Tools")
+      - App Store — "First-party apps built by AI agents. Regenerated daily
+        with the latest models." → /store ("Browse Apps")
+      - Skills Registry — "Install Claude Code skills that enforce quality,
+        automate workflows, and ship faster." → /store/skills ("Browse Skills")
+  6.3 "App Ecosystem — Built on Spike Land"
+      - "Production apps built from prompts. AI agents regenerate them daily."
+      - Infinite marquee of generated-app cards (pauses on hover, edge fade
+        masks). Each card has a title, a 2-line description, a view count, a
+        code icon, and an optional "Featured" badge. Links go to /create/<slug>.
+      - Example cards: Glowing 3D Rubik's Cube, Glass Calc Pro, Focus Timer,
+        Weekly Scheduler, Tweet Mash, Pricing Calculator, Dev Agency roadmap,
+        4D Hypercube Visualizer, Top 20 Salesforce App Ideas.
+      - "Browse the Store" link.
+  6.4 "MCP Protocol — Connect in one line"
+      - Code block (.cursor/mcp.json):
+          { "mcpServers": { "spike-land": { "url": "https://spike.land/api/mcp/sse" } } }
+      - Category chips with counts: Database 12, AI/ML 18, File System 15,
+        Web & HTTP 14, Git & VCS 10, Testing & QA 16, Analytics 9,
+        Auth & Security 8
+      - "Explore All Tools"
+  6.5 "Latest Updates — From the Engineering Blog"
+      - 3 cards (category, date, read time, title, excerpt, "Read article"),
+        plus "View all posts"
+  6.6 Final CTA: "Ready to ship faster?" with "Start Building" and
+      "Read the Docs"
+  6.7 Footer
+
+Acceptance criteria
+  - LCP element (H1) is server-rendered and readable without JS.
+  - Marquee respects prefers-reduced-motion.
+  - All CTAs have discoverable, unique IDs for testing.
+
+================================================================================
+7. FEATURE: VIBE CODING / AI APP BUILDER
+================================================================================
+
+Routes: /create (builder), /create/[...path] (generated app viewer). Any
+unknown top-level path triggers generation too.
+
+7.1 /create page
+  - Shell header: "CodeSpace — Live React code editor with AI assistance" with
+    an "App Info" link and a "Store" breadcrumb.
+  - H1 "Describe it. We build it."
+  - Copy: "Type any app idea and watch AI generate a fully working React app
+    in seconds. No setup, no boilerplate — just describe what you want."
+  - Prompt input "Describe the app you want to create". Submit with the
+    "Create" button or ⌘+Enter.
+  - Suggestion chips: Todo List, Calculator, Color Picker, Markdown Editor,
+    Pomodoro Timer, Weather Widget, Quiz App, Habit Tracker.
+  - "Popular Apps" grid sorted by views (title, view count, description,
+    "Open App"), e.g. Musical Hexagons (280), Alarm Sound Studio (183),
+    Glass Calc Pro (167) …
+
+7.2 Generation pipeline (visible stepper)
+  Planning → Plan Review → Coding → Transpiling → Code Review → Published
+  - Header shows "Building your app... Generating /<slug>".
+  - The prompt becomes a URL slug; nested paths are allowed
+    (e.g. /create/roadmap/next-2-weeks/human-on-the-loop/dev-agency).
+  - Self-correcting: the agent learns from earlier failures (blog: "The Vibe
+    Coding Paradox").
+  - Transpilation runs on an esbuild-wasm Cloudflare Worker (js.spike.land);
+    live apps run on testing.spike.land codespaces.
+
+7.3 Generated app viewer (/create/<slug>)
+  - Breadcrumb "All Apps / create"; title and slug label.
+  - The live app runs in a sandboxed preview.
+  - "Create Your Own" CTA; "More Apps" list.
+  - Hint: "Try typing any path in the URL to generate a new app!"
+  - The view counter goes up on each visit.
+
+7.4 My Apps (signed in) — managed through the "apps" MCP category / /api/apps
+  - Create from prompt, chat to iterate, read the message history.
+  - Immutable code versions, with listing and restore.
+  - Status changes (ARCHIVED stops the live app).
+  - Recycle bin: soft-delete for 30 days, restore, permanent delete.
+  - Batch status changes (agent-only), clear messages, image upload.
+
+Functional requirements
+  FR-7.1  Anonymous users can generate and view apps.
+  FR-7.2  Each generation persists: slug, title, description, code, status
+          and views.
+  FR-7.3  Progress streams to the client in real time (SSE/WebSocket).
+  FR-7.4  If generation fails, show the failed stage and let the user retry.
+  FR-7.5  Generated apps are public and indexable, with a per-app title and
+          description.
+
+================================================================================
+8. FEATURE: MCP SERVER & TOOLS
+================================================================================
+
+8.1 /mcp landing
+  - Badge "Progressive Disclosure MCP"; H1 "455 AI Tools. One Protocol."
+  - Copy: agents start with 5 lightweight gateway tools and progressively
+    discover 455 tools across 88 categories.
+  - Stats: 455 Tools, 88 Categories, 5 Gateway Tools.
+  - Config (.mcp.json):
+      { "mcpServers": { "spike-land": {
+          "url": "https://spike.land/api/mcp",
+          "headers": { "Authorization": "Bearer YOUR_API_KEY" } } } }
+  - "Explore Tools" button.
+  - Interactive Playground: "Browse Tools" → "Select a tool". The list of
+    available tools is grouped into 8 super-categories:
+      Platform Core 47 | Development 69 | AI & Creative 60 |
+      Content & Media 55 | Marketing & Growth 50 | Commerce & Admin 44 |
+      First-Party Apps 62 | Agents & Automation 60
+    Selecting a tool shows a try-it form generated from its schema. Running
+    it needs an API key.
+  - "spike.land MCP Terminal": a simulated terminal showing tool calls.
+  - "How It Works", 3 steps:
+      1 Connect (5 tools): search_tools, list_categories, enable_category,
+        get_balance, get_status
+      2 Discover (8 tools): search_tools("image") adds generate_image,
+        modify_image, check_job
+      3 Activate (34 tools): enable_category loads the full category
+  - "Tool Categories": "Browse 88 categories and 455 tools with inline try-it
+    forms" → /docs/tools
+  - "Get Connected" tabs: Claude Desktop | Claude Code | Cursor | HTTP, each
+    with a config snippet and a "Copy code" button. "Need an API key? Go to
+    Settings."
+
+8.2 Transport & auth
+  - Streamable HTTP endpoint /api/mcp; SSE endpoint /api/mcp/sse.
+  - Bearer API key, created in Settings or with settings_create_api_key. The
+    key is shown once, stored masked, and can be revoked.
+  - Tools are tagged with a tier: "free" or "workspace" (workspace tools need
+    workspace context or a subscription).
+  - Credit-consuming tools check the balance (get_balance) and refund on
+    failure.
+  - MCP job history (settings_mcp_history, settings_mcp_job_detail).
+
+8.3 Progressive Context Disclosure (core requirement)
+  - On connect, ONLY the 5 gateway-meta tools are registered.
+  - search_tools(query) returns matches and registers them dynamically.
+  - enable_category(name) registers the whole category.
+  - Send notifications/tools/list_changed after any change.
+
+8.4 /docs/tools catalogue
+  - Grid of 88 category cards (name, tool count, description, tier badge).
+  - /docs/tools/[category]: the tool list (name, category, tier, description,
+    parameter count) with inline try-it forms.
+  - The full category list is in Appendix A.
+
+================================================================================
+9. FEATURE: APP STORE
+================================================================================
+
+Routes: /store (also mirrored at /apps), /store/[slug].
+
+9.1 /store
+  - Badge "Alpha"; H1 "Create. Deploy. Done."
+  - Copy: "Full-stack apps from a single prompt. Anyone can build, deploy, and
+    ship — straight from here. Powered by Model Context Protocol."
+  - CTAs: "Start Building", "Read the story" (100 app ideas blog post).
+  - Stat strip: Full-Stack Apps · 135+ MCP Tools · Single Prompt · Instant
+    Deploy.
+  - "Featured — Apps we love." carousel: Pixel Studio, Brand Command,
+    CodeSpace, CleanSweep, App Creator, State Machine Studio. Each shows its
+    tool count, "Free" and "Explore".
+  - "How it works": 01 Describe → 02 Build → 03 Deploy.
+  - "Browse — All apps.": search box "Search apps, tools, categories..." (⌘K)
+    and category tabs: All Apps | Creative | Productivity | Developer |
+    Communication | Lifestyle | AI Agents.
+  - App card: icon, name, tagline, "Get" button, description, tool count,
+    category tag.
+  - Promo cards: "100 apps you can build today" (blog) and "Claude Code
+    Skills" (→ /store/skills).
+
+9.2 /store/[slug] detail template
+  - Breadcrumb: Store › <category> › <App>
+  - H1 name, tagline, category, "N MCP Tools", "Free", "Open App" CTA
+  - "About" paragraph
+  - "Features": 4–6 feature tiles (title + description)
+  - "MCP Tools (N)": tools grouped by MCP category, each with a name and
+    description
+  - "Tags"
+  - Footer CTA: "Explore more AI-generated apps. Browse All Apps"
+
+9.3 Data model (StoreApp)
+  slug, name, tagline, description, category, icon, featured, toolCount,
+  price ("Free"), features[], tools[{category, name, description}], tags[],
+  appUrl. Served from typed data and /api/store (listing and stats).
+  A/B testing of store listings (store-ab tools, 8).
+
+================================================================================
+10. FEATURE: SKILLS REGISTRY
+================================================================================
+
+Routes: /store/skills, /store/skills/[slug]
+
+10.1 Listing
+  - H1 "Skill Store"; copy "Browse and install Claude Code skills that
+    enforce quality, automate workflows, and keep AI-generated code
+    production-ready."
+  - Search "Search skills, categories..." (⌘K), category filters.
+
+10.2 Skill detail (example: BAZDMEG Method)
+  - Breadcrumb "Skill Store / BAZDMEG Method"; category badge (QUALITY);
+    version (v1.0.0); install count ("4 installs"); author (Spike Land);
+    "Source" link; tags (quality, testing, ai-development, claude-code).
+  - "What you get": Planning Interview (7 questions); 3 Quality Gate
+    Checklists; Hourglass Testing Model (80/15/5); Automation-Ready Audit;
+    7 Deep-Dive References.
+  - Installation: terminal block "$ claude skill add spike-land/bazdmeg" and
+    a "Copy Install Command" button.
+  - About (markdown), principles list, final CTA.
+
+10.3 Backend: skill-store MCP tools (list, get, install → increments the
+  install count; admin list/create/update/delete (archive)). Skill fields:
+  slug, name, version, category, status (DRAFT/PUBLISHED/ARCHIVED),
+  isActive, featured, installs, author, sourceUrl, tags, markdown body.
+
+================================================================================
+11. FEATURE: FIRST-PARTY APPS (STORE CATALOGUE)
+================================================================================
+
+All apps are free, have an "Open App" route, and expose their logic as MCP
+tools (per BAZDMEG, business logic lives in MCP tools and the UI can be
+thrown away).
+
+| # | App                  | Category      | Tools | Core capability
+|---|----------------------|---------------|-------|------------------------------------------------
+| 1 | Pixel Studio         | Creative      | 15    | Image gen/edit/upscale/bg-removal/style transfer, batch ops, pipelines
+| 2 | Audio Studio         | Creative      | 6     | Multi-track mixing, TTS (ElevenLabs), voice cloning, export MP3/WAV/FLAC
+| 3 | Page Builder         | Creative      | 9     | Drag-drop pages, block library, AI page/block/theme generation, publish
+| 4 | Music Creator        | Creative      | 3     | Layer tracks, record from mic, music projects
+| 5 | Brand Command        | Productivity  | 15    | Brand voice analysis, guidelines, ad copy, taglines, A/B copy, competitor/SEO scout
+| 6 | Social Autopilot     | Productivity  | 18    | Account connect, scheduling/bulk/calendar, engagement analytics, auto-boost
+| 7 | Content Hub          | Productivity  | 6     | Blog CMS, newsletters, subscriber segments, SEO
+| 8 | Ops Dashboard        | Developer     | 16    | Vercel deploy/rollback/logs, Sentry issues/alerts, GitHub admin, env/secret mgmt
+| 9 | CodeSpace            | Developer     | 8     | Live React editor, virtual FS (read/write/edit/glob/grep), app generator
+|10 | QA Studio            | Developer     | 10    | Playwright browser automation, WCAG audits, Vitest runner, coverage
+|11 | State Machine Studio | Developer     | 14    | Visual statecharts, simulation, AI generation, templates, JSON import/export
+|12 | Tabletop Sim         | Communication | 4     | Game rooms, dice, pieces, maps, voice chat (WebRTC/PeerJS)
+|13 | Display Wall         | Communication | 3     | Multi-screen synchronized video wall via QR + WebRTC
+|14 | Chess Arena          | Communication | 21    | Real-time chess, profiles, challenges, ELO, time controls, replay
+|15 | CleanSweep           | Lifestyle     | 14    | ADHD-friendly cleaning: photo scan, tasks, streaks, reminders, AI verify
+|16 | Career Navigator     | Lifestyle     | 4     | Skills assessment, ESCO occupations, salary data, Adzuna job listings
+|17 | AI Orchestrator      | AI Agents     | 8     | Agent swarm spawn/stop/broadcast/redirect, context packing, sandbox, decomposition
+|18 | App Creator          | AI Agents     | 6     | Prompt→React app, chat iterate, versions, one-click deploy, batch create
+
+(The store grid shows 17 apps; App Creator and CodeSpace overlap with /create.
+The docs claim "23 apps".)
+
+11.1 Pixel Studio tools: generate_image, edit_image, upscale_image,
+  remove_background, style_transfer | batch_resize, batch_watermark,
+  batch_convert_format (PNG/JPEG/WebP/AVIF) | auto_enhance, color_correction,
+  noise_reduction, sharpen_image | create_pipeline, run_pipeline,
+  schedule_pipeline (cron).
+11.2 Audio Studio: upload_track, list_tracks, mix_tracks (volume/pan/fx) |
+  generate_speech, list_voices, clone_voice.
+11.3 Page Builder: create_page, update_page (SEO/layout), publish_page |
+  add_block, update_block, reorder_blocks | ai_generate_page,
+  ai_enhance_block, ai_create_theme.
+11.4 Music Creator: list_music_projects, create_music_project,
+  record_audio_clip.
+11.5 Brand Command: analyze_brand_voice, generate_brand_guidelines,
+  brand_consistency_check, extract_brand_colors, brand_sentiment_analysis |
+  generate_ad_copy, create_email_template, generate_taglines, a_b_copy_test |
+  competitor_analysis, trend_detection, market_positioning,
+  audience_insights, keyword_research, seo_audit.
+11.6 Social Autopilot: connect_account, disconnect_account, list_accounts,
+  account_health_check | schedule_post, bulk_schedule (CSV/JSON),
+  get_calendar, reschedule_post, cancel_post | engagement_metrics,
+  audience_growth, content_performance, peak_time_analysis,
+  sentiment_tracker | boost_post, auto_boost_rules, budget_allocation,
+  performance_targeting.
+11.7 Content Hub: create_post, publish_post (now/scheduled), list_posts |
+  create_newsletter, send_newsletter, manage_subscribers.
+11.8 Ops Dashboard: list_deployments, deploy_project, rollback_deployment,
+  get_deployment_logs | list_issues, resolve_issue, get_error_details,
+  create_alert_rule | repo_stats, branch_protection, merge_queue_status,
+  release_create | list_env_vars, set_env_var, rotate_secret, env_diff.
+11.9 CodeSpace: read_file, write_file, edit_file (search/replace),
+  glob_files, grep_files | create_app, search_apps, classify_idea.
+11.10 QA Studio: browser_navigate, browser_screenshot, browser_click,
+  browser_type, browser_session_status | accessibility_audit,
+  accessibility_audit_status | run_tests, analyze_coverage, list_tests.
+11.11 State Machine Studio: sm_create, sm_add_state (atomic, compound,
+  parallel, final, history), sm_remove_state, sm_add_transition (event,
+  guard, actions), sm_remove_transition, sm_set_context, sm_send_event,
+  sm_get_state, sm_get_history, sm_reset, sm_validate (unreachable states,
+  missing transitions), sm_export, sm_visualize (React+D3), sm_list.
+  UI: type-coloured states, animated transitions, multi-machine tabs,
+  templates (Traffic Light, HTTP Request, Auth Flow, Shopping Cart, Retry),
+  event recording and replay.
+11.12 Tabletop Sim: create_room (template + invite link), join_room,
+  roll_dice (NdS+mod expressions), move_piece. Fog-of-war, grid, custom
+  maps/tokens.
+11.13 Display Wall (/apps/display): "Smart Video Wall — Transform multiple
+  devices into a single synchronized display. Scan to start streaming."
+  Generates a display session + QR code. Tools: create_display, add_content
+  (image/video/URL/widget), manage_layout. TURN credentials come from
+  /api/turn-credentials.
+11.14 Chess Arena: chess_create_game, join_game, make_move, get_game,
+  list_games, resign, offer_draw, accept_draw | create_player, get_player,
+  list_profiles, update_player (name/avatar/sound), get_stats, list_online |
+  send/accept/decline/cancel/list challenges | replay_game, get_leaderboard.
+  Netflix-style local profiles; time controls: bullet, blitz, rapid,
+  classical, unlimited; ELO with K-factor adjustment.
+11.15 CleanSweep: upload_photo, get_photo_analysis | scan_room,
+  get_scan_results | create_task, list_tasks, complete_task, skip_task |
+  get_streak, update_streak | set_reminder, list_reminders | verify_clean |
+  get_motivation. Gamification: points, badges, streaks.
+11.16 Career Navigator: assess_skills, search_occupations (ESCO),
+  salary_data, job_listings (Adzuna).
+11.17 AI Orchestrator: spawn_agent, list_agents, stop_agent, broadcast,
+  redirect | pack_context, run_sandbox, decompose_task.
+11.18 App Creator: create_app, chat_with_app, list_apps, update_app,
+  delete_app, batch_create.
+
+================================================================================
+12. FEATURE: PIXEL — AI IMAGE ENHANCEMENT & PHOTOMIX
+================================================================================
+
+12.1 Marketing page (/pixel)
+  - H1 "Your photos deserve better than 'good enough.'"
+  - Copy: uses Google's latest Gemini model to restore blurry childhood
+    photos, VHS stills, old family photos.
+  - Hero before/after slider ("Original" / "Enhanced by Pixel").
+  - CTA "Get Started — First Enhancement Free".
+  - "See the Difference" gallery with filter tabs: All, Portrait, Landscape,
+    Product, Architecture. Each item has a draggable comparison slider.
+  - "Why Pixel?": Instant results; Slideshow mode (iPad/fullscreen); Share
+    anywhere.
+  - FAQ accordion: image types; how tokens work; resolution options;
+    processing time; data security; refunds.
+  - Easter egg: "Pixel is named after our golden retriever."
+  - Cross-sell: "Blend your photos. Create something new." → "Try Photo Mixer"
+
+12.2 Pixel app (/apps/pixel; auth required → sign-in screen "Restore photos
+  in minutes — Batch enhance • Compare before/after • Export in high quality")
+  - Albums (CRUD, privacy/sharing, reorder, move images between albums)
+  - Upload JPEG/PNG/WebP/GIF/BMP up to 25 MB; batch upload; EXIF is stripped
+  - Enhancement tiers: TIER_1K (1024px, 2 tokens), TIER_2K (2048px, 5),
+    TIER_4K (4096px, 10)
+  - Pipeline: pad to square → Gemini enhance → crop back to the original
+    aspect ratio → JPEG q95 sRGB → R2
+  - Real-time job status; automatic refund on failure; cancel with refund
+  - Before/after slider, version history, export JPEG/PNG/WebP, public share
+    links (shareToken), slideshow mode
+  - Batch enhancement with a cost preview
+  - Enhancement pipelines (4 stages: Analysis, Auto-Crop, Prompt,
+    Generation); system default pipelines; fork/edit/delete
+  - Rate limits: 20 uploads/hour, 10 enhancements/minute, 100 balance
+    checks/hour
+  - Retention: images kept 90 days after last access; never used for training
+
+12.3 PhotoMix (/apps/pixel/mix)
+  - "PhotoMix AI — Blend two images together using AI"
+  - Input Photo 1 / Input Photo 2 (JPG, PNG, WEBP; drag-drop or Browse)
+  - "Create Mix (Free)"; result panel "Generated Mix — Awaiting assets"
+  - Quality options: "Nano Banana — Nano Quality — 0 credits" (anonymous);
+    "Nano Banana Pro — 1K quality" (signed in)
+  - Banner: "Try PhotoMix for free with Nano Banana! Sign in to unlock Nano
+    Banana Pro and save your creations."
+  - How it works: 4 steps, ending with download.
+
+================================================================================
+13. FEATURE: ORBIT — SOCIAL MEDIA COMMAND CENTER
+================================================================================
+
+Route: /orbit (auth-gated). Workspace-scoped. Platforms: Instagram, Facebook,
+Twitter/X, LinkedIn, TikTok (YouTube and Discord are also in the integration
+guide; Pinterest and Snapchat are planned).
+
+13.1 Onboarding: sign in → create a workspace (name, description) → connect
+  social accounts via OAuth → land on the Pulse dashboard.
+
+13.2 Modules
+  a) Pulse Dashboard: health score 0-100 per account (follower velocity,
+     engagement, reach, impressions, response time). Anomaly detection
+     covers follower drops, engagement spikes, mention surges and spam
+     attacks. Platform status grid, trend charts, auto-refresh polling.
+     Alerts by email (and Slack on Business).
+  b) Unified Inbox: mentions, DMs and comments from every platform in one
+     threaded feed with platform badges. AI priority score 0-100
+     (high/medium/low), sentiment badges, an AI suggestions panel, filters
+     (platform, priority, sentiment, assignment, status), bulk actions
+     (archive, assign, template reply, spam), assignment and escalation,
+     and smart routing rules. Keyboard: J/K navigate, R reply, A assign,
+     E archive, 1-4 priority. Sync runs every 5 min (Free) or 1 min (paid).
+  c) Smart Allocator: ad budget recommendations with ROAS prediction across
+     Facebook Ads, LinkedIn Campaign Manager, X Ads and TikTok Ads. Manual
+     apply or Autopilot (Business), with constraints; changes over $500 or
+     20% need approval. 30/60/90-day history, CSV export, audit log.
+  d) Competitive Scout: track competitors by handle (public data only).
+     Benchmarks, content-theme, format and hashtag analysis, topic feed,
+     opportunity identification, viral alerts (>10k engagements). Updates
+     daily (Pro) or hourly (Business).
+  e) Brand Brain: setup wizard; train the brand voice on 10-50 examples.
+     Guardrails cover forbidden words, required elements, tone and
+     compliance (FCA, HIPAA, legal). Live tone score 0-100, content
+     rewriter, compliance reports.
+  f) Relay (AI Drafts): generate 3-5 variations by topic, platform, tone
+     and length, each scored by Brand Brain. Edit, regenerate, approve
+     (Owner/Admin), then schedule or publish. Recurring posts, optimal-time
+     suggestions, edit history, audit log, A/B test the top variations.
+     Costs 10 credits per generation and 20 per A/B setup.
+  g) A/B testing of posts (ab-testing tools; winner chosen by engagement).
+  h) Crisis detection (crisis tools), Calendar, Reports, White-label reports
+     (Business).
+
+13.3 Workspace & team
+  - Multiple workspaces per user; a top-left switcher; ownership transfer by
+    email.
+  - Roles: Owner (all + billing/transfer), Admin (all except billing),
+    Editor (content only), Viewer (read-only).
+  - Invites by email with a role.
+  - Settings: General, Social Accounts (connect/reconnect/health),
+    Inbox Smart Routing. Marked "Coming soon": Team Members, Content
+    Policies, Notifications, Integrations (Slack, Zapier, Webhooks), Billing.
+  - Data export (GDPR).
+
+13.4 Plans (from the live /pricing page, which is authoritative)
+                     Free        Pro ($29/mo)      Business ($99/mo)
+  Vibe coding        unlimited   (incl.)           (incl.)
+  MCP tools          unlimited   (incl.)           (incl.)
+  Social accounts    5           10                Unlimited
+  Scheduled posts    100/mo      Unlimited         Unlimited
+  A/B tests          3           10                Unlimited
+  AI credits         500/mo      1,000/mo          5,000/mo
+  Team members       1           3                 10
+  Labels: Pro = "Most Popular", Business = "Best Value".
+  CTAs: "Get Started Free" / "Get Started" (Stripe Checkout).
+  Upgrades apply immediately. On downgrade, existing resources are kept but
+  no new ones can be created over the limit. Credits reset monthly. Agencies
+  get 15% off with 3+ workspaces. Annual billing (20% off) is "coming soon".
+  One-time credit pack: $10 for 500 credits.
+
+13.5 Webhooks (Business): workspace, social account, post, inbox and A/B
+  test events.
+
+================================================================================
+14. FEATURE: AI PROMPT ARENA (/connect)
+================================================================================
+
+  - H1 "AI Prompt Arena"; "Write single-shot prompts. Generate React apps.
+    Climb the leaderboard."
+  - Sections: "Open Challenges" (difficulty, category, submission count) and
+    "Top Players" (with "View all" → /connect/leaderboard "ELO rankings for
+    the AI Prompt Arena").
+  - Flow: pick a challenge → submit one prompt → the system generates,
+    transpiles and validates the code → peer review (bug reports, quality
+    score 0-1, approve/reject) → two reviews trigger automatic scoring → ELO
+    is updated.
+  - MCP: arena_list_challenges, arena_get_challenge_details,
+    arena_submit_prompt, arena_review_submission, arena_get_leaderboard.
+
+================================================================================
+15. FEATURE: LEARNIT — AI WIKI (/learnit)
+================================================================================
+
+  - Label "LearnIt — AI-Powered Wiki"; H1 "Learn anything. Instantly."
+  - Copy: "An interactive, AI-powered learning wiki that grows with you.
+    Search for any topic to generate a comprehensive tutorial."
+  - Search input "What do you want to learn today?" + "Go"
+  - "Popular Topics" (with view counts), "Start Learning" category cards
+    (Programming, Machine Learning, History, Design), "Recently Added"
+  - Topic page /learnit/[slug]: a generated markdown tutorial with
+    [[Wiki Links]] to other topics (created on demand), plus relations:
+    related topics, prerequisites, parent/children (a topic graph).
+  - Unknown topics are generated on first request (Claude), then published
+    and cached.
+  - MCP: learnit_get_topic, search_topics, get_relations, list_popular,
+    list_recent, get_topic_graph.
+
+================================================================================
+16. FEATURE: BLOG & BAZDMEG
+================================================================================
+
+16.1 /blog
+  - Index of cards: category (Developer Experience, Productivity, Product
+    Launch), title, excerpt, date, read time, tags (+N more).
+  - The 13 posts in the sitemap include: Think Slowly, Ship Fast;
+    Godspeed Development: 100 App Ideas; A Chemist Walked Into a Codebase;
+    Docker Layers Are Just Like LLM Context Caching; It Feels Like Cheating;
+    The Testing Pyramid Is Upside Down; The Vibe Coding Paradox; How Claude
+    Code Engineers Context (also in Hungarian); Context Engineering Your
+    Zero-Shot Prompt; You Cannot Automate Chaos; What I Learned From My
+    Worst Pull Request; Recreate Your Memories in 4K (Pixel launch);
+    Automate Dev Team with AI Agents.
+  - Post page: MDX article with a hero image, metadata and tags. Blog MCP
+    tools: list, read.
+
+16.2 /bazdmeg — "The Quality First Manifesto"
+  - Seven principles: Requirements Are The Product; Discipline Before
+    Automation; Context Is Architecture; Test The Lies; Orchestrate, Do Not
+    Operate; Trust Is Earned In PRs; Own What You Ship.
+  - Effort split visual: Planning 30%, Testing 50%, Quality 20%, Coding 0%.
+  - Interactive Quality Gate checklists with progress %: Pre-Code (4 items),
+    Post-Code (4), Pre-PR (4).
+  - Hourglass Testing Model graphic: E2E specs 20% (human-written), UI code
+    (disposable, AI-generated), business logic tests 70% (MCP + unit).
+  - CTAs: "Adopt the Skill" (→ Skill Store), "Join the Community" (Discord),
+    "View on GitHub".
+  - BAZDMEG MCP tools (22): FAQ management, memory.
+
+================================================================================
+17. FEATURE: DOCUMENTATION PORTAL (/docs)
+================================================================================
+
+  - Docs shell: left sidebar (Platform: Overview; Reference: API Reference,
+    Guides, Components, Sitemap), "Search docs... ⌘K", mobile "Toggle menu",
+    footer "Version 1.2.0".
+  - Overview stats: 455 MCP Tools | 400 API Endpoints | 208 Pages |
+    168 Guides.
+  - /docs/tools: see §8.4.
+  - /docs/api: "400 endpoints across 60 domains", grouped by domain. Each
+    endpoint shows its path, HTTP methods, domain, description and a lock
+    icon if auth is required.
+  - /docs/guides: 168 markdown guides in folders: best-practices, blog
+    drafts, business, database, features, guides (ops), integrations,
+    migrations, plans, security, sprints, testing.
+  - /docs/components: design system entry → Storybook sections.
+  - /docs/sitemap: an interactive, expandable visual map of all pages with
+    titles and descriptions.
+
+================================================================================
+18. FEATURE: DESIGN SYSTEM / STORYBOOK (/storybook)
+================================================================================
+
+  Sections: Foundation (Brand, Colors, Typography, Surfaces), Actions
+  (Buttons), Elements (Components, Comparison), Data (Data Display),
+  Structure (Layout), Status (Feedback, Loading), Overlays (Modals),
+  Principles (Accessibility), Features (Merch, PhotoMix), Systems (Auth,
+  Errors).
+  - Brand: logo variants, "AI Spark" logo
+  - Colors: palette, dark/light modes, glow effects
+  - Surfaces: glass-morphism tiers, elevation
+  - Components: cards, badges, inputs, accordion, tabs, textarea, tooltip,
+    slider
+  - Data Display: tables, toggle groups, copy buttons
+  - Layout: masonry grid, text overlays, zoom controls
+  - Comparison: image comparison slider, comparison view toggle
+  - Feedback: toasts, alerts, semantic colours; Loading: skeletons,
+    progress, spinners
+  - Modals: dialogs, dropdowns, sheets, alert dialogs
+  - Accessibility: contrast checker, keyboard nav, ARIA
+  - Built on shadcn/ui + Radix + Tailwind CSS 4
+
+================================================================================
+19. PRICING, BILLING, CREDITS, TOKENS, VOUCHERS, REFERRALS
+================================================================================
+
+19.1 /pricing page
+  - H1 "Most of spike.land is free."
+  - Free product tiles: Vibe Coding, MCP Developer Tools, Pixel Image
+    Enhancement (free tier: nano-model enhancements), LearnIt Wiki.
+  - "Orbit Social Media Management": 3 plan cards (see §13.4).
+  - FAQ: Why is so much free?; What actually costs money?; How can I support
+    the project?
+
+19.2 Currencies
+  a) AI credits: workspace or user level, monthly allowance, used by AI
+     features (credits_get_balance).
+  b) Pixel tokens: user level.
+     - Sources: 50 sign-up bonus; +1 per 15 min regeneration (cap 100);
+       referral +50 for both users; voucher codes; Stripe purchase.
+     - Packs (GBP): Starter 10 = £2.99, Basic 50 = £9.99, Pro 150 = £24.99,
+       Power 500 = £69.99.
+     - Subscriptions (GBP/mo): Hobby 30 tokens £4.99 (rollover 30),
+       Creator 100 £12.99 (rollover 100), Studio 300 £29.99 (unlimited
+       rollover).
+  c) Billing: Stripe Checkout (billing_create_checkout for tokens, plans
+     and workspace tiers) and the Stripe webhook at /api/stripe.
+
+19.3 Vouchers: types FIXED_TOKENS, PERCENTAGE_BONUS, SUBSCRIPTION_TRIAL.
+  Validate and redeem endpoints; per-user and platform-wide limits;
+  eligibility checks; admin create/deactivate/extend; redemption analytics.
+
+19.4 Referrals (/referrals): a unique referral link per user; both users get
+  50 tokens; anti-fraud measures (IP checks, email verification, blocking
+  disposable emails).
+
+19.5 Merch (/merch "Shop"): print-on-demand products. Tools: list products,
+  add to cart, checkout, get order, track shipment.
+
+================================================================================
+20. AUTHENTICATION & ACCOUNT
+================================================================================
+
+  Sign-in screen (/auth/signin, also shown inline for gated apps):
+  - Context headline (e.g. Pixel: "Restore photos in minutes")
+  - "Enter your email to sign in or create an account."
+  - Buttons: Continue with Google | Continue with GitHub | Continue with Apple
+  - "or", then an email input (name@example.com) and "Continue with email"
+    ("We'll send you a sign-in link.", i.e. a magic link)
+  - Legal: "By continuing you agree to Terms & Privacy."
+  - Trust copy: "No spam. We never post to your accounts."
+  - "Back to home"
+  - No passwords are stored (OAuth and magic link only). Auth: NextAuth v5 /
+    Better Auth; sessions are validated by auth MCP tools.
+
+  /profile: display name, email, avatar.
+  /settings: profile, notification preferences, API keys (create, shown
+    once; list masked; revoke), MCP job history, connected integrations,
+    data export, delete account.
+  /referrals: referral link and stats.
+
+================================================================================
+21. ADMIN CONSOLE (/admin/*)
+================================================================================
+
+  Routes: /admin (overview), /admin/analytics, /admin/credits,
+  /admin/system, /admin/vouchers, /admin/users.
+  Capabilities (from the API and tools): user management and roles; credit
+  adjustments; voucher CRUD and stats; system health and reports; error
+  logs; agent sessions (list, view activities, approve plan, message, kill,
+  plus git and GitHub issue context); email and photo moderation; gallery
+  curation; job queues; QA Studio admin; skill store admin; GitHub admin,
+  Vercel and Sentry bridges.
+  Access: admin role only; robots disallow; never in the public sitemap UI.
+
+================================================================================
+22. STATIC / LEGAL PAGES
+================================================================================
+
+  /about: mission (remove the friction around code); founder story (Zoltan
+    Erdos, Brighton, 12+ years: Virgin Media O2, Investec, TalkTalk); core
+    values (Engineering Discipline, Open Source, Human on the Loop);
+    "Journey & Experience" timeline.
+  /terms, /privacy (GDPR rights: access, erasure, portability, objection;
+    data retention), /cookies (cookie categories and consent).
+
+================================================================================
+23. PUBLIC REST API SURFACE (base: https://spike.land/api)
+================================================================================
+
+  400 endpoints across 60 domains. The largest domains by number of
+  endpoint references:
+  orbit (~149), admin (37+), apps, social, codespace, clean, images,
+  workspaces, create, mcp, cron, bazdmeg, connect (arena), career, learnit,
+  agent(s), boxes, jobs, pipelines, merch, albums, store-app, agency, v1,
+  stripe, settings, permissions, live, gallery, competitors, calendar, blog,
+  tracking, store, auth, tts, tabletop, site-chat, share, pixel, newsletter,
+  logs, errors, credits, chat, brand-assets, audio, ab-test, workflows,
+  turn-credentials, sync, reports, health, ai.
+
+  Key contracts:
+    POST /api/images/upload       multipart; returns {id,url,width,height}
+    POST /api/images/enhance      {imageId,tier}; returns {jobId,tokenCost,newBalance}
+                                  Errors: 400 invalid tier, 401, 402 insufficient
+                                  tokens, 429 rate-limited, 500 failure
+    POST /api/workspaces, /api/social-accounts, /api/posts/schedule,
+         /api/ab-tests; GET /api/inbox, /api/analytics
+    GET|POST /api/ab-test/assign
+    /api/mcp (streamable HTTP), /api/mcp/sse
+    /api/health
+  Auth: session cookie or Bearer API key/JWT. Rate limits per tier
+  (Upstash Redis).
+
+================================================================================
+24. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+  Performance  : Server-rendered marketing pages; LCP < 2.5 s on 4G; static
+                 caching at the edge; API p50 < 200 ms, p95 < 500 ms.
+  Availability : 99.9% uptime.
+  Security     : OAuth/magic link only; TLS 1.3; AES-256 at rest; encrypted
+                 social tokens and vault secrets (secret values never
+                 returned); CSP with nonces; strict CORS; rate limiting on
+                 all endpoints; capability/permission approval for agent
+                 tools.
+  Privacy      : GDPR/CCPA; EXIF stripping; no training on user images;
+                 90-day image retention; 7-year transaction logs; data
+                 export and deletion.
+  Accessibility: WCAG 2.1 AA; keyboard-navigable menus and palette;
+                 aria-labels on icon buttons (present on the current site);
+                 reduced-motion support.
+  Responsive   : Mobile-first. The header collapses to a sheet below md.
+                 Cards use a 1-col (mobile) / 3-col (desktop) grid.
+  SEO          : See §5.5; sitemap.xml; per-page metadata; JSON-LD.
+  Quality      : TypeScript strict; Vitest with 100% coverage target on
+                 business logic (MCP tools tested with createMockRegistry);
+                 Playwright + Cucumber BDD for E2E; Hourglass testing model.
+  i18n         : English by default; some content also in Hungarian
+                 (blog).
+
+================================================================================
+25. TECHNICAL ARCHITECTURE (REFERENCE, AS DOCUMENTED)
+================================================================================
+
+  Current production: Next.js 16 App Router (React 19) on Vercel, about 170
+    routes.
+  Workers: testing.spike.land (Cloudflare Worker + Durable Objects + Hono,
+    live codespaces); js.spike.land (esbuild-wasm transpiler);
+    mcp-nanobanana (Pixel Studio worker).
+  Data: PostgreSQL (Neon / Vercel Postgres) + Prisma; Cloudflare R2 + KV;
+    Upstash Redis.
+  AI: Google Gemini (image enhancement, Nano Banana / Nano Banana Pro),
+    Claude Opus (content, LearnIt, sentiment), Replicate (Stable
+    Diffusion), ElevenLabs (TTS).
+  Payments: Stripe. Email: SendGrid / Cloudflare Email. Monitoring: Sentry.
+    Real-time: WebSockets, PeerJS/WebRTC.
+  UI: Tailwind CSS 4, shadcn/ui, Radix, lucide-react, Framer Motion,
+    Zustand, React Hook Form + Zod.
+  Monorepo packages: web app, code editor (Vite + Monaco), testing worker,
+    transpiler, shared (types/constants/Zod), react-ts-worker, vibe-dev,
+    video (Remotion).
+  Target for this repo (spike-vinext): vinext (Vite + RSC) deployed as a
+    Cloudflare Worker, with response-store caching.
+
+================================================================================
+26. CONTENT / DATA INCONSISTENCIES OBSERVED (TO RESOLVE)
+================================================================================
+
+  1. Tool count: home page "600+", /mcp and /docs "455 tools / 88
+     categories", /store "135+", features doc "163 tools".
+     → Use one live count from the registry everywhere.
+  2. App count: home "16+", the store shows 17, the docs say "23 apps".
+  3. Orbit Free tier: /pricing says 5 accounts / 100 posts / 3 A/B / 500
+     credits, but the docs say 3 / 30 / 1 / 100. Scout limits: docs say 5
+     or 10 competitors on Pro.
+  4. MCP endpoint: home uses /api/mcp/sse with no auth; /mcp uses /api/mcp
+     with a Bearer key.
+  5. Several pages (/pricing, /orbit, /about, /learnit, /profile, /terms)
+     reuse the generic site title and description. Each needs its own.
+  6. Vibe Coding is "Free/unlimited" on /pricing but "limited beta, contact
+     sales" in the user guide.
+  7. og:image alt says "AI-Powered Social Media Command Center", which
+     contradicts the developer-platform positioning.
+  8. Some marquee items are generic ("dev agency — Generated application").
+     Hide items without a description.
+  9. The home "Latest Updates" cards (Feb 2026) don't match the /blog index
+     posts.
+
+================================================================================
+27. OPEN QUESTIONS
+================================================================================
+
+  Q1  Is Orbit still a primary product, or secondary to the developer
+      platform (strategic pivot of Jan 2026 vs. current home page)?
+  Q2  Should catch-all generation stay on every unknown path (an SEO and
+      abuse risk), or move to /create only?
+  Q3  Anonymous generation limits and abuse protection (Turnstile? rate
+      limits per IP?)
+  Q4  Do Pixel tokens and AI credits merge into one currency?
+  Q5  Moderation policy for public generated apps and arena submissions.
+  Q6  Which /admin and /docs/guides content (business plans, valuation)
+      should be public?
+
+================================================================================
+28. APPENDIX A — MCP TOOL CATEGORY CATALOGUE (/docs/tools)
+================================================================================
+Format: category (tool count) [tier] — description
+
+  ab-testing (6) [free]            | admin (10) [workspace] agents, emails, gallery, jobs, photo moderation
+  agency (4) [free]                | agents (4) [free] lifecycle, queue, messages
+  album-images (5) [free]          | album-management (6) [free] CRUD, privacy, sharing
+  allocator (6) [free]             | apps (14) [free] My-Apps lifecycle
+  arena (5) [free] Prompt Arena    | assets (5) [free]
+  audio (8) [free] mixer           | audit (4) [free]
+  auth (3) [free] session/route/profile | batch-enhance (3) [free] cost preview, progress
+  bazdmeg (22) [free] FAQ          | billing (2) [free] Stripe checkout, subscription
+  blocks (6) [free]                | blog (2) [free]
+  boost (4) [free]                 | bootstrap (4) [free] workspace, vault secrets, deploy apps
+  boxes (4) [workspace]            | brand-brain (6) [free]
+  calendar (5) [free]              | capabilities (3) [free] agent permission requests/approvals
+  career (6) [free] ESCO + Adzuna  | chat (1) [free]
+  chess-challenge (5), chess-game (8), chess-player (6), chess-replay (2) [free]
+  clean-motivate (4), clean-photo (2), clean-reminders (4), clean-scanner (2),
+  clean-streaks (3), clean-tasks (8), clean-verify (2) [free]
+  orchestration (21) [free] context packing, sandbox, decomposition
+  codespace (9) [free] live React on testing.spike.land
+  create (7) [free] public /create generator
+  creative (4) [free]              | credits (1) [free]
+  crisis (5) [free]                | dash (5) [workspace]
+  email (3) [free]                 | enhancement-jobs (4) [free] start, cancel+refund, status, history
+  env (4) [workspace]              | filesystem (8) [free]
+  gallery (3) [free]               | gateway-meta (5) [free] search_tools, list_categories,
+                                     enable_category, get_balance, get_status
+  gateway (15) [workspace] BridgeMind PM, GitHub sync, Bolt orchestration
+  github-admin (3) [workspace]     | image (1+) [free] generate/modify/job
+  inbox (6) [free]                 | jobs (4) [workspace]
+  jules (5) [free] async coding agent: sessions, approve plan, message
+  learnit (6) [free]               | mcp-registry (4) [free] Smithery/Official/Glama search + install
+  merch (5) [free]                 | newsletter (1) [free]
+  notifications (4) [free]         | orchestrator (5) [free]
+  page-ai (5) [workspace]          | pages (7) [free]
+  permissions (2) [workspace]      | pipelines (6) [free] create/fork/update
+  policy (3) [workspace]           | pulse (5) [free]
+  relay (5) [free]                 | reminders (3) [workspace]
+  reports (1) [free]               | scout (5) [free]
+  sentry (3) [workspace]           | settings (5) [free] API keys, MCP history
+  share (2) [workspace]            | skill-store (7) [free]
+  social-accounts (5) [free]       | state-machine (16) [free]
+  storage (2) [workspace]          | store-ab (8) [free]
+  swarm (8) [workspace]            | tracking (5) [free]
+  tts (1) [free] ElevenLabs        | vault (4) [free] encrypted secrets
+  vercel (3) [workspace]           | white-label (2) [workspace]
+  workflows (5) [free]             | workspaces (5) [free] create/list/update/favorite
+  (+ qa-studio, decisions, lie-detector, context-architect, codebase-explain,
+   sandbox, dev, dashboard and others listed in the internal catalogue)
+
+================================================================================
+29. APPENDIX B — CRAWLED ROUTE INVENTORY (HTTP 200 unless noted)
+================================================================================
+
+  /, /pricing, /about, /blog (+13 posts), /store, /store/skills,
+  /store/skills/bazdmeg, /store/{pixel-studio, audio-studio, page-builder,
+  brand-command, social-autopilot, content-hub, ops-dashboard, codespace,
+  tabletop-sim, display-wall, cleansweep, career-navigator, ai-orchestrator,
+  app-creator, chess-arena, qa-studio, state-machine, music-creator},
+  /apps, /apps/pixel, /apps/pixel/mix, /apps/display, /pixel, /orbit, /mcp,
+  /create, /create/calculator, /connect, /connect/leaderboard, /learnit,
+  /learnit/[13 slugs], /bazdmeg, /auth/signin, /profile, /settings,
+  /referrals, /admin/{analytics,credits,system,vouchers,users},
+  /storybook/{brand,colors,typography,buttons,components,comparison,
+  feedback,loading,modals,accessibility,surfaces,layout,data-display,merch,
+  photo-mix,auth,errors}, /docs, /docs/{tools,api,guides,components,sitemap},
+  /docs/tools/[88 categories], /docs/guides/[168 docs], /terms, /privacy,
+  /cookies.
+  404: /apps/audio, /features/ai-tools, /mcp/playground, /pixel/mix.
+  Unknown paths (/careers, /chess, /tools, /dashboard, /my-apps, /merch,
+  /feedback, /vibe-code, /skills) go to the AI app generator.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
