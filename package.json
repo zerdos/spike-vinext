@@ -5,30 +5,42 @@
   "packageManager": "pnpm@10.29.2",
   "dependencies": {
     "@cloudflare/workers-response-store": "^1.1.0",
+    "@radix-ui/react-slot": "^1.5.0",
     "@vinext/cloudflare": "^1.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.56.0",
     "react": "latest",
     "react-dom": "latest",
     "react-server-dom-webpack": "^19.3.0",
+    "tailwind-merge": "^3.7.0",
     "vinext": "^1.1.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
     "@tailwindcss/postcss": "latest",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "^6.1.2",
     "@vitejs/plugin-rsc": "^0.5.36",
     "cf": "1.0.0-beta.14",
+    "jsdom": "^30.1.2",
     "tailwindcss": "latest",
     "typescript": "latest",
-    "vite": "8.3.0"
+    "vite": "8.3.0",
+    "vitest": "^5.0.4"
   },
   "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "start": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "deploy": "vinext-cloudflare deploy --warm-cache",
     "deploy:response-store": "cf deploy --prebuilt --mode production --worker spike-vinext-response-store"
   }

@@ -1,3 +1,14 @@
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { ExternalLink, Terminal } from "lucide-react";
+
 const links = [
   {
     href: "https://github.com/cloudflare/vinext",
@@ -13,56 +24,73 @@ export const revalidate = 300;
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10 text-slate-950">
+    <main className="min-h-screen bg-background px-6 py-12 text-foreground">
       <section className="mx-auto flex max-w-4xl flex-col gap-8">
-        <div className="flex flex-col gap-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-orange-600">
+        <div className="flex flex-col items-start gap-4">
+          <Badge variant="secondary" className="px-3 py-1 text-sm font-semibold text-primary">
             vinext + Cloudflare Workers
-          </p>
-          <h1 className="max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl">
+          </Badge>
+          <h1 className="max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
             Build Next.js-style apps with Vite and deploy them to the edge.
           </h1>
-          <p className="max-w-2xl text-lg leading-8 text-slate-700">
-            This App Router project is wired for vinext, Tailwind CSS, and Cloudflare Workers.
+          <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
+            This App Router project is powered by vinext, Tailwind CSS v4, shadcn/ui, and Cloudflare Workers.
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="font-semibold">Develop</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Run the vinext dev server locally.</p>
-            <code className="mt-4 block rounded bg-slate-100 px-3 py-2 text-sm">pnpm run dev</code>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="font-semibold">Build</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Create Worker-ready production output.</p>
-            <code className="mt-4 block rounded bg-slate-100 px-3 py-2 text-sm">pnpm run build</code>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h2 className="font-semibold">Deploy</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Ship the generated Worker with cf.</p>
-            <code className="mt-4 block rounded bg-slate-100 px-3 py-2 text-sm">pnpm run deploy</code>
-          </div>
+          <Card className="transition-all hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Terminal className="h-4 w-4 text-primary" />
+                Develop
+              </CardTitle>
+              <CardDescription>Run the vinext dev server locally.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <code className="block rounded-md bg-muted px-3 py-2 font-mono text-xs">pnpm run dev</code>
+            </CardContent>
+          </Card>
+
+          <Card className="transition-all hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Terminal className="h-4 w-4 text-primary" />
+                Build
+              </CardTitle>
+              <CardDescription>Create Worker-ready production output.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <code className="block rounded-md bg-muted px-3 py-2 font-mono text-xs">pnpm run build</code>
+            </CardContent>
+          </Card>
+
+          <Card className="transition-all hover:shadow-md">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                <Terminal className="h-4 w-4 text-primary" />
+                Deploy
+              </CardTitle>
+              <CardDescription>Ship the generated Worker with cf.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <code className="block rounded-md bg-muted px-3 py-2 font-mono text-xs">pnpm run deploy</code>
+            </CardContent>
+          </Card>
         </div>
 
-        <nav className="flex flex-wrap gap-3">
+        <nav className="flex flex-wrap items-center gap-3">
           {links.map((link) => (
-            <a
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-100"
-              href={link.href}
-              key={link.href}
-              rel="noreferrer"
-              target="_blank"
-            >
-              {link.label}
-            </a>
+            <Button asChild variant="outline" key={link.href}>
+              <a href={link.href} rel="noreferrer" target="_blank">
+                {link.label}
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
           ))}
-          <a
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium hover:bg-slate-100"
-            href="/api/hello"
-          >
-            API route
-          </a>
+          <Button asChild variant="secondary">
+            <a href="/api/hello">API route</a>
+          </Button>
         </nav>
       </section>
     </main>
