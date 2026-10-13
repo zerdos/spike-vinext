@@ -73,4 +73,12 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
     expect(screen.getByRole("button", { name: /Subscribe/i })).toBeInTheDocument();
     expect(screen.getByText(/© 2026 Spike Land\. All rights reserved\./i)).toBeInTheDocument();
   });
+
+  it("renders McpPage at /mcp route correctly", async () => {
+    const { default: McpPage } = await import("@/app/mcp/page");
+    render(<McpPage />);
+    expect(screen.getByText(/455 AI Tools\./i)).toBeInTheDocument();
+    expect(screen.getByText("Interactive Playground")).toBeInTheDocument();
+  });
 });
+

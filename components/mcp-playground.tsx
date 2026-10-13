@@ -11,6 +11,7 @@ import {
   CreditCard,
   Gamepad2,
   Users,
+  Globe,
   ChevronDown,
   ChevronRight,
   Terminal,
@@ -31,6 +32,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   "credit-card": CreditCard,
   "gamepad-2": Gamepad2,
   users: Users,
+  globe: Globe,
 };
 
 export function McpPlayground() {
@@ -66,9 +68,75 @@ export function McpPlayground() {
     setTerminalOutput(tool.mockResponse);
   };
 
-  const handleRunTool = () => {
+  const handleRunTool = async () => {
     setIsRunning(true);
-    setTimeout(() => {
+    const startTime = performance.now();
+    try {
+      const parsedArguments: Record<string, unknown> = {};
+      Object.entries(paramInputs).forEach(([key, val]) => {
+        const paramDef = activeTool.parameters[key];
+        if (paramDef?.type === "number") {
+          parsedArguments[key] = Number(val);
+        } else if (paramDef?.type === "boolean") {
+          parsedArguments[key] = val === "true" || val === "1";
+        } else if (paramDef?.type === "object" || paramDef?.type === "array") {
+          try {
+            parsedArguments[key] = JSON.parse(val);
+          } catch {
+            parsedArguments[key] = val;
+          }
+        } else {
+          parsedArguments[key] = val;
+        }
+      });
+
+      const response = await fetch("/api/mcp?sessionId=web_playground", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: Date.now(),
+          method: "tools/call",
+          params: {
+            name: activeTool.name,
+            arguments: parsedArguments,
+          },
+        }),
+      });
+
+      const execTime = Number((performance.now() - startTime).toFixed(1));
+      setExecutionTime(execTime);
+
+      if (response.ok) {
+        const json = await response.json();
+        if (json.result && json.result.content) {
+          const contentItems = json.result.content;
+          const lastItem = contentItems[contentItems.length - 1];
+          try {
+            const parsed = JSON.parse(lastItem.text);
+            setTerminalOutput({
+              ...parsed,
+              _gatewayNotice: contentItems.length > 1 ? contentItems[0].text : undefined,
+              _latencyMs: execTime,
+            });
+          } catch {
+            setTerminalOutput({
+              output: lastItem.text,
+              _gatewayNotice: contentItems.length > 1 ? contentItems[0].text : undefined,
+              _latencyMs: execTime,
+            });
+          }
+        } else if (json.error) {
+          setTerminalOutput({ error: json.error, _latencyMs: execTime });
+        } else {
+          setTerminalOutput(json);
+        }
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch {
       const execTime = Number((Math.random() * 8 + 2).toFixed(1));
       setExecutionTime(execTime);
       setTerminalOutput({
@@ -76,9 +144,11 @@ export function McpPlayground() {
         executedAt: new Date().toISOString(),
         requestParams: paramInputs,
         latencyMs: execTime,
+        mode: "edge_simulation",
       });
+    } finally {
       setIsRunning(false);
-    }, 400);
+    }
   };
 
   const copyResponseText = async () => {

@@ -367,6 +367,94 @@ export const MCP_CATEGORIES: ToolCategory[] = [
       },
     ],
   },
+  {
+    id: "mcp-registry",
+    name: "MCP Registry",
+    count: 24,
+    icon: "globe",
+    tools: [
+      {
+        name: "mcp_registry_search",
+        description: "Search across Smithery, Official MCP Registry, and Glama for MCP servers by keyword.",
+        category: "MCP Registry",
+        parameters: {
+          query: { type: "string", description: "Keywords (e.g. postgres, brave search, github)", required: true },
+          registry: { type: "string", description: "Filter: all, official, smithery, glama" },
+          limit: { type: "number", description: "Maximum servers to return (default: 10)" },
+        },
+        mockResponse: {
+          query: "database",
+          totalFound: 4,
+          servers: [
+            {
+              id: "@smithery/sqlite",
+              name: "SQLite MCP Server",
+              source: "smithery",
+              transport: "stdio",
+              downloads: 14200,
+            },
+            {
+              id: "modelcontextprotocol/server-postgres",
+              name: "PostgreSQL Database Connector",
+              source: "official",
+              transport: "stdio",
+              downloads: 38900,
+            },
+          ],
+        },
+      },
+      {
+        name: "mcp_registry_get",
+        description: "Get detailed information about a specific MCP server including connection configuration, required environment variables, and tool list.",
+        category: "MCP Registry",
+        parameters: {
+          serverId: { type: "string", description: "Server ID from registry search", required: true },
+        },
+        mockResponse: {
+          id: "modelcontextprotocol/server-postgres",
+          name: "PostgreSQL Database Connector",
+          source: "official",
+          requiredEnv: ["DATABASE_URL"],
+          tools: ["query", "execute", "list_tables", "describe_table"],
+        },
+      },
+      {
+        name: "mcp_registry_install",
+        description: "Generate auto-configured client snippet or mount an MCP server via proxy.",
+        category: "MCP Registry",
+        parameters: {
+          serverId: { type: "string", description: "Server identifier to install", required: true },
+          clientType: { type: "string", description: "cursor | claude_desktop | claude_code | http" },
+        },
+        mockResponse: {
+          status: "installed",
+          serverId: "modelcontextprotocol/server-postgres",
+          clientType: "cursor",
+          configurationSnippet: {
+            mcpServers: {
+              postgres: {
+                command: "npx",
+                args: ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"],
+              },
+            },
+          },
+        },
+      },
+      {
+        name: "mcp_registry_list_installed",
+        description: "List all currently configured or proxy-mounted MCP servers in the current workspace.",
+        category: "MCP Registry",
+        parameters: {},
+        mockResponse: {
+          count: 2,
+          servers: [
+            { id: "spike-land-gateway", transport: "sse", status: "active", latencyMs: 3.8 },
+            { id: "@smithery/sqlite", transport: "stdio", status: "active", latencyMs: 1.2 },
+          ],
+        },
+      },
+    ],
+  },
 ];
 
 export const CLIENT_CONFIGS = [
@@ -378,7 +466,7 @@ export const CLIENT_CONFIGS = [
     code: `{
   "mcpServers": {
     "spike-land": {
-      "url": "https://spike.land/api/mcp",
+      "url": "https://next.spike.land/api/mcp/sse",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -391,7 +479,7 @@ export const CLIENT_CONFIGS = [
     name: "Claude Code",
     icon: "terminal",
     filename: "Terminal Command",
-    code: `claude mcp add spike-land https://spike.land/api/mcp --header "Authorization: Bearer YOUR_API_KEY"`,
+    code: `claude mcp add spike-land https://next.spike.land/api/mcp/sse --header "Authorization: Bearer YOUR_API_KEY"`,
   },
   {
     id: "cursor",
@@ -401,10 +489,9 @@ export const CLIENT_CONFIGS = [
     code: `{
   "mcpServers": {
     "spike-land": {
-      "command": "npx",
-      "args": ["-y", "@spike-land/mcp-remote", "https://spike.land/api/mcp"],
-      "env": {
-        "SPIKE_API_KEY": "YOUR_API_KEY"
+      "url": "https://next.spike.land/api/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -412,10 +499,10 @@ export const CLIENT_CONFIGS = [
   },
   {
     id: "http",
-    name: "HTTP",
+    name: "HTTP / JSON-RPC",
     icon: "globe",
     filename: "curl request",
-    code: `curl -X POST https://spike.land/api/mcp \\
+    code: `curl -X POST https://next.spike.land/api/mcp \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
