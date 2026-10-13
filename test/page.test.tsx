@@ -1,22 +1,76 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import Home from "@/app/page";
 
-describe("Home Page", () => {
-  it("renders page header and main content", () => {
+describe("Landing Page (MCP Server - Spike Land)", () => {
+  it("renders header, hero headline, and key metric counters", () => {
     render(<Home />);
 
-    expect(
-      screen.getByRole("heading", {
-        name: /Build Next\.js-style apps with Vite and deploy them to the edge\./i,
-      })
-    ).toBeInTheDocument();
+    // Headline and brand
+    expect(screen.getByText(/455 AI Tools\./i)).toBeInTheDocument();
+    expect(screen.getByText(/One Protocol\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Progressive Disclosure MCP/i)).toBeInTheDocument();
 
-    expect(screen.getByText("vinext + Cloudflare Workers")).toBeInTheDocument();
-    expect(screen.getByText("Develop")).toBeInTheDocument();
-    expect(screen.getByText("Build")).toBeInTheDocument();
-    expect(screen.getByText("Deploy")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /vinext/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /API route/i })).toBeInTheDocument();
+    // Metrics
+    expect(screen.getByText("455")).toBeInTheDocument();
+    expect(screen.getByText("88")).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("Gateway Tools")).toBeInTheDocument();
+  });
+
+  it("renders How It Works section with 3 progressive disclosure steps", () => {
+    render(<Home />);
+
+    expect(screen.getByText("How It Works")).toBeInTheDocument();
+    expect(screen.getByText("Connect")).toBeInTheDocument();
+    expect(screen.getByText("Discover")).toBeInTheDocument();
+    expect(screen.getByText("Activate")).toBeInTheDocument();
+  });
+
+  it("allows switching tabs in the Get Connected section", () => {
+    render(<Home />);
+
+    expect(screen.getByText("Get Connected")).toBeInTheDocument();
+
+    // Default tab is Claude Desktop
+    expect(screen.getByText(/claude_desktop_config\.json/i)).toBeInTheDocument();
+
+    // Click Claude Code tab
+    const claudeCodeTab = screen.getByRole("tab", { name: /Claude Code/i });
+    fireEvent.click(claudeCodeTab);
+    expect(screen.getByText(/claude mcp add spike-land/i)).toBeInTheDocument();
+
+    // Click Cursor tab
+    const cursorTab = screen.getByRole("tab", { name: /Cursor/i });
+    fireEvent.click(cursorTab);
+    expect(screen.getByText(/cursor-mcp-settings\.json/i)).toBeInTheDocument();
+
+    // Click HTTP tab
+    const httpTab = screen.getByRole("tab", { name: /HTTP/i });
+    fireEvent.click(httpTab);
+    expect(screen.getByText(/curl request/i)).toBeInTheDocument();
+  });
+
+  it("renders interactive playground and allows tool execution", async () => {
+    render(<Home />);
+
+    expect(screen.getByText("Interactive Playground")).toBeInTheDocument();
+    expect(screen.getAllByText("Platform Core").length).toBeGreaterThan(0);
+
+    // Execute tool button
+    const executeButton = screen.getByRole("button", { name: /Execute Tool/i });
+    expect(executeButton).toBeInTheDocument();
+    fireEvent.click(executeButton);
+
+    expect(screen.getByText(/Invoking\.\.\./i)).toBeInTheDocument();
+  });
+
+  it("renders footer and newsletter subscription form", () => {
+    render(<Home />);
+
+    expect(screen.getByText("Subscribe to updates")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Enter your email/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Subscribe/i })).toBeInTheDocument();
+    expect(screen.getByText(/© 2026 Spike Land\. All rights reserved\./i)).toBeInTheDocument();
   });
 });
