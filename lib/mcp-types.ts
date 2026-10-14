@@ -19,6 +19,8 @@ export interface RequestContext {
   apiKey?: string;
   clientInfo?: { name: string; version: string };
   ip?: string;
+  colo?: string;
+  profile?: "standard" | "universal";
 }
 
 export interface ToolDefinition {
@@ -61,6 +63,8 @@ export interface MCPSessionState {
   activatedCategories: string[];
   activatedTools: string[]; // Dynamically hydrated tools
   clientInfo?: { name: string; version: string };
+  turns?: number;
+  profile?: "standard" | "universal";
 }
 
 export interface JSONRPCRequest {

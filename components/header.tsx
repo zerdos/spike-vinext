@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Zap, BookOpen, Terminal, ChevronDown, Search, Rocket, Menu, X } from "lucide-react";
+import { Zap, BookOpen, Terminal, ChevronDown, Search, Rocket, Menu, X, TrendingUp } from "lucide-react";
 
 function GithubIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
@@ -54,6 +54,13 @@ export function Header() {
             >
               <Terminal className="h-4 w-4" />
               MCP Tools
+            </a>
+            <a
+              className="text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5"
+              href="#simulator"
+            >
+              <TrendingUp className="h-4 w-4" />
+              ROI Simulator
             </a>
             <a
               className="flex items-center gap-1 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
@@ -140,6 +147,14 @@ export function Header() {
             >
               <Terminal className="h-4 w-4" />
               MCP Tools
+            </a>
+            <a
+              href="#simulator"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-emerald-400 hover:bg-white/5"
+            >
+              <TrendingUp className="h-4 w-4" />
+              ROI Simulator
             </a>
             <a
               href="#categories"

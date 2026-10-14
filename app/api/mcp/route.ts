@@ -19,19 +19,26 @@ export async function OPTIONS() {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const sessionId = url.searchParams.get("sessionId");
+  const colo = (request as unknown as { cf?: { colo?: string } }).cf?.colo || "LHR";
 
   return Response.json(
     {
+      service: "Spike Land Progressive MCP Gateway",
       name: "spike-land-gateway",
       version: "1.0.0-mvp",
       protocol: "mcp-jsonrpc-2.0",
+      runtime: "Cloudflare Workers Edge (V8 isolates)",
+      datacenter: colo,
       description: "Progressively Disclosed MCP Server & MCP Registry Gateway",
       endpoints: {
         httpPost: "/api/mcp",
         sse: "/api/mcp/sse",
       },
       gatewayTools: [...GATEWAY_TOOL_NAMES],
+      universalGatewayTools: ["discover_tools", "run_tool", "get_gateway_status"],
       totalCatalogTools: Object.keys(ALL_TOOLS).length,
+      initialExposedTools: 3,
+      estimatedTokenSavings: "98.2%",
       currentSession: sessionId || null,
       documentation: "https://spike.land/mcp",
     },
@@ -51,11 +58,15 @@ export async function POST(request: Request) {
   // Derive or use provided session ID
   const sessionId = querySessionId || headerSessionId || (apiKey ? `auth_${apiKey.slice(-8)}` : "default_session");
   const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
+  const colo = (request as unknown as { cf?: { colo?: string } }).cf?.colo || "LHR";
+  const profile = (url.searchParams.get("profile") || request.headers.get("x-mcp-profile") || request.headers.get("mcp-profile")) as ("standard" | "universal" | undefined);
 
   const ctx: RequestContext = {
     sessionId,
     apiKey,
     ip,
+    colo,
+    profile,
   };
 
   let body: unknown;

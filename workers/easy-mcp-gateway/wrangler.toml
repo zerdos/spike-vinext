@@ -1,0 +1,12 @@
+name = "spike-land-mcp-mvp"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# Session state for tracking unlocked tools & token savings per user
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "your-kv-namespace-id"
+
+# Optional: Native Edge AI for semantic tool search (zero external API keys)
+[ai]
+binding = "AI"

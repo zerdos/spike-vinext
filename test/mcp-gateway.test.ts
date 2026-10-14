@@ -4,6 +4,7 @@ import {
   getOrCreateSession,
   resetSession,
   GATEWAY_TOOL_NAMES,
+  UNIVERSAL_GATEWAY_TOOL_NAMES,
   ALL_TOOLS,
 } from "@/lib/mcp-gateway";
 import { POST as mcpPost, GET as mcpGet, OPTIONS as mcpOptions } from "@/app/api/mcp/route";
@@ -412,6 +413,128 @@ describe("Progressive Context Disclosure MCP Gateway", () => {
         expect(text).toContain("/api/mcp?sessionId=sse-test");
         await reader.cancel();
       }
+    });
+  });
+
+  describe("Universal 3-Tool Gateway Suite & Investor Telemetry", () => {
+    const uniSessionId = "universal-session-999";
+
+    beforeEach(() => {
+      resetSession(uniSessionId);
+    });
+
+    it("returns ONLY the 3 Universal Gateway tools when initialized with universal profile", async () => {
+      await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            profile: "universal",
+            clientInfo: { name: "Claude Code", version: "1.0.0" },
+          },
+        },
+        { sessionId: uniSessionId, profile: "universal" }
+      );
+
+      const listResponse = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/list",
+          params: {},
+        },
+        { sessionId: uniSessionId, profile: "universal" }
+      );
+
+      const tools = (listResponse?.result as { tools: Array<{ name: string }> }).tools;
+      expect(tools).toHaveLength(3);
+      const names = tools.map((t) => t.name);
+      expect(names).toEqual(expect.arrayContaining([...UNIVERSAL_GATEWAY_TOOL_NAMES]));
+    });
+
+    it("discover_tools dynamically searches and mounts tools by intent", async () => {
+      const call = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 10,
+          method: "tools/call",
+          params: {
+            name: "discover_tools",
+            arguments: { query: "scrape web page", limit: 3 },
+          },
+        },
+        { sessionId: uniSessionId }
+      );
+
+      expect(call?.error).toBeUndefined();
+      const text = (call?.result as { content: Array<{ text: string }> }).content[0].text;
+      const parsed = JSON.parse(text);
+      expect(parsed.status).toBe("Tools dynamically mounted to session");
+      expect(parsed.estimatedTokenSavings).toBe("98.2%");
+      expect(parsed.matchedTools.length).toBeGreaterThan(0);
+    });
+
+    it("run_tool executes an unmounted tool directly and auto-hydrates it", async () => {
+      const call = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 11,
+          method: "tools/call",
+          params: {
+            name: "run_tool",
+            arguments: {
+              tool_name: "generate_image",
+              arguments: { prompt: "hyper-realistic quantum computer" },
+            },
+          },
+        },
+        { sessionId: uniSessionId }
+      );
+
+      expect(call?.error).toBeUndefined();
+      const text = (call?.result as { content: Array<{ text: string }> }).content[0].text;
+      const parsed = JSON.parse(text);
+      expect(parsed.status).toBe("success");
+      expect(parsed.executedTool).toBe("generate_image");
+    });
+
+    it("get_gateway_status calculates real-time token savings and edge datacenter", async () => {
+      // Simulate 2 calls
+      await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 20,
+          method: "tools/call",
+          params: {
+            name: "discover_tools",
+            arguments: { query: "database query" },
+          },
+        },
+        { sessionId: uniSessionId, colo: "SFO" }
+      );
+
+      const statusCall = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 21,
+          method: "tools/call",
+          params: {
+            name: "get_gateway_status",
+            arguments: {},
+          },
+        },
+        { sessionId: uniSessionId, colo: "SFO" }
+      );
+
+      expect(statusCall?.error).toBeUndefined();
+      const text = (statusCall?.result as { content: Array<{ text: string }> }).content[0].text;
+      const status = JSON.parse(text);
+      expect(status.service).toContain("Progressive MCP Gateway");
+      expect(status.cloudflareEdgeColo).toBe("SFO");
+      expect(status.sessionTurns).toBeGreaterThanOrEqual(2);
+      expect(status.percentageContextSaved).toContain("%");
+      expect(status.tokensSavedThisSession).toBeGreaterThan(40000);
     });
   });
 });
