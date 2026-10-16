@@ -110,14 +110,23 @@ export function McpPlayground() {
       setExecutionTime(execTime);
 
       if (response.ok) {
-        const json = await response.json();
-        if (json.result && json.result.content) {
+        const json = (await response.json()) as {
+          result?: {
+            content?: Array<{
+              type?: string;
+              text: string;
+            }>;
+          };
+          error?: unknown;
+          [key: string]: unknown;
+        };
+        if (json.result && json.result.content && json.result.content.length > 0) {
           const contentItems = json.result.content;
           const lastItem = contentItems[contentItems.length - 1];
           try {
             const parsed = JSON.parse(lastItem.text);
             setTerminalOutput({
-              ...parsed,
+              ...(typeof parsed === "object" && parsed !== null ? parsed : { output: parsed }),
               _gatewayNotice: contentItems.length > 1 ? contentItems[0].text : undefined,
               _latencyMs: execTime,
             });

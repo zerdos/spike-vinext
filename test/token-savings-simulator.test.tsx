@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { TokenSavingsSimulator } from "@/components/token-savings-simulator";
 
 describe("TokenSavingsSimulator Component", () => {
@@ -62,7 +62,9 @@ describe("TokenSavingsSimulator Component", () => {
     render(<TokenSavingsSimulator />);
 
     const copyBtn = screen.getByRole("button", { name: /Copy Investor One-Pager/i });
-    fireEvent.click(copyBtn);
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
 
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
   });

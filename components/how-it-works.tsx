@@ -1,7 +1,23 @@
 import { Plug, Search, Zap, Check } from "lucide-react";
 
+interface StepTool {
+  name: string;
+  checked: boolean;
+  highlight?: boolean;
+}
+
+interface StepItem {
+  step: string;
+  title: string;
+  badge: string;
+  icon: React.ElementType;
+  description: string;
+  tools: StepTool[];
+  more: string | null;
+}
+
 export function HowItWorks() {
-  const steps = [
+  const steps: StepItem[] = [
     {
       step: "1",
       title: "Connect",

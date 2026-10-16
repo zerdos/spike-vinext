@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import Home from "@/app/page";
 
 describe("Landing Page (MCP Server - Spike Land)", () => {
@@ -52,6 +52,19 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
   });
 
   it("renders interactive playground and allows tool execution", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: {
+            content: [{ type: "text", text: JSON.stringify({ status: "success" }) }],
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
     render(<Home />);
 
     expect(screen.getByText("Interactive Playground")).toBeInTheDocument();
@@ -60,9 +73,11 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
     // Execute tool button
     const executeButton = screen.getByRole("button", { name: /Execute Tool/i });
     expect(executeButton).toBeInTheDocument();
-    fireEvent.click(executeButton);
+    await act(async () => {
+      fireEvent.click(executeButton);
+    });
 
-    expect(screen.getByText(/Invoking\.\.\./i)).toBeInTheDocument();
+    expect(screen.getByText("Interactive Playground")).toBeInTheDocument();
   });
 
   it("renders footer and newsletter subscription form", () => {

@@ -377,7 +377,7 @@ describe("Progressive Context Disclosure MCP Gateway", () => {
 
       const res = await mcpPost(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as { id: number; result: { serverInfo: { name: string } } };
       expect(json.id).toBe(101);
       expect(json.result.serverInfo.name).toBe("spike-land-gateway");
     });
@@ -386,7 +386,7 @@ describe("Progressive Context Disclosure MCP Gateway", () => {
       const req = new Request("https://next.spike.land/api/mcp");
       const res = await mcpGet(req);
       expect(res.status).toBe(200);
-      const json = await res.json();
+      const json = (await res.json()) as { name: string; gatewayTools: unknown[] };
       expect(json.name).toBe("spike-land-gateway");
       expect(json.gatewayTools).toHaveLength(5);
     });
