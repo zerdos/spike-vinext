@@ -52,6 +52,7 @@ export interface RequestContext {
   transportHeaders?: TransportHeaders;
   sanitizedMeta?: MCP2026RequestMeta;
   strippedMetaKeys?: string[];
+  browserEnv?: import("./browser-run").BrowserRunEnv;
 }
 
 export type RiskTier = "low-readonly" | "elevated-write" | "critical-admin";

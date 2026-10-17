@@ -61,7 +61,7 @@ export function ClientConfigs() {
             Get Connected
           </h2>
           <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch]">
-            Integrate spike.land MCP with your favorite AI tools in seconds.
+            Connect Spike Land to Claude Desktop, Cursor, Claude Code, or any other AI app in seconds. Just copy the snippet below into your setup.
           </p>
         </div>
 
@@ -133,11 +133,11 @@ export function ClientConfigs() {
 
             <CardFooter className="bg-card px-5 py-3 border-t border-[#111315] flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
-                Need an API key?
+                Need early access or an API key?
               </span>
               <Button variant="link" size="sm" asChild className="h-auto p-0 text-xs">
                 <a href="/waitlist">
-                  <span>Go to Settings / Waitlist</span>
+                  <span>Join the early access waitlist</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </Button>

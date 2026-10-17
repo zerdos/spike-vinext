@@ -64,7 +64,7 @@ export default async function SignInPage(props: SignInPageProps) {
               </span>
             </a>
             <Badge variant="outline" className="font-mono text-[11px]">
-              AUTH // OAUTH 2.0
+              SECURE SIGN IN
             </Badge>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-black tracking-tight text-foreground">
@@ -78,9 +78,9 @@ export default async function SignInPage(props: SignInPageProps) {
         {/* shadcn Card */}
         <Card className="border-2 border-[#111315] overflow-hidden">
           <CardHeader className="bg-secondary/60 border-b border-[#111315] p-5">
-            <CardTitle className="text-base">Operator Authentication</CardTitle>
+            <CardTitle className="text-base">Sign In</CardTitle>
             <CardDescription className="text-xs">
-              Authenticate your developer workspace for MCP session keys.
+              Access your developer workspace and manage your MCP keys.
             </CardDescription>
           </CardHeader>
 

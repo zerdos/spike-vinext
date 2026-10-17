@@ -21,11 +21,11 @@ import {
 } from "@/components/ui/table";
 
 const INITIAL_GATEWAY_SUITE = [
-  { idx: "01", name: "list_capability_categories", role: "SEP-2567 workspace_handle & pack directory", footprint: "108 tok" },
-  { idx: "02", name: "configure_active_categories", role: "In-band tail schema disclosure + MRTR step-up", footprint: "124 tok" },
-  { idx: "03", name: "inspect_tool_schema", role: "On-demand JSON Schema 2020-12 & MCP Apps UI", footprint: "92 tok" },
-  { idx: "04", name: "execute_tool", role: "RFC 8707 token exchange & sandboxed dispatch", footprint: "104 tok" },
-  { idx: "05", name: "inspect_result_slice", role: "Output payload slicing via result_cursor_handle", footprint: "88 tok" },
+  { idx: "01", name: "list_capability_categories", role: "Shows which tool categories are available", footprint: "108 tokens" },
+  { idx: "02", name: "configure_active_categories", role: "Turns on a category so its tools can be used", footprint: "124 tokens" },
+  { idx: "03", name: "inspect_tool_schema", role: "Explains how to use one specific tool", footprint: "92 tokens" },
+  { idx: "04", name: "execute_tool", role: "Runs a tool safely, with its own login", footprint: "104 tokens" },
+  { idx: "05", name: "inspect_result_slice", role: "Reads big results a piece at a time", footprint: "88 tokens" },
 ];
 
 export function HeroSection() {
@@ -92,7 +92,7 @@ export function HeroSection() {
                   >
                     <span className="h-2.5 w-2.5 rounded-full bg-primary animate-dispatch-pulse" />
                   </span>
-                  <span>Progressive Disclosure MCP</span>
+                  <span>Progressive Disclosure MCP — Tools on Demand</span>
                 </Badge>
                 <Badge variant="cobalt" className="font-mono">
                   MCP 2026-07-28 STATELESS
@@ -103,15 +103,15 @@ export function HeroSection() {
               </div>
 
               <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch] leading-relaxed">
-                Spike Land&apos;s MCP 2026-07-28 Relay uses{" "}
+                Give your AI assistant 455 tools without cramming all of them into every prompt.{" "}
                 <strong className="text-foreground font-semibold underline decoration-primary decoration-2 underline-offset-4">
-                  Two-Sided Progressive Context Disclosure
+                  Spike Land loads tools progressively on demand
                 </strong>{" "}
-                — keeping <code className="font-mono text-xs bg-secondary px-1.5 py-0.5 rounded">tools/list</code> static at Token Position Zero with 5 cache-stable Broker Meta-Tools while disclosing 455 tools across 88 deterministic capability packs in-band via SEP-2567 <code className="font-mono text-xs bg-secondary px-1.5 py-0.5 rounded">workspace_handle</code> tokens.
+                — your AI starts with 5 lightweight starter tools at Token Position Zero. When a task requires more capabilities, it switches on a category (like &ldquo;Development&rdquo;) in-band. The result: shorter prompts, lower bills, and better tool choices.
               </p>
             </div>
 
-            {/* 3-Cell Ruled Index Table (Chivo 900 numeral leads, label + sector coordinate below, zero decorative icons) */}
+            {/* 3-Cell Ruled Index Table */}
             <Card className="overflow-hidden rounded-xl border-2 border-[#111315]">
               <div className="grid grid-cols-1 sm:grid-cols-3 divide-y-2 sm:divide-y-0 sm:divide-x-2 divide-[#111315]">
                 <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
@@ -122,8 +122,8 @@ export function HeroSection() {
                     Tools
                   </div>
                   <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>SEC 01 // CATALOG</span>
-                    <span className="text-primary">IN-BAND TAIL</span>
+                    <span>ALL TOOLS</span>
+                    <span className="text-primary">LOADED ON DEMAND</span>
                   </div>
                 </div>
 
@@ -135,8 +135,8 @@ export function HeroSection() {
                     Categories
                   </div>
                   <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>SEC 02 // PACKS</span>
-                    <span className="text-[#0047BB]">RISK-TIERED</span>
+                    <span>GROUPED BY TOPIC</span>
+                    <span className="text-[#0047BB]">ON / OFF</span>
                   </div>
                 </div>
 
@@ -148,7 +148,7 @@ export function HeroSection() {
                     Gateway Tools
                   </div>
                   <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>SEC 03 // POS-ZERO</span>
+                    <span>STARTER TOOLS</span>
                     <span className="text-[#0D7A5F]">~516 TOK</span>
                   </div>
                 </div>
@@ -165,12 +165,12 @@ export function HeroSection() {
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <a href="/waitlist">
-                  Reserve Early Access Key
+                  Get Early Access
                   <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
               <Button size="lg" variant="secondary" asChild>
-                <a href="#simulator">Calculate Token ROI</a>
+                <a href="#simulator">See How Much You&apos;d Save</a>
               </Button>
             </div>
           </div>
@@ -193,9 +193,8 @@ export function HeroSection() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="px-3 sm:px-4">Broker Meta-Tool</TableHead>
-                      <TableHead className="px-3 sm:px-4">SEP-2567 Dispatch Role</TableHead>
-                      <TableHead className="px-3 sm:px-4 text-right whitespace-nowrap">Schema</TableHead>
+                      <TableHead className="px-3 sm:px-4">Tool</TableHead>
+                      <TableHead className="px-3 sm:px-4 text-right whitespace-nowrap">Size</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -204,9 +203,6 @@ export function HeroSection() {
                         <TableCell className="px-3 sm:px-4 font-mono text-xs font-bold text-[#0047BB] whitespace-nowrap">
                           <span className="text-muted-foreground mr-1.5 font-normal">{item.idx}.</span>
                           {item.name}
-                        </TableCell>
-                        <TableCell className="px-3 sm:px-4 text-xs text-muted-foreground">
-                          {item.role}
                         </TableCell>
                         <TableCell className="px-3 sm:px-4 text-right font-mono text-xs font-semibold text-[#0D7A5F] whitespace-nowrap">
                           {item.footprint}
@@ -235,7 +231,7 @@ export function HeroSection() {
                             : "bg-[#1B1E23] text-[#B8BDC7] hover:text-white"
                         }`}
                       >
-                        Pattern B: Broker
+                        All tools
                       </button>
                       <button
                         type="button"
@@ -246,7 +242,7 @@ export function HeroSection() {
                             : "bg-[#1B1E23] text-[#B8BDC7] hover:text-white"
                         }`}
                       >
-                        Pattern C: Virtual URI
+                        One category only
                       </button>
                     </div>
                   </div>
@@ -278,10 +274,10 @@ export function HeroSection() {
 
               <CardFooter className="bg-secondary px-5 py-3 border-t border-[#111315] flex items-center justify-between text-xs">
                 <span className="font-medium text-foreground">
-                  SEP-2575 Self-Describing HTTP POST (No Handshake)
+                  Paste into your AI app — no extra setup
                 </span>
                 <span className="font-mono font-semibold text-[#0D7A5F]">
-                  300+ Edge Colos
+                  Runs in 300+ cities
                 </span>
               </CardFooter>
             </Card>

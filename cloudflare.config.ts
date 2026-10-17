@@ -29,6 +29,7 @@ export default defineConfig({
     env: {
       ...responseStore.applicationWorker.env,
       ASSETS: bindings.assets(),
+      BROWSER: bindings.browser(),
     },
   }),
 });

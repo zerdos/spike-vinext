@@ -35,7 +35,7 @@ export function Footer() {
               </h3>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              MCP 2026-07-28 Stateless Progressive-Disclosure Relay &amp; Zero-Trust Governance Control Plane on Cloudflare Workers.
+              455 tools for your AI on demand. Keeps prompts small, saves token costs, and runs fast on Cloudflare&apos;s global network.
             </p>
 
             <div className="pt-2">
@@ -157,7 +157,7 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <p>© 2026 Spike Land. All rights reserved.</p>
           <p className="font-mono">
-            MCP 2026-07-28 STATELESS • CLOUDFLARE WORKERS V8 ISOLATES
+            BUILT ON CLOUDFLARE WORKERS • 300+ CITIES WORLDWIDE
           </p>
         </div>
       </div>

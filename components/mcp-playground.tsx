@@ -327,7 +327,7 @@ export function McpPlayground() {
               Interactive Playground
             </h2>
             <p className="text-muted-foreground text-base leading-relaxed max-w-[65ch]">
-              Progressive context disclosure in action: inspect schemas, configure arguments, and execute edge-native MCP gateway calls with live JSON-RPC 2.0 feedback.
+              Try any tool right here in your browser. Pick a tool from the catalog, tweak its inputs, and run it live to see how it responds.
             </p>
             <div className="pt-1 flex items-center gap-2">
               <Badge variant="ink">
@@ -335,7 +335,7 @@ export function McpPlayground() {
                 Live MCP Console
               </Badge>
               <Badge variant="outline" className="font-mono">
-                {totalLiveToolsCount} Interactive Demo Tools
+                {totalLiveToolsCount} Tools Ready to Try
               </Badge>
             </div>
           </div>
@@ -572,74 +572,74 @@ export function McpPlayground() {
 
               {/* Parameters Editor */}
               {Object.keys(activeTool.parameters).length > 0 ? (
-                <div className="bg-secondary/60 rounded-lg p-4 border border-[#111315] space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-foreground">
-                    <span>Arguments (JSON-RPC 2.0 params)</span>
-                    <span className="text-muted-foreground font-mono font-normal">
-                      Press ⌘+Enter to execute
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Object.entries(activeTool.parameters).map(([key, schema]) => (
-                      <div key={key} className="space-y-1.5">
-                        <Label className="block font-mono text-xs">
-                          {key}{" "}
-                          {schema.required && <span className="text-primary">*</span>}
-                          <span className="text-muted-foreground text-[10px] ml-1">
-                            ({schema.type})
-                          </span>
-                        </Label>
-                        <Input
-                          type="text"
-                          value={paramInputs[key] ?? ""}
-                          onKeyDown={handleKeyDownInputs}
-                          onChange={(e) =>
-                            setParamInputs((prev) => ({
-                              ...prev,
-                              [key]: e.target.value,
-                            }))
-                          }
-                          placeholder={schema.description}
-                          className="h-9 font-mono text-xs"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-secondary/50 rounded-lg px-3.5 py-2.5 border border-[#C8C5BC] text-xs text-muted-foreground font-mono">
-                  Zero arguments required. Ready for instant edge execution.
-                </div>
-              )}
-            </CardHeader>
+                 <div className="bg-secondary/60 rounded-lg p-4 border border-[#111315] space-y-3">
+                   <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-foreground">
+                     <span>Inputs &amp; Options</span>
+                     <span className="text-muted-foreground font-mono font-normal">
+                       Press ⌘+Enter to execute
+                     </span>
+                   </div>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                     {Object.entries(activeTool.parameters).map(([key, schema]) => (
+                       <div key={key} className="space-y-1.5">
+                         <Label className="block font-mono text-xs">
+                           {key}{" "}
+                           {schema.required && <span className="text-primary">*</span>}
+                           <span className="text-muted-foreground text-[10px] ml-1">
+                             ({schema.type})
+                           </span>
+                         </Label>
+                         <Input
+                           type="text"
+                           value={paramInputs[key] ?? ""}
+                           onKeyDown={handleKeyDownInputs}
+                           onChange={(e) =>
+                             setParamInputs((prev) => ({
+                               ...prev,
+                               [key]: e.target.value,
+                             }))
+                           }
+                           placeholder={schema.description}
+                           className="h-9 font-mono text-xs"
+                         />
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               ) : (
+                 <div className="bg-secondary/50 rounded-lg px-3.5 py-2.5 border border-[#C8C5BC] text-xs text-muted-foreground font-mono">
+                   No inputs needed for this tool. Ready to run.
+                 </div>
+               )}
+             </CardHeader>
 
-            {/* View Tabs & Output Console */}
-            <CardContent className="p-5 bg-[#111315] text-[#F5F4F0]">
-              <Tabs value={viewTab} onValueChange={setViewTab}>
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#2E323B]">
-                  <TabsList className="flex-wrap h-auto bg-[#1B1E23] border-[#343942]">
-                    <TabsTrigger
-                      value="response"
-                      className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
-                    >
-                      <FileJson className="w-3.5 h-3.5" />
-                      Response (JSON)
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="request"
-                      className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
-                    >
-                      <Code className="w-3.5 h-3.5" />
-                      JSON-RPC Request
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="curl"
-                      className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
-                    >
-                      <Terminal className="w-3.5 h-3.5" />
-                      cURL
-                    </TabsTrigger>
-                  </TabsList>
+             {/* View Tabs & Output Console */}
+             <CardContent className="p-5 bg-[#111315] text-[#F5F4F0]">
+               <Tabs value={viewTab} onValueChange={setViewTab}>
+                 <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#2E323B]">
+                   <TabsList className="flex-wrap h-auto bg-[#1B1E23] border-[#343942]">
+                     <TabsTrigger
+                       value="response"
+                       className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
+                     >
+                       <FileJson className="w-3.5 h-3.5" />
+                       Result (JSON)
+                     </TabsTrigger>
+                     <TabsTrigger
+                       value="request"
+                       className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
+                     >
+                       <Code className="w-3.5 h-3.5" />
+                       Raw Request
+                     </TabsTrigger>
+                     <TabsTrigger
+                       value="curl"
+                       className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
+                     >
+                       <Terminal className="w-3.5 h-3.5" />
+                       cURL
+                     </TabsTrigger>
+                   </TabsList>
 
                   <div className="flex items-center gap-2.5">
                     {viewTab === "response" && (

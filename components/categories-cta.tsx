@@ -15,8 +15,8 @@ const VIRTUAL_GATEWAYS = [
     name: "Development Pack",
     uri: "https://spike.land/api/mcp/g/development",
     toolsCount: 69,
-    riskTier: "low-readonly",
-    stepUp: "Direct Activation",
+    riskTier: "Read-only (Safe)",
+    stepUp: "Ready to run",
     cacheScope: "public • ttlMs: 3600000",
   },
   {
@@ -24,8 +24,8 @@ const VIRTUAL_GATEWAYS = [
     name: "AI & Creative Pack",
     uri: "https://spike.land/api/mcp/g/ai-creative",
     toolsCount: 60,
-    riskTier: "low-readonly",
-    stepUp: "Direct Activation",
+    riskTier: "Read-only (Safe)",
+    stepUp: "Ready to run",
     cacheScope: "public • ttlMs: 3600000",
   },
   {
@@ -33,8 +33,8 @@ const VIRTUAL_GATEWAYS = [
     name: "FinTech & Billing Pack",
     uri: "https://spike.land/api/mcp/g/fintech-billing",
     toolsCount: 38,
-    riskTier: "elevated-write",
-    stepUp: "SEP-2322 MRTR Step-Up",
+    riskTier: "Write actions",
+    stepUp: "Asks before running",
     cacheScope: "public • ttlMs: 3600000",
   },
   {
@@ -42,8 +42,8 @@ const VIRTUAL_GATEWAYS = [
     name: "Web & Scraping Pack",
     uri: "https://spike.land/api/mcp/g/web-scraping",
     toolsCount: 44,
-    riskTier: "low-readonly",
-    stepUp: "Direct Activation",
+    riskTier: "Read-only (Safe)",
+    stepUp: "Ready to run",
     cacheScope: "public • ttlMs: 3600000",
   },
 ];
@@ -67,19 +67,19 @@ export function CategoriesCta() {
                 </CardTitle>
               </div>
               <CardDescription className="text-sm sm:text-base text-muted-foreground max-w-[65ch] leading-relaxed">
-                Probabilistic Top-K vector search (<code className="font-mono text-xs">search_tools</code>) fails on multi-tool workflows and breaks enterprise RBAC audits. Spike Land groups 455 tools into{" "}
-                <strong className="text-foreground font-semibold">88 atomic, risk-tiered Capability Packs</strong>{" "}
-                available either in-band via <code className="font-mono text-xs">configure_active_categories</code> (Pattern B) or as static RFC 8707 URI-Scoped Virtual Gateways (Pattern C).
+                Instead of guessing which tools you might need with fuzzy search, Spike Land organizes 455 tools into{" "}
+                <strong className="text-foreground font-semibold">88 focused Capability Packs</strong>{" "}
+                grouped by topic. Your AI can turn on whole packs on the fly, or you can connect your client directly to a single-purpose link tailored to one team.
               </CardDescription>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Badge variant="outline" className="font-mono">
-                  88 DETERMINISTIC PACKS
+                  88 FOCUSED PACKS
                 </Badge>
                 <Badge variant="emerald" className="font-mono">
-                  455 VERIFIED SCHEMAS
+                  455 TESTED TOOLS
                 </Badge>
                 <Badge variant="cobalt" className="font-mono">
-                  SEP-2322 MRTR STEP-UP GOVERNANCE
+                  SAFETY APPROVALS INCLUDED
                 </Badge>
               </div>
             </CardHeader>
@@ -97,7 +97,7 @@ export function CategoriesCta() {
           {/* Pattern C URI-Scoped Virtual Gateway Directory */}
           <div className="border-t-2 border-[#111315] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#111315] bg-card">
             {VIRTUAL_GATEWAYS.map((vg) => {
-              const isWrite = vg.riskTier === "elevated-write";
+              const isWrite = vg.riskTier === "Write actions";
               return (
                 <div key={vg.slug} className="p-5 flex flex-col justify-between space-y-3">
                   <div className="space-y-1.5">
@@ -130,7 +130,7 @@ export function CategoriesCta() {
                       )}
                       {vg.stepUp}
                     </span>
-                    <span className="text-foreground font-semibold">RFC 8707</span>
+                    <span className="text-foreground font-semibold">Secure Login</span>
                   </div>
                 </div>
               );

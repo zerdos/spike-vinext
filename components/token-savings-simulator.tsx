@@ -139,32 +139,32 @@ export function TokenSavingsSimulator() {
   const copyInvestorSummary = async () => {
     const summary = `
 =============================================================
-SPIKE LAND MCP 2026-07-28 RELAY — INVESTOR ROI & UNIT ECONOMICS
+SPIKE LAND — ESTIMATED SAVINGS SUMMARY
 =============================================================
-Team Size: ${developers} Engineers / Agents
-Activity: ${turnsPerDay} Turns / Day / Dev (${totalTurnsPerMonth.toLocaleString()} turns/mo)
-Tool Catalog: ${toolsInCatalog} Tools
-Selected LLM: ${selectedModel.name} ($${selectedModel.inputCostPerMillion.toFixed(2)}/M tokens)
+Team size:      ${developers} people
+Activity:       ${turnsPerDay} AI messages per person per day (${totalTurnsPerMonth.toLocaleString()} per month)
+Tools:          ${toolsInCatalog}
+AI model:       ${selectedModel.name} ($${selectedModel.inputCostPerMillion.toFixed(2)} per million tokens)
 
-1. TOKEN OVERHEAD & POSITION-ZERO CACHE PRESERVATION
-- Status Quo (Static MCP): ${staticTokensPerTurn.toLocaleString()} tokens/turn
-- Naive Pattern A (tools/list mutation): Invalidates 60k-token Position-Zero prefix cache ($${Math.round(patternACachePenaltyCost).toLocaleString()}/mo cache-bust penalty)
-- Spike Land Pattern B (Stateless Handle Broker): ${spikeLandTokensPerTurn.toLocaleString()} tokens/turn (0% Position-Zero cache invalidation)
-- Context Reduction:       ${percentageSaved.toFixed(1)}% savings
+1. PROMPT SIZE
+- Without Spike Land: ${staticTokensPerTurn.toLocaleString()} tokens per message (every tool is sent every time)
+- Changing the tool list mid-chat: wipes the AI's cache (about $${Math.round(patternACachePenaltyCost).toLocaleString()} extra per month)
+- With Spike Land:    ${spikeLandTokensPerTurn.toLocaleString()} tokens per message (cache stays intact)
+- Reduction:          ${percentageSaved.toFixed(1)}%
 
-2. FINANCIAL ROI
-- Status Quo LLM Spend:    $${Math.round(staticMonthlyCost).toLocaleString()} / month
-- Spike Land LLM Spend:    $${Math.round(spikeLandMonthlyCost).toLocaleString()} / month
-- Net LLM Savings:         $${Math.round(monthlySavings).toLocaleString()} / month ($${Math.round(annualSavings).toLocaleString()} / year)
+2. COST
+- Without Spike Land: $${Math.round(staticMonthlyCost).toLocaleString()} per month
+- With Spike Land:    $${Math.round(spikeLandMonthlyCost).toLocaleString()} per month
+- You save:           $${Math.round(monthlySavings).toLocaleString()} per month ($${Math.round(annualSavings).toLocaleString()} per year)
 
-3. AGENT ACCURACY & MCP 2026-07-28 COMPLIANCE
-- Status Quo Accuracy:     ${staticAccuracy}% (${100 - staticAccuracy}% hallucination risk)
-- Spike Land Accuracy:     ${spikeLandAccuracy}% (< 1% hallucination risk)
-- Spec Compliance:         100% SEP-2567 Stateless Handle + SEP-2549 CacheableResult + RFC 8707 Token Exchange
-- Edge Cold Start:         < 5ms (Cloudflare V8 Isolates vs 1,200ms Docker)
-- Spike Land Gross Margin: ${grossMargin}% on Edge Compute
+3. QUALITY & SPEED
+- Right tool chosen without Spike Land: ${staticAccuracy}%
+- Right tool chosen with Spike Land:    ${spikeLandAccuracy}%
+- Works with the latest MCP standard, with secure per-service logins
+- Startup time: under 5ms (vs ~1,200ms for a typical container)
+- Spike Land gross margin: ${grossMargin}%
 
-Verified live at https://spike.land/mcp
+Try it yourself at https://spike.land/mcp
 =============================================================
 `.trim();
 
@@ -191,11 +191,12 @@ Verified live at https://spike.land/mcp
               <span className="text-primary">AI Agent Token Bills</span>
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed max-w-[65ch]">
-              Standard MCP servers force models to ingest your entire catalog on every turn. Spike Land replaces context bloat with{" "}
+              Most MCP setups send the description of every single tool with every message — and you pay for all of
+              it. Spike Land{" "}
               <strong className="text-foreground font-semibold">
-                Progressive Context Disclosure
-              </strong>{" "}
-              on Cloudflare&apos;s global edge.
+                only sends the tools your AI needs right now
+              </strong>
+              . Move the sliders to see what that means for your team.
             </p>
             <div className="pt-1">
               <Badge variant="cobalt">
@@ -208,7 +209,7 @@ Verified live at https://spike.land/mcp
           {/* Scenario Presets */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-muted-foreground mr-1">
-              Investor Scenarios:
+              Example Scenarios:
             </span>
             {PRESETS.map((preset) => {
               const isActive =
@@ -248,9 +249,9 @@ Verified live at https://spike.land/mcp
                     <Gauge className="w-4 h-4 text-primary" />
                   </span>
                   <div>
-                    <CardTitle className="text-base">Workload Parameters</CardTitle>
+                    <CardTitle className="text-base">Your Team</CardTitle>
                     <CardDescription className="text-xs">
-                      Adjust team scale &amp; catalog size
+                      Tell us how you use AI
                     </CardDescription>
                   </div>
                 </div>
@@ -262,7 +263,7 @@ Verified live at https://spike.land/mcp
               <div className="space-y-2">
                 <div className="flex justify-between items-center gap-2">
                   <Label htmlFor="input-developers" className="text-sm font-semibold">
-                    Team Size (Engineers / Agents)
+                    Team Size (people or AI agents)
                   </Label>
                   <Badge variant="outline" className="font-mono text-xs font-bold shrink-0">
                     {developers} devs
@@ -289,7 +290,7 @@ Verified live at https://spike.land/mcp
               <div className="space-y-2">
                 <div className="flex justify-between items-center gap-2">
                   <Label htmlFor="input-turns" className="text-sm font-semibold">
-                    Turns / Agent Prompts per Day
+                    AI Messages per Person per Day
                   </Label>
                   <Badge variant="cobalt" className="font-mono text-xs font-bold shrink-0">
                     {turnsPerDay} turns/day
@@ -305,9 +306,9 @@ Verified live at https://spike.land/mcp
                   onChange={(e) => setTurnsPerDay(Number(e.target.value))}
                 />
                 <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
-                  <span>20 (Casual)</span>
-                  <span>150 (Active)</span>
-                  <span>400 (Swarm)</span>
+                  <span>20 (Light)</span>
+                  <span>150 (Regular)</span>
+                  <span>400 (Heavy)</span>
                 </div>
               </div>
 
@@ -315,7 +316,7 @@ Verified live at https://spike.land/mcp
               <div className="space-y-2">
                 <div className="flex justify-between items-center gap-2">
                   <Label htmlFor="input-tools" className="text-sm font-semibold">
-                    Total Tools in Catalog
+                    Total Tools in Catalog (Number of available tools)
                   </Label>
                   <Badge variant="emerald" className="font-mono text-xs font-bold shrink-0">
                     {toolsInCatalog} tools
@@ -331,9 +332,9 @@ Verified live at https://spike.land/mcp
                   onChange={(e) => setToolsInCatalog(Number(e.target.value))}
                 />
                 <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
-                  <span>20 (Mini)</span>
+                  <span>20 (Few)</span>
                   <span>455 (Spike Land)</span>
-                  <span>1,000+ (Hub)</span>
+                  <span>1,000+ (Lots)</span>
                 </div>
               </div>
 
@@ -341,7 +342,7 @@ Verified live at https://spike.land/mcp
 
               {/* Model Selector */}
               <div className="space-y-2.5">
-                <Label className="text-sm font-semibold block">LLM Pricing Model</Label>
+                <Label className="text-sm font-semibold block">Which AI Model You Use</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {LLM_MODELS.map((model) => {
                     const isSelected = model.id === selectedModelId;
@@ -381,13 +382,13 @@ Verified live at https://spike.land/mcp
                   <>
                     <Check className="w-4 h-4 text-[#0D7A5F]" />
                     <span className="text-[#0D7A5F]">
-                      Investor Brief Copied to Clipboard!
+                      Summary copied to your clipboard!
                     </span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 text-primary" />
-                    <span>Copy Investor One-Pager / ROI Calculations</span>
+                    <span>Copy Investor One-Pager / Savings Summary</span>
                   </>
                 )}
               </Button>
@@ -408,9 +409,9 @@ Verified live at https://spike.land/mcp
                       </span>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <Badge variant="default">Customer Value Proposition</Badge>
+                      <Badge variant="default">Your Estimated Savings</Badge>
                       <span className="text-xs text-[#B8BDC7] font-mono">
-                        {totalTurnsPerMonth.toLocaleString()} turns/mo
+                        {totalTurnsPerMonth.toLocaleString()} messages/mo
                       </span>
                     </div>
                   </div>
@@ -419,7 +420,7 @@ Verified live at https://spike.land/mcp
                       ${Math.round(annualSavings).toLocaleString()} / yr
                     </div>
                     <div className="text-xs text-[#B8BDC7] mt-1">
-                      Annual LLM Spend Avoided
+                      Saved on AI costs each year
                     </div>
                   </div>
                 </div>
@@ -435,17 +436,17 @@ Verified live at https://spike.land/mcp
                       Status Quo (Static MCP)
                     </span>
                     <Badge variant="destructive" className="font-mono text-[10px]">
-                      Context Bloat
+                      All tools, every time
                     </Badge>
                   </div>
                   <div className="text-2xl font-mono font-bold text-[#111315] mb-1 tabular-nums">
                     {staticTokensPerTurn.toLocaleString()}
                     <span className="text-xs text-muted-foreground font-sans font-normal ml-1">
-                      tokens / turn
+                      tokens per message
                     </span>
                   </div>
                   <div className="text-xs text-[#7F1D1D] font-mono">
-                    ${Math.round(staticMonthlyCost).toLocaleString()} / month on prompt waste
+                    ${Math.round(staticMonthlyCost).toLocaleString()} / month just to describe tools
                   </div>
                 </div>
 
@@ -463,7 +464,7 @@ Verified live at https://spike.land/mcp
                   <div className="text-2xl font-mono font-bold text-[#111315] mb-1 tabular-nums">
                     {spikeLandTokensPerTurn.toLocaleString()}
                     <span className="text-xs text-muted-foreground font-sans font-normal ml-1">
-                      tokens / turn (avg active turn: 3 gateway + 3 domain)
+                      tokens per message (about 6 tools in view at a time)
                     </span>
                   </div>
                   <div className="text-xs text-[#065F46] font-mono font-semibold">
@@ -480,19 +481,19 @@ Verified live at https://spike.land/mcp
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Layers className="w-4 h-4 text-[#0047BB]" />
-                    Context Window Consumption per Single Turn
+                    How Much Room Each Message Takes Up
                   </CardTitle>
                   <Badge variant="cobalt" className="font-mono">
-                    {percentageSaved.toFixed(1)}% Headroom Preserved
+                    {percentageSaved.toFixed(1)}% More Room Left
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                    <span>Static MCP ({toolsInCatalog} tools loaded upfront at Position Zero)</span>
+                    <span>Sending all {toolsInCatalog} tools with every message</span>
                     <span className="font-mono text-[#BA1C1C] font-bold">
-                      {staticTokensPerTurn.toLocaleString()} tokens / turn
+                      {staticTokensPerTurn.toLocaleString()} tokens per message
                     </span>
                   </div>
                   <Progress value={100} indicatorClassName="bg-[#BA1C1C]" />
@@ -500,9 +501,9 @@ Verified live at https://spike.land/mcp
 
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                    <span>Naive Pattern A (tools/list mutation busts 60k-token Position-Zero LLM cache)</span>
+                    <span>Changing the tool list mid-chat (the AI has to re-read the whole conversation)</span>
                     <span className="font-mono text-primary font-bold">
-                      +${Math.round(patternACachePenaltyCost).toLocaleString()}/mo cache-bust penalty
+                      +${Math.round(patternACachePenaltyCost).toLocaleString()}/mo extra
                     </span>
                   </div>
                   <Progress value={68} indicatorClassName="bg-primary" />
@@ -510,9 +511,9 @@ Verified live at https://spike.land/mcp
 
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                    <span>Spike Land Pattern B (5 static Position-Zero broker tools + tail working set)</span>
+                    <span>Spike Land (5 starter tools + only the ones you switch on)</span>
                     <span className="font-mono text-[#0D7A5F] font-bold">
-                      {spikeLandTokensPerTurn.toLocaleString()} tokens / turn (0% cache invalidation)
+                      {spikeLandTokensPerTurn.toLocaleString()} tokens per message (no re-reading)
                     </span>
                   </div>
                   <Progress
@@ -523,11 +524,12 @@ Verified live at https://spike.land/mcp
 
                 <div className="pt-2 border-t border-[#C8C5BC] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                   <span className="text-muted-foreground">
-                    <strong className="text-foreground">Two-Sided Disclosure (SEP-2567 &amp; SEP-2549):</strong>{" "}
-                    Position Zero stays 100% cache-stable (<code className="font-mono">cacheScope: &quot;public&quot;</code>) while oversized tool outputs slice via <code className="font-mono">result_cursor_handle</code>.
+                    <strong className="text-foreground">Savings on both ends:</strong>{" "}
+                    The start of every conversation stays the same, so your AI provider can reuse its cache. And when a
+                    tool returns a huge result, your AI reads it in small pieces instead of all at once.
                   </span>
                   <Badge variant="emerald" className="font-mono text-[10px] shrink-0">
-                    98% Output Slicing Included
+                    Up to 98% Smaller Results
                   </Badge>
                 </div>
               </CardContent>
@@ -549,7 +551,7 @@ Verified live at https://spike.land/mcp
                     <span>Tool Accuracy</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Prevents hallucinated parameters by keeping active tool context under 6 tools.
+                    Your AI makes far fewer mistakes because it isn&apos;t overwhelmed with hundreds of tool choices at once.
                   </p>
                 </div>
 
@@ -566,7 +568,7 @@ Verified live at https://spike.land/mcp
                     <span>Edge Startup Latency</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Cloudflare V8 isolates eliminate container spin-up delays across 300+ edge cities.
+                    Tools start up instantly from 300+ cities worldwide — no waiting for slow servers to boot.
                   </p>
                 </div>
 
@@ -583,7 +585,7 @@ Verified live at https://spike.land/mcp
                     <span>Spike Land Margin</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Serverless edge compute COGS is under $0.45 per million agent turns.
+                    Running lightweight edge workers costs fractions of a cent, keeping prices low and sustainable.
                   </p>
                 </div>
               </div>
@@ -592,7 +594,7 @@ Verified live at https://spike.land/mcp
             {/* Call to action strip */}
             <Card className="border-2 border-[#111315] bg-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs sm:text-sm font-medium text-foreground">
-                Ready to verify this in your AI agent? Connect Cursor, Claude Code, or Windsurf in 30 seconds.
+                Ready to try it with your AI? Works with Cursor, Claude Code, Windsurf, and Claude Desktop in 30 seconds.
               </div>
               <Button variant="default" size="sm" asChild className="shrink-0">
                 <a href="#playground">

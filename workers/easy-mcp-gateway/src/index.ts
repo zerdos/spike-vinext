@@ -1,6 +1,11 @@
+import { BROWSER_RUN_TOOLS, type BrowserRunBinding } from "../../../lib/browser-run";
+
 export interface Env {
   SESSION_KV?: KVNamespace;
   AI?: unknown;
+  BROWSER?: BrowserRunBinding;
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_API_TOKEN?: string;
 }
 
 const SUPPORTED_VERSIONS = ["2026-07-28"];
@@ -37,7 +42,7 @@ const TOOL_CATALOG: Record<
     riskTier: "low-readonly" | "elevated-write";
     description: string;
     inputSchema: object;
-    execute: (args: Record<string, unknown>) => Promise<unknown>;
+    execute: (args: Record<string, unknown>, env?: Env) => Promise<unknown>;
   }
 > = {
   scrape_webpage: {
@@ -87,6 +92,25 @@ const TOOL_CATALOG: Record<
     }),
   },
 };
+
+for (const tool of BROWSER_RUN_TOOLS) {
+  TOOL_CATALOG[tool.name] = {
+    category: tool.category,
+    riskTier: tool.riskTier === "elevated-write" ? "elevated-write" : "low-readonly",
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+    execute: async (args, env) =>
+      tool.handler
+        ? tool.handler(args, {
+            browserEnv: {
+              BROWSER: env?.BROWSER,
+              CLOUDFLARE_ACCOUNT_ID: env?.CLOUDFLARE_ACCOUNT_ID,
+              CLOUDFLARE_API_TOKEN: env?.CLOUDFLARE_API_TOKEN,
+            },
+          })
+        : { status: "success" },
+  };
+}
 
 // 2. The 5 Static, Cache-Preserving Broker Meta-Tools (MCP 2026-07-28 Pattern B)
 const BROKER_2026_TOOLS = [
@@ -336,6 +360,7 @@ export default {
                         { id: "web-scraping", name: "Web & Scraping", riskTier: "low-readonly", count: 1 },
                         { id: "development", name: "Development", riskTier: "low-readonly", count: 1 },
                         { id: "ai-creative", name: "AI & Creative", riskTier: "low-readonly", count: 1 },
+                        { id: "browser-run", name: "Browser Run", riskTier: "low-readonly", count: 18 },
                       ],
                     },
                     null,
@@ -401,7 +426,7 @@ export default {
       const targetTool = TOOL_CATALOG[targetName];
 
       if (targetTool) {
-        const output = await targetTool.execute(targetArgs);
+        const output = await targetTool.execute(targetArgs, env);
         return Response.json(
           {
             jsonrpc: "2.0",

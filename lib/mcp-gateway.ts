@@ -14,6 +14,9 @@ import {
 } from "./mcp-types";
 import { MCP_CATEGORIES } from "./mcp-data";
 import { MCP_REGISTRY_SERVERS } from "./mcp-registry-data";
+import { BROWSER_RUN_TOOLS, BROWSER_RUN_TOOL_NAMES } from "./browser-run";
+
+export { BROWSER_RUN_TOOLS, BROWSER_RUN_TOOL_NAMES };
 
 // Supported MCP Protocol Revision (Pure MCP 2026-07-28 Stateless Operating Model — SEP-2575)
 export const SUPPORTED_PROTOCOL_VERSIONS = [
@@ -77,6 +80,13 @@ installedServers.set("spike-land-gateway", {
   transport: "sse",
   status: "active",
   installedAt: Date.now() - 3600000,
+});
+installedServers.set("cloudflare/browser-run-mcp", {
+  id: "cloudflare/browser-run-mcp",
+  name: "Cloudflare Browser Run MCP Server",
+  transport: "http",
+  status: "active",
+  installedAt: Date.now() - 1800000,
 });
 
 // Deterministic Edge HMAC / FNV-1a Signing for SEP-2567 Workspace Handles & SEP-2322 MRTR Envelopes
@@ -1877,6 +1887,10 @@ function initializeCatalog() {
   }
   // 4. MCP 2026-07-28 Broker 5-tool suite
   for (const t of BROKER_2026_TOOLS) {
+    ALL_TOOLS[t.name] = t;
+  }
+  // 4b. Cloudflare Browser Run MCP tools (real binding/REST/edge handlers)
+  for (const t of BROWSER_RUN_TOOLS) {
     ALL_TOOLS[t.name] = t;
   }
 

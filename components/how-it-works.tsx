@@ -34,35 +34,35 @@ interface StepItem {
 
 const ARCHITECTURE_COMPARISON = [
   {
-    pattern: "Static MCP (455 Tools Upfront)",
-    sep2567: "Compliant (Static)",
-    positionZeroCache: "100% Preserved (but 50,050 tok/turn bloat)",
-    clientSupport: "Universal",
-    verdict: "Unsustainable token spend & 48% tool accuracy",
+    pattern: "Load all 455 tools up front",
+    sep2567: "Yes",
+    positionZeroCache: "Kept, but every message carries ~50,000 extra tokens",
+    clientSupport: "Works everywhere",
+    verdict: "Expensive, and the AI picks the right tool only about half the time",
     highlight: false,
   },
   {
-    pattern: "Pattern A: Stateful tools/list Mutation (list_changed)",
-    sep2567: "Non-Compliant (Violates SEP-2567)",
-    positionZeroCache: "0% (Busts 60k-token LLM prefix cache on toggle)",
-    clientSupport: "Broken in Claude Code / Remote Proxies",
-    verdict: "Architectural dead end under MCP 2026-07-28",
+    pattern: "Change the tool list mid-chat",
+    sep2567: "No",
+    positionZeroCache: "Lost every time the list changes",
+    clientSupport: "Breaks in Claude Code and remote setups",
+    verdict: "Doesn't work with the latest MCP version",
     highlight: false,
   },
   {
-    pattern: "Probabilistic Top-K Search (search_tools BM25/Vector)",
-    sep2567: "Partial",
-    positionZeroCache: "Unstable (Non-deterministic tool ordering)",
-    clientSupport: "Universal",
-    verdict: "Fails on multi-tool workflows & audit compliance",
+    pattern: "Search for the closest-matching tools (Probabilistic Search)",
+    sep2567: "Partly",
+    positionZeroCache: "Unreliable (results come back in a different order)",
+    clientSupport: "Works everywhere",
+    verdict: "Misses related tools that a task needs together",
     highlight: false,
   },
   {
-    pattern: "Spike Land Pattern B + C (Stateless Handle Broker + Virtual URIs)",
-    sep2567: "100% Native SEP-2567 & SEP-2549",
-    positionZeroCache: "100% Preserved (~516 tok static Position Zero)",
-    clientSupport: "100% Universal across all 2026 clients",
-    verdict: "98.7% input savings + 98% output slicing + RFC 8707/MRTR",
+    pattern: "Spike Land (5 Starter Tools + Categories on Demand)",
+    sep2567: "Yes (SEP-2567 & SEP-2549)",
+    positionZeroCache: "Always kept (only ~516 tokens at Position Zero)",
+    clientSupport: "Works with every major AI app",
+    verdict: "~99% fewer prompt tokens, smaller results, and built-in safety checks",
     highlight: true,
   },
 ];
@@ -72,10 +72,10 @@ export function HowItWorks() {
     {
       step: "1",
       title: "Connect",
-      badge: "5 tools (Static)",
+      badge: "5 tools",
       icon: Plug,
       description:
-        "Wire-Level Surface (SEP-2567 & SEP-2549): tools/list exposes 5 static Broker Meta-Tools with cacheScope: \"public\" and ttlMs: 3600000. Token Position Zero never mutates.",
+        "Add Spike Land to your AI app. Your AI sees just 5 small helper tools. This list never changes, so your AI provider can cache it and you pay less on every message.",
       tools: [
         { name: "list_capability_categories", checked: false },
         { name: "configure_active_categories", checked: false },
@@ -88,33 +88,33 @@ export function HowItWorks() {
     {
       step: "2",
       title: "Discover",
-      badge: "Handle-Scoped",
+      badge: "Pick a category",
       icon: Search,
       description:
-        "Conversation Working Set: Agent invokes configure_active_categories(workspace_handle, [\"Development\"]). Tool schemas append in-band to the conversation tail — 0% prefix cache invalidation.",
+        "When your AI needs something specific, it switches on a category — for example \"Development\". The instructions for those tools are added to the end of the chat, so nothing earlier has to be re-read.",
       tools: [
         { name: "list_capability_categories", checked: true },
         { name: "configure_active_categories", checked: true },
-        { name: "code_runner (tail-disclosed)", checked: false, highlight: true },
-        { name: "git_diff_viewer (tail-disclosed)", checked: false, highlight: true },
-        { name: "ast_inspect (tail-disclosed)", checked: false, highlight: true },
+        { name: "code_runner (now available)", checked: false, highlight: true },
+        { name: "git_diff_viewer (now available)", checked: false, highlight: true },
+        { name: "ast_inspect (now available)", checked: false, highlight: true },
       ],
-      more: "workspace_handle: spk_hdl_v2...",
+      more: "Your choices are remembered for this chat",
     },
     {
       step: "3",
       title: "Activate",
-      badge: "RFC 8707 + MRTR",
+      badge: "Safe by default",
       icon: Zap,
       description:
-        "Two-Sided Disclosure & Governance: execute_tool verifies handle grants, performs RFC 8707 OAuth 2.1 token exchange (zero passthrough), enforces SEP-2322 MRTR step-up, and slices oversized payloads.",
+        "Your AI runs the tool. Spike Land checks it's allowed, uses a separate login for each service (your own key is never passed on), asks you before anything risky, and trims huge results down to size.",
       tools: [
-        { name: "execute_tool (RFC 8707 exchange)", checked: true },
-        { name: "inspect_result_slice (98% output saved)", checked: true },
-        { name: "MRTR Step-Up (resultType: input_required)", checked: true, highlight: true },
-        { name: "HeaderMismatch (-32020) Defense", checked: true },
+        { name: "execute_tool (secure login)", checked: true },
+        { name: "inspect_result_slice (up to 98% smaller results)", checked: true },
+        { name: "Asks for your approval on risky actions", checked: true, highlight: true },
+        { name: "Blocks mismatched or tampered requests", checked: true },
       ],
-      more: "+88 deterministic capability packs...",
+      more: "+88 categories to choose from...",
     },
   ];
 
@@ -131,11 +131,12 @@ export function HowItWorks() {
               How It Works
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed max-w-[65ch]">
-              Built on the MCP 2026-07-28 Three-Layer Separation Principle: decouple the static wire catalog at Token Position Zero from the handle-scoped conversation working set.
+              Your AI doesn&apos;t need every tool at once. Spike Land keeps a short, fixed list of helper tools
+              in view, and adds the rest only when a task calls for them.
             </p>
           </div>
           <Badge variant="secondary" className="self-start sm:self-end">
-            MCP 2026-07-28 Architecture
+            3 simple steps
           </Badge>
         </div>
 
@@ -215,22 +216,22 @@ export function HowItWorks() {
                 Why Stateful tools/list Mutation Fails Under MCP 2026-07-28
               </CardTitle>
               <CardDescription className="text-xs text-[#B8BDC7] mt-0.5">
-                Comparing progressive disclosure architectures across SEP-2567 compliance, LLM prefix cache physics, and client compatibility
+                Comparing 4 ways to give an AI lots of tools — and what each one actually costs you
               </CardDescription>
             </div>
             <Badge variant="emerald" className="font-mono text-[10px] self-start sm:self-center">
-              THREE-LAYER SEPARATION
+              SIDE-BY-SIDE
             </Badge>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-4">Architecture Pattern</TableHead>
-                  <TableHead className="px-4">SEP-2567 Stateless</TableHead>
-                  <TableHead className="px-4">Position-Zero Prefix Cache</TableHead>
-                  <TableHead className="px-4">Client Support</TableHead>
-                  <TableHead className="px-4">Production Verdict</TableHead>
+                  <TableHead className="px-4">Approach</TableHead>
+                  <TableHead className="px-4">Works With Latest MCP?</TableHead>
+                  <TableHead className="px-4">AI Cache Savings</TableHead>
+                  <TableHead className="px-4">Which Apps It Works In</TableHead>
+                  <TableHead className="px-4">Bottom Line</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

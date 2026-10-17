@@ -91,7 +91,7 @@ export default function WaitlistPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as { ticket?: WaitlistTicket; error?: string };
       if (res.ok && data.ticket) {
         setTicket(data.ticket);
       } else {
@@ -167,12 +167,12 @@ export default function WaitlistPage() {
                   Join the <span className="text-primary">Waiting List</span>
                 </h1>
                 <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch] leading-relaxed">
-                  Be the first to build with Spike Land&apos;s edge-native MCP gateway. Get instant access to 455+ progressive tools, zero setup overhead, and 100,000 free monthly executions.
+                  Be among the first to use Spike Land with your AI agents. Get early access to 455+ on-demand tools, zero setup hassle, and 100,000 free tool calls every month.
                 </p>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Badge variant="default">
                     <Sparkles className="w-3.5 h-3.5" />
-                    Early Developer Preview • Cohort 2
+                    Early Access • Wave 2
                   </Badge>
                   <Badge variant="outline" className="font-mono">
                     BATCH ALPHA-2
@@ -180,7 +180,7 @@ export default function WaitlistPage() {
                 </div>
               </div>
 
-              {/* Value Specification Row (Numeral-led timetable strip, zero decorative icons) */}
+              {/* Value Specification Row */}
               <Card className="border-2 border-[#111315] overflow-hidden">
                 <div className="grid grid-cols-1 sm:grid-cols-3 divide-y-2 sm:divide-y-0 sm:divide-x-2 divide-[#111315]">
                   <div className="p-5 bg-card flex flex-col justify-between space-y-2">
@@ -192,11 +192,11 @@ export default function WaitlistPage() {
                         100k Free Calls
                       </h4>
                       <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
-                        Monthly execution quota included for all early preview developers.
+                        Free monthly quota included for all early preview developers.
                       </p>
                     </div>
                     <div className="pt-2 border-t border-[#C8C5BC] font-mono text-[10px] font-semibold text-muted-foreground">
-                      SEC 01 // MONTHLY QUOTA
+                      EVERY MONTH FREE
                     </div>
                   </div>
 
@@ -209,11 +209,11 @@ export default function WaitlistPage() {
                         98.2% Token Savings
                       </h4>
                       <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
-                        Progressive context disclosure loads tool schemas strictly on demand.
+                        Tools load only when called, so your AI prompts stay tiny and fast.
                       </p>
                     </div>
                     <div className="pt-2 border-t border-[#C8C5BC] font-mono text-[10px] font-semibold text-muted-foreground">
-                      SEC 02 // CONTEXT OVERHEAD
+                      LESS TOKEN SPEND
                     </div>
                   </div>
 
@@ -223,14 +223,14 @@ export default function WaitlistPage() {
                         &lt; 5ms
                       </div>
                       <h4 className="mt-2 text-foreground text-sm font-bold">
-                        Cloudflare Edge
+                        Global Edge
                       </h4>
                       <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
-                        Globally distributed V8 isolates with sub-5ms edge dispatch latency.
+                        Runs in 300+ cities globally with sub-5ms response times. No cold starts.
                       </p>
                     </div>
                     <div className="pt-2 border-t border-[#C8C5BC] font-mono text-[10px] font-semibold text-muted-foreground">
-                      SEC 03 // V8 ISOLATE COLOS
+                      GLOBAL SPEED
                     </div>
                   </div>
                 </div>
@@ -240,10 +240,10 @@ export default function WaitlistPage() {
               <Card className="border-2 border-[#111315] overflow-hidden">
                 <CardHeader className="bg-secondary/60 border-b border-[#111315] p-6">
                   <CardTitle className="text-lg">
-                    Developer Dispatch Registration
+                    Request Early Access
                   </CardTitle>
                   <CardDescription>
-                    Complete your profile to reserve an API key in the next weekly rollout.
+                    Fill in your details below to get your API key in the next rollout batch.
                   </CardDescription>
                 </CardHeader>
 
@@ -354,7 +354,7 @@ export default function WaitlistPage() {
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Active open-source contributors and developers receive fast-track cohort invites.
+                        Active open-source builders and engineers get fast-track access.
                       </p>
                     </div>
 
@@ -379,7 +379,7 @@ export default function WaitlistPage() {
                         )}
                       </Button>
                       <p className="text-center text-xs text-muted-foreground">
-                        No spam. We will only contact you when your early access API key is ready.
+                        No spam, ever. We&apos;ll only email you when your early access key is ready.
                       </p>
                     </div>
                   </form>
