@@ -1,19 +1,12 @@
-export interface WaitlistSubmission {
-  id: string;
-  email: string;
-  name?: string;
-  company?: string;
-  client?: string;
-  useCase?: string;
-  githubUsername?: string;
-  referralCode: string;
-  position: number;
-  createdAt: string;
-}
+import {
+  WaitlistSubmission,
+  getWaitlistStats,
+  getWaitlistEntryByEmail,
+  getNextWaitlistPosition,
+  saveWaitlistEntry,
+} from "@/lib/waitlist-db";
 
-// In-memory waitlist state for edge isolate runtime
-const waitlistEntries: WaitlistSubmission[] = [];
-let currentPositionCounter = 428;
+export type { WaitlistSubmission };
 
 function generateReferralCode(email: string, position: number): string {
   const hash = Math.abs(
@@ -41,15 +34,8 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
-  return Response.json(
-    {
-      totalWaitlistCount: currentPositionCounter + waitlistEntries.length,
-      status: "accepting_applications",
-      batchName: "Alpha Cohort 2",
-      nextReleaseDate: "2026-11-01",
-    },
-    { headers: getCorsHeaders() }
-  );
+  const stats = await getWaitlistStats();
+  return Response.json(stats, { headers: getCorsHeaders() });
 }
 
 export async function POST(request: Request) {
@@ -75,8 +61,8 @@ export async function POST(request: Request) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check if already in waitlist
-    const existing = waitlistEntries.find((e) => e.email === normalizedEmail);
+    // Check if already in waitlist (checks D1 database)
+    const existing = await getWaitlistEntryByEmail(normalizedEmail);
     if (existing) {
       return Response.json(
         {
@@ -94,8 +80,7 @@ export async function POST(request: Request) {
       );
     }
 
-    currentPositionCounter += 1;
-    const newPosition = currentPositionCounter;
+    const newPosition = await getNextWaitlistPosition();
     const referralCode = generateReferralCode(normalizedEmail, newPosition);
 
     const newEntry: WaitlistSubmission = {
@@ -111,7 +96,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    waitlistEntries.push(newEntry);
+    await saveWaitlistEntry(newEntry);
 
     return Response.json(
       {
@@ -136,3 +121,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

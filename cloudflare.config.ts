@@ -30,6 +30,10 @@ export default defineConfig({
       ...responseStore.applicationWorker.env,
       ASSETS: bindings.assets(),
       BROWSER: bindings.browser(),
+      DB: bindings.d1({
+        id: "013edfbd-5b02-4543-8b73-af5d9721fe0e",
+        name: "spike-waitlist",
+      }),
     },
   }),
 });
