@@ -115,6 +115,18 @@
       "skillPath": "skills/workers-profiling/SKILL.md",
       "computedHash": "310220bfad691100e6c2549628437c03873bdf870cbfacbd2e2cb5c125538864"
     },
+    "workos": {
+      "source": "workos/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/workos/skills/workos/SKILL.md",
+      "computedHash": "77e6f96f16aaf6363cf5d3d816e1bbe1321d6c0daa1c8be1a116cbd138c5413f"
+    },
+    "workos-widgets": {
+      "source": "workos/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/workos/skills/workos-widgets/SKILL.md",
+      "computedHash": "138d1733d9b92be8cae10dc8d7538e0a161c89d7b9330c335b35c27f8e13b781"
+    },
     "wrangler": {
       "source": "cloudflare/skills",
       "sourceType": "github",
