@@ -6,13 +6,17 @@ import { POST as waitlistPost, GET as waitlistGet } from "@/app/api/waitlist/rou
 
 describe("Waitlist Feature & Top Bar Overhaul", () => {
   describe("Header Component", () => {
-    it("renders 'Sign In' button for authenticated state", () => {
+    it("renders 'Join Waitlist' button and NO 'Sign In' button", () => {
       render(<Header />);
 
-      // With WorkOS AuthKit, we show Sign In button when not authenticated
-      // (the useAuth hook returns isLoading initially, then user: null)
-      // Just verify the header renders without error
-      expect(screen.getByRole("banner")).toBeInTheDocument();
+      // Ensure "Sign In" is completely removed from top bar
+      expect(screen.queryByText("Sign In")).not.toBeInTheDocument();
+      expect(screen.queryByText(/log in/i)).not.toBeInTheDocument();
+
+      // Ensure "Join Waitlist" is present and links to /waitlist
+      const waitlistButtons = screen.getAllByRole("link", { name: /join waitlist/i });
+      expect(waitlistButtons.length).toBeGreaterThan(0);
+      expect(waitlistButtons[0]).toHaveAttribute("href", "/waitlist");
     });
 
     it("renders working navigation links", () => {
