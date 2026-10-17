@@ -8,7 +8,7 @@ export interface Env {
   CLOUDFLARE_API_TOKEN?: string;
 }
 
-const SUPPORTED_VERSIONS = ["2026-07-28"];
+const SUPPORTED_VERSIONS = ["2026-07-28", "2025-11-25", "2024-11-05"];
 const CANONICAL_URI = "https://mcp.spike.land/mcp";
 const HANDLE_SECRET = "spk_edge_hmac_secret_2026_07_28_v2";
 
@@ -292,6 +292,34 @@ export default {
         },
         { status: 400, headers: corsHeaders }
       );
+    }
+
+    // Dual-Era Stateless Compatibility: Support MCP 2025-11-25 / 2024-11-05 'initialize'
+    if (method === "initialize") {
+      const clientVersion =
+        typeof params.protocolVersion === "string" &&
+        SUPPORTED_VERSIONS.includes(params.protocolVersion)
+          ? params.protocolVersion
+          : "2025-11-25";
+      return Response.json(
+        {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            protocolVersion: clientVersion,
+            supportedProtocolVersions: SUPPORTED_VERSIONS,
+            serverInfo: { name: "spike-land-cloudflare-gateway", version: "2.0.0-mcp2026" },
+            capabilities: {
+              tools: { listChanged: true },
+            },
+          },
+        },
+        { headers: corsHeaders }
+      );
+    }
+
+    if (method === "notifications/initialized" || method === "notifications/cancelled") {
+      return new Response(null, { status: 202, headers: corsHeaders });
     }
 
     // 1. SEP-2575 Mandatory Stateless Discovery

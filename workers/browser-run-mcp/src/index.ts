@@ -27,7 +27,11 @@ export interface Env extends BrowserRunEnv {
 export const WORKER_NAME = "spike-browser-run-mcp";
 export const WORKER_VERSION = "2.0.0-mcp2026";
 export const CANONICAL_WORKER_URI = "https://spike-browser-run-mcp.spikeland.workers.dev";
-export const SUPPORTED_PROTOCOL_VERSIONS = ["2026-07-28"] as const;
+export const SUPPORTED_PROTOCOL_VERSIONS = [
+  "2026-07-28",
+  "2025-11-25",
+  "2024-11-05",
+] as const;
 
 const QUICK_ACTIONS_SET = new Set<BrowserRunQuickActionType>([
   "content",
@@ -159,6 +163,42 @@ export async function handleMcpJsonRpc(
 
   try {
     switch (method) {
+      case "initialize": {
+        const clientVersion =
+          typeof params.protocolVersion === "string" &&
+          SUPPORTED_PROTOCOL_VERSIONS.includes(
+            params.protocolVersion as (typeof SUPPORTED_PROTOCOL_VERSIONS)[number]
+          )
+            ? params.protocolVersion
+            : "2025-11-25";
+
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            protocolVersion: clientVersion,
+            supportedProtocolVersions: [...SUPPORTED_PROTOCOL_VERSIONS],
+            serverInfo: {
+              name: WORKER_NAME,
+              version: WORKER_VERSION,
+            },
+            capabilities: {
+              tools: {
+                listChanged: true,
+              },
+            },
+            _meta: {
+              "io.modelcontextprotocol/serverInfo": serverInfoMeta,
+            },
+          },
+        };
+      }
+
+      case "notifications/initialized":
+      case "notifications/cancelled": {
+        return null;
+      }
+
       case "server/discover": {
         return {
           jsonrpc: "2.0",

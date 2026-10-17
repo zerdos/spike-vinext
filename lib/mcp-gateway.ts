@@ -18,9 +18,11 @@ import { BROWSER_RUN_TOOLS, BROWSER_RUN_TOOL_NAMES } from "./browser-run";
 
 export { BROWSER_RUN_TOOLS, BROWSER_RUN_TOOL_NAMES };
 
-// Supported MCP Protocol Revision (Pure MCP 2026-07-28 Stateless Operating Model — SEP-2575)
+// Supported MCP Protocol Revisions (Dual-Era Stateless Operating Model: 2026-07-28 + 2025-11-25 / 2024-11-05)
 export const SUPPORTED_PROTOCOL_VERSIONS = [
   "2026-07-28",
+  "2025-11-25",
+  "2024-11-05",
 ] as const;
 
 export const CANONICAL_SERVER_URI = "https://spike.land/api/mcp";
@@ -2107,6 +2109,63 @@ export async function dispatchJsonRpc(
 
   try {
     switch (method) {
+      // Dual-Era Stateless Compatibility: Support MCP 2025-11-25 / 2024-11-05 'initialize' handshake
+      case "initialize": {
+        const clientVersion =
+          typeof params.protocolVersion === "string" &&
+          SUPPORTED_PROTOCOL_VERSIONS.includes(
+            params.protocolVersion as (typeof SUPPORTED_PROTOCOL_VERSIONS)[number]
+          )
+            ? params.protocolVersion
+            : "2025-11-25";
+
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            protocolVersion: clientVersion,
+            supportedProtocolVersions: [...SUPPORTED_PROTOCOL_VERSIONS],
+            serverInfo: {
+              name: "spike-land-gateway",
+              version: "2.0.0-mcp2026",
+            },
+            capabilities: {
+              tools: {
+                listChanged: true,
+              },
+            },
+            _meta: {
+              "io.modelcontextprotocol/serverInfo": serverInfoMeta,
+            },
+          },
+        };
+      }
+
+      case "notifications/initialized":
+      case "notifications/cancelled": {
+        return null;
+      }
+
+      case "resources/list": {
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            resources: [],
+          },
+        };
+      }
+
+      case "prompts/list": {
+        return {
+          jsonrpc: "2.0",
+          id,
+          result: {
+            prompts: [],
+          },
+        };
+      }
+
       // SEP-2575: Mandatory stateless discovery RPC
       case "server/discover": {
         return {

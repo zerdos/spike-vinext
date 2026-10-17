@@ -11,9 +11,9 @@ import { JSONRPCRequest, RequestContext, TransportHeaders } from "@/lib/mcp-type
 function getCorsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
     "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name",
+      "Content-Type, Authorization, Mcp-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name",
   };
 }
 
@@ -24,7 +24,22 @@ export async function OPTIONS() {
   });
 }
 
+export async function DELETE() {
+  return new Response(null, {
+    status: 204,
+    headers: getCorsHeaders(),
+  });
+}
+
 export async function GET(request: Request) {
+  const accept = request.headers.get("accept") || "";
+  if (accept.includes("text/event-stream") && !accept.includes("application/json")) {
+    return new Response(null, {
+      status: 405,
+      headers: getCorsHeaders(),
+    });
+  }
+
   const url = new URL(request.url);
   const gatewaySlug = url.searchParams.get("gateway") || undefined;
   const colo = (request as unknown as { cf?: { colo?: string } }).cf?.colo || "LHR";
@@ -122,6 +137,12 @@ export async function POST(request: Request) {
       const res = await dispatchJsonRpc(req as JSONRPCRequest, ctx);
       if (res) responses.push(res);
     }
+    if (responses.length === 0) {
+      return new Response(null, {
+        status: 202,
+        headers: getCorsHeaders(),
+      });
+    }
     return Response.json(responses, {
       headers: getCorsHeaders(),
     });
@@ -130,9 +151,9 @@ export async function POST(request: Request) {
   // Handle single request
   const response = await dispatchJsonRpc(body as JSONRPCRequest, ctx);
   if (!response) {
-    // Notification: return 204 or empty response
+    // Notification: return 202 Accepted per MCP Streamable HTTP specification
     return new Response(null, {
-      status: 204,
+      status: 202,
       headers: getCorsHeaders(),
     });
   }

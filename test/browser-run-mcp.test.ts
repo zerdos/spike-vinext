@@ -1120,13 +1120,31 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
       const mismatchJson = (await mismatchRes.json()) as { error: { code: number } };
       expect(mismatchJson.error.code).toBe(-32020);
 
-      // 5. SEP-2575 UnsupportedProtocolVersionError (-32022)
+      // 5. Dual-Era initialize (2025-11-25) + SEP-2575 UnsupportedProtocolVersionError (-32022)
+      const initRes = await browserRunWorker.fetch(
+        new Request("https://spike-browser-run-mcp.zolika84.workers.dev/mcp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 50,
+            method: "initialize",
+            params: { protocolVersion: "2025-11-25" },
+          }),
+        })
+      );
+      expect(initRes.status).toBe(200);
+      const initJson = (await initRes.json()) as { result: { protocolVersion: string } };
+      expect(initJson.result.protocolVersion).toBe("2025-11-25");
+
       const oldVerRes = await browserRunWorker.fetch(
         new Request("https://spike-browser-run-mcp.zolika84.workers.dev/mcp", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "MCP-Protocol-Version": "2024-11-05",
+            "MCP-Protocol-Version": "1999-01-01",
           },
           body: JSON.stringify({
             jsonrpc: "2.0",

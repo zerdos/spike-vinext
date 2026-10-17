@@ -16,9 +16,13 @@ import {
 import { GET as oauthResourceGet } from "@/app/.well-known/oauth-protected-resource/route";
 
 describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
-  describe("SEP-2575 Stateless Discovery & Protocol Version Enforcement (No Legacy Backwards Compatibility)", () => {
-    it("supports exclusively MCP 2026-07-28 and implements mandatory 'server/discover'", async () => {
-      expect(SUPPORTED_PROTOCOL_VERSIONS).toEqual(["2026-07-28"]);
+  describe("SEP-2575 Stateless Discovery & Dual-Era Protocol Version Compatibility", () => {
+    it("supports Dual-Era MCP protocol versions and implements mandatory 'server/discover'", async () => {
+      expect(SUPPORTED_PROTOCOL_VERSIONS).toEqual([
+        "2026-07-28",
+        "2025-11-25",
+        "2024-11-05",
+      ]);
       expect(GATEWAY_TOOL_NAMES).toEqual(BROKER_2026_TOOL_NAMES);
 
       const response = await dispatchJsonRpc(
@@ -40,17 +44,21 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
       };
       expect(result.resultType).toBe("complete");
       expect(result.protocolVersion).toBe("2026-07-28");
-      expect(result.supportedProtocolVersions).toEqual(["2026-07-28"]);
+      expect(result.supportedProtocolVersions).toEqual([
+        "2026-07-28",
+        "2025-11-25",
+        "2024-11-05",
+      ]);
       expect(result.capabilities.extensions).toHaveProperty("io.modelcontextprotocol/tasks");
       expect(result.capabilities.extensions).toHaveProperty("io.modelcontextprotocol/ui");
     });
 
-    it("rejects legacy protocol versions (e.g. 2024-11-05, 2025-11-25) with -32022 UnsupportedProtocolVersionError and HTTP 400", async () => {
+    it("rejects unknown protocol versions with -32022 UnsupportedProtocolVersionError and HTTP 400", async () => {
       const req = new Request("https://next.spike.land/api/mcp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "MCP-Protocol-Version": "2024-11-05",
+          "MCP-Protocol-Version": "1999-01-01",
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
@@ -66,23 +74,49 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
         error: { code: number; data: { supportedVersions: string[] } };
       };
       expect(json.error.code).toBe(-32022);
-      expect(json.error.data.supportedVersions).toEqual(["2026-07-28"]);
+      expect(json.error.data.supportedVersions).toEqual([
+        "2026-07-28",
+        "2025-11-25",
+        "2024-11-05",
+      ]);
     });
 
-    it("rejects removed stateful 'initialize' handshake with -32601 Method Not Found", async () => {
+    it("supports Dual-Era stateless 'initialize' (e.g. Antigravity 2025-11-25) and 'notifications/initialized'", async () => {
       const response = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
           id: 3,
           method: "initialize",
-          params: {},
+          params: {
+            protocolVersion: "2025-11-25",
+          },
         },
         {}
       );
 
-      expect(response?.error).toBeDefined();
-      expect(response?.error?.code).toBe(-32601);
-      expect(response?.error?.message).toContain("removed in MCP 2026-07-28");
+      expect(response?.error).toBeUndefined();
+      const result = response?.result as {
+        protocolVersion: string;
+        serverInfo: { name: string };
+        capabilities: { tools: { listChanged: boolean } };
+      };
+      expect(result.protocolVersion).toBe("2025-11-25");
+      expect(result.serverInfo.name).toBe("spike-land-gateway");
+      expect(result.capabilities.tools.listChanged).toBe(true);
+
+      const notifReq = new Request("https://next.spike.land/api/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "MCP-Protocol-Version": "2025-11-25",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          method: "notifications/initialized",
+        }),
+      });
+      const notifRes = await mcpPost(notifReq);
+      expect(notifRes.status).toBe(202);
     });
 
     it("handles 'subscriptions/listen' and 'ping' in stateless mode", async () => {
