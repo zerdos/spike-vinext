@@ -11,6 +11,20 @@ import {
   Check,
   ExternalLink,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 const CLIENT_ICONS: Record<string, React.ElementType> = {
   settings: Settings,
@@ -37,108 +51,99 @@ export function ClientConfigs() {
   };
 
   return (
-    <section id="get-connected" className="container mx-auto px-4 py-20 sm:py-32 border-t border-white/[0.05] relative overflow-hidden max-w-5xl">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-950/5 to-transparent pointer-events-none" />
-
-      <div className="text-center space-y-3 mb-12 relative z-10">
-        <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-white">
-          Get Connected
-        </h2>
-        <p className="text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto">
-          Integrate spike.land MCP with your favorite AI tools in seconds.
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex justify-center mb-8 overflow-x-auto pb-2 relative z-10">
-        <div
-          role="tablist"
-          className="bg-black/40 backdrop-blur-xl border border-white/10 p-1.5 rounded-full inline-flex gap-1.5 shadow-xl"
-        >
-          {CLIENT_CONFIGS.map((config) => {
-            const Icon = CLIENT_ICONS[config.icon] || Terminal;
-            const isActive = activeTabId === config.id;
-            return (
-              <button
-                key={config.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => {
-                  setActiveTabId(config.id);
-                  setCopied(false);
-                }}
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs sm:text-sm font-medium transition-all duration-300 ${
-                  isActive
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 shadow-md shadow-cyan-500/20 font-semibold"
-                    : "text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {config.name}
-              </button>
-            );
-          })}
+    <section
+      id="get-connected"
+      className="py-16 sm:py-24 border-b-2 border-[#111315] bg-secondary/30 scroll-mt-16"
+    >
+      <div className="mx-auto max-w-5xl px-4">
+        <div className="space-y-3 mb-10 pb-6 border-b border-[#111315]">
+          <h2 className="font-display text-3xl sm:text-5xl font-black tracking-tight text-foreground leading-[1.02]">
+            Get Connected
+          </h2>
+          <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch]">
+            Integrate spike.land MCP with your favorite AI tools in seconds.
+          </p>
         </div>
-      </div>
 
-      {/* Code Card */}
-      <div className="relative group max-w-3xl mx-auto z-10">
-        <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
-        <div className="relative glass-1 glass-edge rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-black/60 backdrop-blur-md">
-          {/* Top Bar */}
-          <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.02] px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5">
-                <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                <div className="h-3 w-3 rounded-full bg-green-500/80" />
+        {/* shadcn Tabs */}
+        <Tabs
+          value={activeTabId}
+          onValueChange={(val) => {
+            setActiveTabId(val);
+            setCopied(false);
+          }}
+        >
+          <div className="mb-6 overflow-x-auto pb-1">
+            <TabsList className="h-auto p-1.5 gap-1.5 bg-card border-2 border-[#111315]">
+              {CLIENT_CONFIGS.map((config) => {
+                const Icon = CLIENT_ICONS[config.icon] || Terminal;
+                return (
+                  <TabsTrigger
+                    key={config.id}
+                    value={config.id}
+                    className="px-4 py-2"
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {config.name}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
+
+          {/* Code Card */}
+          <Card className="border-2 border-[#111315] overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-[#111315] bg-[#111315] text-[#F5F4F0] px-5 py-3.5 space-y-0">
+              <div className="flex items-center gap-2.5">
+                <Badge variant="default" className="font-mono text-[10px]">
+                  CONFIG
+                </Badge>
+                <CardTitle className="font-mono text-xs font-semibold text-[#F5F4F0]">
+                  {activeConfig.filename}
+                </CardTitle>
               </div>
-              <span className="ml-3 font-mono text-xs text-zinc-400">
-                {activeConfig.filename}
+
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleCopy}
+                className="h-7 px-2.5 text-xs font-mono"
+                aria-label="Copy config snippet"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-[#0D7A5F]" />
+                    <span className="text-[#0D7A5F]">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </Button>
+            </CardHeader>
+
+            <CardContent className="p-5 bg-[#181B20] font-mono text-xs sm:text-sm overflow-x-auto leading-relaxed">
+              <pre className="text-[#F5F4F0]">
+                <code>{activeConfig.code}</code>
+              </pre>
+            </CardContent>
+
+            <CardFooter className="bg-card px-5 py-3 border-t border-[#111315] flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                Need an API key?
               </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-300 hover:text-white hover:bg-white/10 transition-colors"
-              aria-label="Copy config snippet"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Snippet */}
-          <div className="p-5 font-mono text-xs sm:text-sm overflow-x-auto leading-relaxed">
-            <pre className="text-zinc-200">
-              <code>{activeConfig.code}</code>
-            </pre>
-          </div>
-        </div>
-      </div>
-
-      {/* Need an API key footer note */}
-      <div className="text-center mt-10 relative z-10">
-        <a
-          href="#settings"
-          className="inline-flex items-center gap-2 text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors px-4 py-2 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10"
-        >
-          <span>Need an API key?</span>
-          <span className="text-cyan-400 flex items-center gap-1 font-medium underline underline-offset-4 decoration-cyan-400/40">
-            Go to Settings <ExternalLink className="h-3.5 w-3.5" />
-          </span>
-        </a>
+              <Button variant="link" size="sm" asChild className="h-auto p-0 text-xs">
+                <a href="/waitlist">
+                  <span>Go to Settings / Waitlist</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </Button>
+            </CardFooter>
+          </Card>
+        </Tabs>
       </div>
     </section>
   );

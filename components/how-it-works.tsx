@@ -1,4 +1,18 @@
-import { Plug, Search, Zap, Check } from "lucide-react";
+import { Plug, Search, Zap, Check, Circle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
 
 interface StepTool {
   name: string;
@@ -73,80 +87,92 @@ export function HowItWorks() {
   ];
 
   return (
-    <section className="relative py-20 sm:py-32 overflow-hidden border-t border-white/[0.05]">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-950/10 to-transparent pointer-events-none" />
-
-      <div className="container relative mx-auto px-4 max-w-7xl">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-3">
-            Architecture
+    <section
+      id="how-it-works"
+      className="py-16 sm:py-24 border-b-2 border-[#111315] bg-secondary/40 scroll-mt-16"
+    >
+      <div className="mx-auto max-w-7xl px-4">
+        {/* Heading leads first, description and badge below */}
+        <div className="mb-12 pb-6 border-b border-[#111315] flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="space-y-3 max-w-2xl">
+            <h2 className="font-display text-3xl sm:text-5xl font-black text-foreground tracking-tight leading-[1.02]">
+              How It Works
+            </h2>
+            <p className="text-base text-muted-foreground leading-relaxed max-w-[65ch]">
+              Progressive Context Disclosure keeps your agent fast and focused. Tools load only when needed.
+            </p>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-bold text-white tracking-tight mb-4">
-            How It Works
-          </h2>
-          <p className="text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Progressive Context Disclosure keeps your agent fast and focused. Tools load only when needed.
-          </p>
+          <Badge variant="secondary" className="self-start sm:self-end">
+            Architecture
+          </Badge>
         </div>
 
-        <div className="relative">
-          {/* Connector Line on desktop */}
-          <div className="hidden lg:block absolute top-6 left-1/6 right-1/6 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {steps.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.step} className="flex flex-col items-center">
-                  {/* Step Bubble */}
-                  <div className="relative mb-6">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center backdrop-blur-sm">
-                      <span className="text-lg font-bold text-white">{item.step}</span>
-                    </div>
-                    <div className="absolute -inset-2 rounded-full bg-cyan-500/10 blur-lg -z-10" />
-                  </div>
-
-                  {/* Card */}
-                  <div className="glass-1 glass-edge rounded-2xl w-full max-w-sm p-6 shadow-xl border border-white/10 text-left hover:border-cyan-400/30 transition-all duration-300">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 text-cyan-400">
-                        <Icon className="w-5 h-5" />
-                        <span className="font-bold tracking-tight text-white text-lg">{item.title}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {steps.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Card
+                key={item.step}
+                className="border-2 border-[#111315] overflow-hidden flex flex-col justify-between"
+              >
+                <div>
+                  <CardHeader className="bg-secondary/70 border-b border-[#111315] p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-[#111315] text-[#F5F4F0] font-mono text-sm font-bold">
+                          {item.step}
+                        </span>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          <Icon className="w-4 h-4 text-primary" />
+                          <span>{item.title}</span>
+                        </CardTitle>
                       </div>
-                      <span className="text-xs font-semibold font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-400/20">
+                      <Badge variant="cobalt" className="font-mono">
                         {item.badge}
-                      </span>
+                      </Badge>
                     </div>
-
-                    <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed mb-6">
+                    <CardDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                       {item.description}
-                    </p>
+                    </CardDescription>
+                  </CardHeader>
 
-                    <div className="space-y-1.5 pt-2 border-t border-white/[0.06]">
-                      {item.tools.map((t) => (
-                        <div
-                          key={t.name}
-                          className={`flex items-center gap-2 text-xs font-mono ${
-                            t.highlight ? "text-cyan-300" : "text-zinc-400"
-                          }`}
-                        >
-                          {t.checked ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          ) : (
-                            <span className="w-2.5 h-2.5 rounded-full border border-white/20 shrink-0" />
-                          )}
-                          <span className="truncate">{t.name}</span>
-                        </div>
-                      ))}
-                      {item.more && (
-                        <div className="text-xs text-zinc-500 pl-4 font-mono">{item.more}</div>
-                      )}
-                    </div>
-                  </div>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableBody>
+                        {item.tools.map((t) => (
+                          <TableRow key={t.name}>
+                            <TableCell className="py-2 px-4 flex items-center gap-2.5 font-mono text-xs">
+                              {t.checked ? (
+                                <Check className="w-3.5 h-3.5 text-[#0D7A5F] shrink-0" />
+                              ) : (
+                                <Circle className="w-2.5 h-2.5 text-muted-foreground shrink-0" />
+                              )}
+                              <span
+                                className={
+                                  t.highlight
+                                    ? "font-bold text-primary"
+                                    : "text-foreground"
+                                }
+                              >
+                                {t.name}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {item.more && (
+                          <TableRow>
+                            <TableCell className="py-2 px-4 font-mono text-xs text-muted-foreground">
+                              {item.more}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
                 </div>
-              );
-            })}
-          </div>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>

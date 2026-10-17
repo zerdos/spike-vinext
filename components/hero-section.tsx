@@ -1,7 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { Wrench, LayoutGrid, Zap, ArrowDown, Copy, Check } from "lucide-react";
+import { Wrench, LayoutGrid, Zap, ArrowDown, Copy, Check, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+const INITIAL_GATEWAY_SUITE = [
+  { idx: "01", name: "search_tools", role: "Semantic & keyword catalog search", footprint: "118 tok" },
+  { idx: "02", name: "list_categories", role: "Enumerate 88 domain tool groups", footprint: "94 tok" },
+  { idx: "03", name: "enable_category", role: "Mount category schemas on demand", footprint: "112 tok" },
+  { idx: "04", name: "get_balance", role: "Inspect execution quota & rate state", footprint: "86 tok" },
+  { idx: "05", name: "get_status", role: "Edge isolate colo & latency telemetry", footprint: "92 tok" },
+];
 
 export function HeroSection() {
   const [copied, setCopied] = useState(false);
@@ -28,132 +53,203 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-[92vh] flex items-center justify-center pt-28 pb-20 sm:pt-36 sm:pb-28 overflow-hidden">
-      {/* Background ambient light blobs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div
-          className="absolute w-[600px] h-[600px] rounded-full bg-cyan-500/[0.08] blur-[140px] animate-float-slow"
-          style={{ top: "5%", left: "15%" }}
-        />
-        <div
-          className="absolute w-[500px] h-[500px] rounded-full bg-purple-500/[0.08] blur-[150px] animate-float-slow-reverse"
-          style={{ top: "40%", right: "15%" }}
-        />
-        <div
-          className="absolute w-[400px] h-[400px] rounded-full bg-pink-500/[0.05] blur-[120px]"
-          style={{ bottom: "5%", left: "40%" }}
-        />
-      </div>
+    <section className="border-b-2 border-[#111315] bg-background">
+      <div className="mx-auto max-w-7xl xl:border-x-2 xl:border-[#111315]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 lg:divide-x-2 lg:divide-[#111315] items-stretch">
+          {/* Left 7 Columns: Primary Thesis, Subcopy, and Ruled Index Table */}
+          <div className="lg:col-span-7 min-w-0 p-4 py-10 sm:p-8 lg:p-10 flex flex-col justify-between space-y-8 border-b-2 lg:border-b-0 border-[#111315]">
+            <div className="space-y-6">
+              <h1 className="font-display text-4xl sm:text-7xl lg:text-[5.25rem] font-black text-foreground leading-[0.94] tracking-[-0.03em] balance">
+                455 AI Tools.
+                <br />
+                <span className="text-primary underline decoration-[#111315] decoration-4 underline-offset-8">
+                  One Protocol.
+                </span>
+              </h1>
 
-      <div className="container relative mx-auto px-4 text-center z-10 max-w-5xl">
-        {/* Shimmering Badge */}
-        <div className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-xs text-cyan-400 mb-8 backdrop-blur-xl overflow-hidden shadow-2xl hover:bg-white/[0.07] transition-all cursor-default">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/10 to-transparent animate-shimmer pointer-events-none" />
-          <div className="inline-flex items-center relative" role="img" aria-label="Progressive Disclosure MCP logo">
-            <svg width="24" height="18" viewBox="0 0 84 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0" aria-hidden="true">
-              <rect x="0" y="0" width="84" height="60" rx="8" fill="#1e293b" />
-              <rect x="10" y="15" width="12" height="6" rx="3" fill="#00E5FF" />
-              <rect x="10" y="27" width="20" height="6" rx="3" fill="#A855F7" />
-              <rect x="10" y="39" width="28" height="6" rx="3" fill="#EC4899" />
-              <text x="74" y="40" textAnchor="end" fill="white" fontFamily="monospace" fontSize="16" fontWeight="bold">
-                MCP
-              </text>
-            </svg>
-          </div>
-          <span className="font-semibold tracking-wider uppercase text-[11px] relative text-cyan-300">
-            Progressive Disclosure MCP
-          </span>
-        </div>
-
-        {/* Main Headline */}
-        <div className="relative inline-block py-2">
-          <div className="absolute -inset-10 bg-cyan-500/15 blur-[90px] rounded-full pointer-events-none mix-blend-screen" />
-          <h1 className="relative text-5xl sm:text-7xl md:text-8xl font-black text-white max-w-5xl mx-auto leading-none mb-6 tracking-tight drop-shadow-2xl">
-            455 AI Tools.
-            <br />
-            <span className="bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-black drop-shadow-[0_0_40px_rgba(168,85,247,0.4)]">
-              One Protocol.
-            </span>
-          </h1>
-        </div>
-
-        {/* Subhead */}
-        <p className="text-base sm:text-xl text-zinc-300 max-w-2xl mx-auto mb-12 font-light leading-relaxed">
-          Spike Land&apos;s MCP server uses{" "}
-          <span className="text-white font-medium underline decoration-cyan-400/40 underline-offset-4">
-            Progressive Context Disclosure
-          </span>{" "}
-          — agents start with 5 lightweight gateway tools and progressively discover 455 tools across 88 categories.
-        </p>
-
-        {/* Metrics Row */}
-        <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 mb-12">
-          <div className="glass-1 glass-edge rounded-2xl px-6 py-4 flex items-center gap-4 min-w-[170px] shadow-lg">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-400/20 flex items-center justify-center shrink-0">
-              <Wrench className="w-5 h-5 text-cyan-400" />
-            </div>
-            <div className="text-left">
-              <div className="text-2xl font-black tracking-tight text-white">455</div>
-              <div className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Tools</div>
-            </div>
-          </div>
-
-          <div className="glass-1 glass-edge rounded-2xl px-6 py-4 flex items-center gap-4 min-w-[170px] shadow-lg">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-400/20 flex items-center justify-center shrink-0">
-              <LayoutGrid className="w-5 h-5 text-purple-400" />
-            </div>
-            <div className="text-left">
-              <div className="text-2xl font-black tracking-tight text-white">88</div>
-              <div className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Categories</div>
-            </div>
-          </div>
-
-          <div className="glass-1 glass-edge rounded-2xl px-6 py-4 flex items-center gap-4 min-w-[170px] shadow-lg">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center shrink-0">
-              <Zap className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div className="text-left">
-              <div className="text-2xl font-black tracking-tight text-white">5</div>
-              <div className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Gateway Tools</div>
-            </div>
-          </div>
-        </div>
-
-        {/* .mcp.json Snippet Card */}
-        <div className="max-w-md mx-auto mb-10">
-          <div className="glass-1 glass-edge rounded-2xl border border-white/10 p-4 text-left shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                <span className="ml-2 text-[11px] text-zinc-400 font-mono">.mcp.json</span>
+              {/* Protocol Status Strip (placed below h1 per craft floor) */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Badge variant="outline" className="px-3 py-1 bg-card">
+                  <span
+                    className="inline-flex items-center mr-1.5"
+                    role="img"
+                    aria-label="Progressive Disclosure MCP logo"
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full bg-primary animate-dispatch-pulse" />
+                  </span>
+                  <span>Progressive Disclosure MCP</span>
+                </Badge>
+                <Badge variant="cobalt" className="font-mono">
+                  CLOUDFLARE V8 ISOLATES
+                </Badge>
+                <Badge variant="emerald" className="font-mono">
+                  -98.7% PROMPT OVERHEAD
+                </Badge>
               </div>
-              <button
-                type="button"
-                onClick={copyConfig}
-                className="flex items-center gap-1 text-[11px] font-mono text-zinc-400 hover:text-white px-2 py-0.5 rounded hover:bg-white/10 transition-colors"
-                aria-label="Copy .mcp.json snippet"
-              >
-                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copied ? "Copied" : "Copy"}</span>
-              </button>
-            </div>
-            <pre className="text-xs font-mono text-zinc-300 leading-relaxed overflow-x-auto p-1">
-              <code>{mcpConfig}</code>
-            </pre>
-          </div>
-        </div>
 
-        {/* Explore Tools Button */}
-        <div>
-          <a
-            href="#playground"
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-full text-sm font-semibold tracking-wide border border-white/10 bg-white/5 hover:bg-white/10 h-11 px-6 py-2 text-zinc-300 hover:text-white gap-2 group transition-all duration-300 shadow-md"
-          >
-            Explore Tools
-            <ArrowDown className="w-4 h-4 transition-transform group-hover:translate-y-1 text-cyan-400" />
-          </a>
+              <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch] leading-relaxed">
+                Spike Land&apos;s MCP server uses{" "}
+                <strong className="text-foreground font-semibold underline decoration-primary decoration-2 underline-offset-4">
+                  Progressive Context Disclosure
+                </strong>{" "}
+                — agents start with 5 lightweight gateway tools and progressively discover 455 tools across 88 categories strictly when the task requires them.
+              </p>
+            </div>
+
+            {/* 3-Cell Ruled Index Table (Chivo 900 numeral leads, label + sector coordinate below, zero decorative icons) */}
+            <Card className="overflow-hidden rounded-xl border-2 border-[#111315]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y-2 sm:divide-y-0 sm:divide-x-2 divide-[#111315]">
+                <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
+                  <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-foreground tabular-nums leading-none">
+                    455
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-foreground">
+                    Tools
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
+                    <span>SEC 01 // CATALOG</span>
+                    <span className="text-primary">ON-DEMAND</span>
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
+                  <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-foreground tabular-nums leading-none">
+                    88
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-foreground">
+                    Categories
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
+                    <span>SEC 02 // TAXONOMY</span>
+                    <span className="text-[#0047BB]">INDEXED</span>
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
+                  <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-primary tabular-nums leading-none">
+                    5
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-foreground">
+                    Gateway Tools
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
+                    <span>SEC 03 // ENTRY</span>
+                    <span className="text-[#0D7A5F]">~502 TOK</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Primary Viewport Actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="lg" variant="default" asChild>
+                <a href="#playground">
+                  Explore Tools
+                  <ArrowDown className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <a href="/waitlist">
+                  Reserve Early Access Key
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </Button>
+              <Button size="lg" variant="secondary" asChild>
+                <a href="#simulator">Calculate Token ROI</a>
+              </Button>
+            </div>
+          </div>
+
+          {/* Right 5 Columns: Live Gateway Dispatch Schedule + .mcp.json Config Card */}
+          <div className="lg:col-span-5 min-w-0 p-4 py-10 sm:p-8 lg:p-10 bg-secondary/40 flex flex-col gap-5">
+            <Card className="border-2 border-[#111315] overflow-hidden flex-1 flex flex-col justify-between">
+              <CardHeader className="bg-[#111315] text-[#F5F4F0] py-4 px-5 border-b border-[#111315]">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="text-base font-bold text-[#F5F4F0]">
+                    Initial Gateway Dispatch Suite
+                  </CardTitle>
+                  <Badge variant="default" className="font-mono text-[10px]">
+                    ~502 TOKENS (5 GATEWAY TOOLS)
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-0 min-w-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-3 sm:px-4">Gateway Tool</TableHead>
+                      <TableHead className="px-3 sm:px-4">Dispatch Role</TableHead>
+                      <TableHead className="px-3 sm:px-4 text-right whitespace-nowrap">Schema</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {INITIAL_GATEWAY_SUITE.map((item) => (
+                      <TableRow key={item.name}>
+                        <TableCell className="px-3 sm:px-4 font-mono text-xs font-bold text-[#0047BB] whitespace-nowrap">
+                          <span className="text-muted-foreground mr-1.5 font-normal">{item.idx}.</span>
+                          {item.name}
+                        </TableCell>
+                        <TableCell className="px-3 sm:px-4 text-xs text-muted-foreground">
+                          {item.role}
+                        </TableCell>
+                        <TableCell className="px-3 sm:px-4 text-right font-mono text-xs font-semibold text-[#0D7A5F] whitespace-nowrap">
+                          {item.footprint}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+
+              {/* .mcp.json Snippet Panel */}
+              <div className="border-t-2 border-[#111315] bg-[#111315] text-[#F5F4F0] p-4 sm:p-5 min-w-0">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    <span className="font-mono text-xs font-semibold text-[#F5F4F0]">
+                      .mcp.json
+                    </span>
+                    <span className="font-mono text-[11px] text-[#B8BDC7]">
+                      — Streamable HTTP
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={copyConfig}
+                    className="h-7 px-2.5 text-xs font-mono"
+                    aria-label="Copy .mcp.json snippet"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3 w-3 text-[#0D7A5F]" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <pre className="text-xs font-mono text-[#F5F4F0] leading-relaxed overflow-x-auto p-3 rounded-md bg-[#1B1E23] border border-[#343942]">
+                  <code>{mcpConfig}</code>
+                </pre>
+              </div>
+
+              <CardFooter className="bg-secondary px-5 py-3 border-t border-[#111315] flex items-center justify-between text-xs">
+                <span className="font-medium text-foreground">
+                  Zero local Docker containers required
+                </span>
+                <span className="font-mono font-semibold text-[#0D7A5F]">
+                  300+ Edge Colos
+                </span>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
       </div>
     </section>

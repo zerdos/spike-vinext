@@ -14,8 +14,22 @@ import {
   Shield,
   Layers,
   ArrowLeft,
-  ChevronDown,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 interface WaitlistTicket {
   position: number;
@@ -81,13 +95,18 @@ export default function WaitlistPage() {
       if (res.ok && data.ticket) {
         setTicket(data.ticket);
       } else {
-        setErrorMessage(data.error || "Unable to join waitlist. Please try again.");
+        setErrorMessage(
+          data.error || "Unable to join waitlist. Please try again."
+        );
       }
     } catch {
       // Offline fallback
       setTicket({
         position: 429,
-        referralCode: `SPK-429-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        referralCode: `SPK-429-${Math.random()
+          .toString(36)
+          .substring(2, 6)
+          .toUpperCase()}`,
         email,
         name: name || undefined,
         createdAt: new Date().toISOString(),
@@ -117,306 +136,376 @@ export default function WaitlistPage() {
     const url = encodeURIComponent(
       `${window.location.origin}/waitlist?ref=${ticket.referralCode}`
     );
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
+    window.open(
+      `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+      "_blank"
+    );
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-foreground flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
 
-      <main className="flex-1 pt-24 pb-20">
-        <div className="container mx-auto px-4 max-w-4xl">
-          {/* Breadcrumb / Back button */}
+      <main className="flex-1 py-12 sm:py-16">
+        <div className="mx-auto px-4 max-w-4xl">
+          {/* Back button using shadcn Button */}
           <div className="mb-8">
-            <a
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Home
-            </a>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/">
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to Home
+              </a>
+            </Button>
           </div>
 
           {!ticket ? (
             /* Signup View */
-            <div className="space-y-12">
-              {/* Header Box */}
-              <div className="text-center space-y-4">
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/20 text-cyan-300 text-xs font-semibold backdrop-blur-md">
-                  <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                  Early Developer Preview • Cohort 2
-                </div>
-                <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight">
-                  Join the <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">Waiting List</span>
+            <div className="space-y-10">
+              {/* Header Box: h1 leads first, Badge below per craft floor */}
+              <div className="space-y-4 pb-6 border-b-2 border-[#111315]">
+                <h1 className="font-display text-4xl sm:text-6xl font-black text-foreground tracking-tight leading-[0.96]">
+                  Join the <span className="text-primary">Waiting List</span>
                 </h1>
-                <p className="text-base sm:text-lg text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch] leading-relaxed">
                   Be the first to build with Spike Land&apos;s edge-native MCP gateway. Get instant access to 455+ progressive tools, zero setup overhead, and 100,000 free monthly executions.
                 </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Badge variant="default">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Early Developer Preview • Cohort 2
+                  </Badge>
+                  <Badge variant="outline" className="font-mono">
+                    BATCH ALPHA-2
+                  </Badge>
+                </div>
               </div>
 
-              {/* Value Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="glass-1 glass-edge rounded-2xl p-4 border border-white/10 text-center">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-400/20 flex items-center justify-center mx-auto mb-2.5">
-                    <Zap className="w-4 h-4 text-cyan-400" />
+              {/* Value Specification Row (Numeral-led timetable strip, zero decorative icons) */}
+              <Card className="border-2 border-[#111315] overflow-hidden">
+                <div className="grid grid-cols-1 sm:grid-cols-3 divide-y-2 sm:divide-y-0 sm:divide-x-2 divide-[#111315]">
+                  <div className="p-5 bg-card flex flex-col justify-between space-y-2">
+                    <div>
+                      <div className="font-display text-3xl font-black tracking-tight text-primary tabular-nums leading-none">
+                        100,000
+                      </div>
+                      <h4 className="mt-2 text-foreground text-sm font-bold">
+                        100k Free Calls
+                      </h4>
+                      <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
+                        Monthly execution quota included for all early preview developers.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-[#C8C5BC] font-mono text-[10px] font-semibold text-muted-foreground">
+                      SEC 01 // MONTHLY QUOTA
+                    </div>
                   </div>
-                  <h4 className="text-white text-sm font-bold mb-1">100k Free Calls</h4>
-                  <p className="text-zinc-400 text-xs">Monthly execution quota included for all early preview developers.</p>
-                </div>
-                <div className="glass-1 glass-edge rounded-2xl p-4 border border-white/10 text-center">
-                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-400/20 flex items-center justify-center mx-auto mb-2.5">
-                    <Layers className="w-4 h-4 text-purple-400" />
+
+                  <div className="p-5 bg-card flex flex-col justify-between space-y-2">
+                    <div>
+                      <div className="font-display text-3xl font-black tracking-tight text-[#0047BB] tabular-nums leading-none">
+                        -98.2%
+                      </div>
+                      <h4 className="mt-2 text-foreground text-sm font-bold">
+                        98.2% Token Savings
+                      </h4>
+                      <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
+                        Progressive context disclosure loads tool schemas strictly on demand.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-[#C8C5BC] font-mono text-[10px] font-semibold text-muted-foreground">
+                      SEC 02 // CONTEXT OVERHEAD
+                    </div>
                   </div>
-                  <h4 className="text-white text-sm font-bold mb-1">98.2% Token Savings</h4>
-                  <p className="text-zinc-400 text-xs">Progressive context disclosure loads tool schemas strictly on demand.</p>
-                </div>
-                <div className="glass-1 glass-edge rounded-2xl p-4 border border-white/10 text-center">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-2.5">
-                    <Shield className="w-4 h-4 text-emerald-400" />
+
+                  <div className="p-5 bg-card flex flex-col justify-between space-y-2">
+                    <div>
+                      <div className="font-display text-3xl font-black tracking-tight text-[#0D7A5F] tabular-nums leading-none">
+                        &lt; 5ms
+                      </div>
+                      <h4 className="mt-2 text-foreground text-sm font-bold">
+                        Cloudflare Edge
+                      </h4>
+                      <p className="mt-1 text-muted-foreground text-xs leading-relaxed">
+                        Globally distributed V8 isolates with sub-5ms edge dispatch latency.
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-[#C8C5BC] font-mono text-[10px] font-semibold text-muted-foreground">
+                      SEC 03 // V8 ISOLATE COLOS
+                    </div>
                   </div>
-                  <h4 className="text-white text-sm font-bold mb-1">Cloudflare Edge</h4>
-                  <p className="text-zinc-400 text-xs">Globally distributed V8 isolates with sub-5ms edge dispatch latency.</p>
                 </div>
-              </div>
+              </Card>
 
               {/* Form Card */}
-              <div className="glass-1 glass-edge rounded-3xl p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden">
-                <div className="absolute -inset-10 bg-cyan-500/10 blur-[90px] rounded-full pointer-events-none" />
+              <Card className="border-2 border-[#111315] overflow-hidden">
+                <CardHeader className="bg-secondary/60 border-b border-[#111315] p-6">
+                  <CardTitle className="text-lg">
+                    Developer Dispatch Registration
+                  </CardTitle>
+                  <CardDescription>
+                    Complete your profile to reserve an API key in the next weekly rollout.
+                  </CardDescription>
+                </CardHeader>
 
-                <form onSubmit={handleSubmit} className="relative z-10 space-y-6">
-                  {errorMessage && (
-                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
-                      {errorMessage}
-                    </div>
-                  )}
+                <CardContent className="p-6 sm:p-8">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {errorMessage && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{errorMessage}</AlertDescription>
+                      </Alert>
+                    )}
 
-                  {/* Email & Name */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                        Work or Developer Email <span className="text-cyan-400">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="you@company.com"
-                        required
-                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all"
-                      />
+                    {/* Email & Name */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="waitlist-email">
+                          Work or Developer Email{" "}
+                          <span className="text-primary">*</span>
+                        </Label>
+                        <Input
+                          id="waitlist-email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@company.com"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="waitlist-name">
+                          Your Name / Handle{" "}
+                          <span className="text-muted-foreground font-normal">
+                            (Optional)
+                          </span>
+                        </Label>
+                        <Input
+                          id="waitlist-name"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Jane Developer"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                        Your Name / Handle <span className="text-zinc-500">(Optional)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Jane Developer"
-                        className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all"
-                      />
-                    </div>
-                  </div>
 
-                  {/* Primary MCP Client */}
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-300 mb-2">
-                      Primary AI Client or Environment
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {CLIENT_OPTIONS.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setClient(opt)}
-                          className={`text-left px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
-                            client === opt
-                              ? "bg-cyan-500/20 text-cyan-300 border-cyan-400/40 shadow-sm"
-                              : "bg-white/[0.03] text-zinc-400 border-white/10 hover:text-white hover:bg-white/[0.06]"
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      ))}
+                    {/* Primary MCP Client */}
+                    <div className="space-y-2">
+                      <Label className="block">
+                        Primary AI Client or Environment
+                      </Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {CLIENT_OPTIONS.map((opt) => (
+                          <Button
+                            key={opt}
+                            type="button"
+                            variant={client === opt ? "ink" : "outline"}
+                            size="sm"
+                            onClick={() => setClient(opt)}
+                            className="justify-start text-xs"
+                          >
+                            {opt}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Primary Use Case */}
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                      What are you primarily building?
-                    </label>
-                    <div className="relative">
-                      <select
+                    {/* Primary Use Case */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="waitlist-use-case">
+                        What are you primarily building?
+                      </Label>
+                      <NativeSelect
+                        id="waitlist-use-case"
                         value={useCase}
                         onChange={(e) => setUseCase(e.target.value)}
-                        className="w-full appearance-none bg-black/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all cursor-pointer pr-10"
                       >
                         {USE_CASES.map((uc) => (
-                          <option key={uc} value={uc} className="bg-zinc-900 text-white">
+                          <option key={uc} value={uc}>
                             {uc}
                           </option>
                         ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-zinc-400 absolute right-3.5 top-3 pointer-events-none" />
+                      </NativeSelect>
                     </div>
-                  </div>
 
-                  {/* GitHub Username (Priority Queue) */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold text-zinc-300">
-                        GitHub Username <span className="text-zinc-500">(Optional)</span>
-                      </label>
-                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                        Priority Queue
-                      </span>
+                    {/* GitHub Username (Priority Queue) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="waitlist-github">
+                          GitHub Username{" "}
+                          <span className="text-muted-foreground font-normal">
+                            (Optional)
+                          </span>
+                        </Label>
+                        <Badge variant="emerald" className="font-mono text-[10px]">
+                          Priority Queue
+                        </Badge>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-2.5 text-xs text-muted-foreground font-mono">
+                          @
+                        </span>
+                        <Input
+                          id="waitlist-github"
+                          type="text"
+                          value={githubUsername}
+                          onChange={(e) => setGithubUsername(e.target.value)}
+                          placeholder="octocat"
+                          className="pl-8 font-mono"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Active open-source contributors and developers receive fast-track cohort invites.
+                      </p>
                     </div>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-2.5 text-xs text-zinc-500 font-mono">@</span>
-                      <input
-                        type="text"
-                        value={githubUsername}
-                        onChange={(e) => setGithubUsername(e.target.value)}
-                        placeholder="octocat"
-                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all font-mono"
-                      />
-                    </div>
-                    <p className="text-[11px] text-zinc-500 mt-1">
-                      Active open-source contributors and developers receive fast-track cohort invites.
-                    </p>
-                  </div>
 
-                  {/* Submit Button */}
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 px-6 text-sm font-semibold tracking-wide bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:brightness-110 active:scale-[0.99] transition-all disabled:opacity-50"
-                    >
-                      {loading ? (
-                        <>
-                          <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <Separator />
+
+                    {/* Submit Button */}
+                    <div className="space-y-3">
+                      <Button
+                        type="submit"
+                        size="lg"
+                        variant="default"
+                        disabled={loading}
+                        className="w-full"
+                      >
+                        {loading ? (
                           <span>Reserving Your Position...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Join Developer Waiting List</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                    <p className="text-center text-[11px] text-zinc-500 mt-3">
-                      No spam. We will only contact you when your early access API key is ready.
-                    </p>
-                  </div>
-                </form>
-              </div>
+                        ) : (
+                          <>
+                            <span>Join Developer Waiting List</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-center text-xs text-muted-foreground">
+                        No spam. We will only contact you when your early access API key is ready.
+                      </p>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           ) : (
-            /* Confirmation Ticket View */
-            <div className="space-y-8 animate-in fade-in-50 duration-500">
+            /* Confirmation Ticket View (Swiss Railway Boarding Pass) */
+            <div className="space-y-8">
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-400/30 flex items-center justify-center mx-auto text-emerald-400">
-                  <Check className="w-8 h-8" />
+                <div className="w-14 h-14 rounded-full bg-[#ECFDF5] border-2 border-[#0D7A5F] flex items-center justify-center mx-auto text-[#0D7A5F]">
+                  <Check className="w-7 h-7" />
                 </div>
-                <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+                <h2 className="font-display text-3xl sm:text-5xl font-black text-foreground tracking-tight">
                   You&apos;re on the list!
                 </h2>
-                <p className="text-zinc-300 text-sm sm:text-base max-w-md mx-auto">
+                <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto">
                   We&apos;ve reserved your early access spot. Invites are being rolled out in weekly batches.
                 </p>
               </div>
 
-              {/* Digital Boarding Pass Ticket */}
-              <div className="glass-1 glass-edge rounded-3xl border border-white/10 shadow-2xl p-6 sm:p-8 max-w-lg mx-auto relative overflow-hidden bg-gradient-to-b from-[#131c2e] to-[#0c121d]">
-                <div className="flex items-center justify-between pb-6 border-b border-dashed border-white/10">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-cyan-400 fill-cyan-400" />
-                    <span className="font-bold text-white tracking-tight font-mono">spike.land</span>
+              {/* Swiss SBB Perforated Boarding Pass Card */}
+              <Card className="border-2 border-[#111315] max-w-lg mx-auto overflow-hidden">
+                <CardHeader className="bg-[#111315] text-[#F5F4F0] p-6 border-b-2 border-dashed border-[#4B5563]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary fill-primary" />
+                      <span className="font-bold text-[#F5F4F0] tracking-tight font-mono">
+                        spike.land
+                      </span>
+                    </div>
+                    <Badge variant="emerald" className="font-mono uppercase">
+                      Confirmed
+                    </Badge>
                   </div>
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    Confirmed
-                  </span>
-                </div>
+                </CardHeader>
 
-                <div className="py-6 space-y-4">
+                <CardContent className="p-6 space-y-6 bg-card">
                   <div className="flex items-baseline justify-between">
                     <div>
-                      <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-medium">Your Position</div>
-                      <div className="text-4xl sm:text-5xl font-black text-white font-mono tracking-tight text-cyan-400">
+                      <div className="text-4xl sm:text-5xl font-black text-primary font-mono tracking-tight tabular-nums">
                         #{ticket.position}
+                      </div>
+                      <div className="text-xs font-semibold text-muted-foreground mt-1">
+                        Your Position
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[11px] uppercase tracking-wider text-zinc-400 font-medium">Cohort Batch</div>
-                      <div className="text-lg font-bold text-white">Alpha-2</div>
+                      <div className="text-xl font-bold text-foreground font-mono">
+                        Alpha-2
+                      </div>
+                      <div className="text-xs font-semibold text-muted-foreground mt-1">
+                        Cohort Batch
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#C8C5BC]">
                     <div>
-                      <div className="text-[10px] uppercase text-zinc-500 font-mono">Registered Email</div>
-                      <div className="text-xs text-zinc-200 font-mono truncate">{ticket.email}</div>
+                      <div className="text-xs font-mono font-semibold text-foreground truncate">
+                        {ticket.email}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Registered Email
+                      </div>
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase text-zinc-500 font-mono">Referral Code</div>
-                      <div className="text-xs text-cyan-300 font-mono font-bold">{ticket.referralCode}</div>
+                      <div className="text-xs text-[#0047BB] font-mono font-bold">
+                        {ticket.referralCode}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Referral Code
+                      </div>
                     </div>
                   </div>
-                </div>
+                </CardContent>
 
-                {/* Referral sharing */}
-                <div className="pt-6 border-t border-dashed border-white/10 space-y-3">
-                  <div className="text-xs font-semibold text-zinc-300">
+                <CardFooter className="p-6 bg-secondary/60 border-t-2 border-dashed border-[#111315] flex flex-col items-stretch gap-3">
+                  <div className="text-xs font-semibold text-foreground">
                     Move up the queue by inviting teammates:
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={copyReferral}
-                      className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 py-2.5 px-3 text-xs font-mono text-zinc-200 transition-colors"
+                      className="flex-1 font-mono text-xs"
                     >
                       {copiedLink ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400 font-bold">Link Copied!</span>
+                          <Check className="w-3.5 h-3.5 text-[#0D7A5F]" />
+                          <span className="text-[#0D7A5F] font-bold">
+                            Link Copied!
+                          </span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3.5 h-3.5 text-zinc-400" />
+                          <Copy className="w-3.5 h-3.5" />
                           <span>Copy Invite Link</span>
                         </>
                       )}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="cobalt"
                       onClick={tweetShare}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#1d9bf0]/20 border border-[#1d9bf0]/30 hover:bg-[#1d9bf0]/30 text-[#1d9bf0] py-2.5 px-4 text-xs font-semibold transition-colors shrink-0"
+                      className="shrink-0 text-xs"
                     >
                       <Share2 className="w-3.5 h-3.5" />
                       <span>Post</span>
-                    </button>
+                    </Button>
                   </div>
-                </div>
-              </div>
+                </CardFooter>
+              </Card>
 
               {/* Action buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-                <a
-                  href="/#playground"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg hover:brightness-110 transition-all"
-                >
-                  <Terminal className="w-4 h-4" />
-                  Explore Live MCP Playground
-                </a>
-                <a
-                  href="/"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-semibold border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-all"
-                >
-                  Return to Home
-                </a>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <Button variant="default" asChild className="w-full sm:w-auto">
+                  <a href="/#playground">
+                    <Terminal className="w-4 h-4" />
+                    Explore Live MCP Playground
+                  </a>
+                </Button>
+                <Button variant="outline" asChild className="w-full sm:w-auto">
+                  <a href="/">Return to Home</a>
+                </Button>
               </div>
             </div>
           )}

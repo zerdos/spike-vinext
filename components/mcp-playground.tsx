@@ -12,8 +12,6 @@ import {
   Gamepad2,
   Users,
   Globe,
-  ChevronDown,
-  ChevronRight,
   Terminal,
   Play,
   Search,
@@ -26,6 +24,30 @@ import {
   Code,
   FileJson,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   layers: Layers,
@@ -39,14 +61,13 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   globe: Globe,
 };
 
-// Realistic defaults for tool arguments
 const PARAM_PRESETS: Record<string, string> = {
   query: "image",
   category: "AI & Creative",
-  prompt: "cyberpunk neon skyline with reflections in rain, 8k cinematic",
+  prompt: "Swiss railway station split-flap departure board, architectural daylight",
   aspectRatio: "16:9",
   imageUrl: "https://spike.land/assets/demo.png",
-  instruction: "Add glowing neon cyan reflections to the puddle",
+  instruction: "Add crisp vermilion route markers",
   factor: "4",
   fileUrl: "https://spike.land/whitepaper.pdf",
   extractTables: "true",
@@ -85,13 +106,14 @@ export function McpPlayground() {
   const [openCategoryId, setOpenCategoryId] = useState<string>("platform-core");
   const [activeTool, setActiveTool] = useState<ToolItem>(MCP_CATEGORIES[0].tools[0]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewTab, setViewTab] = useState<"response" | "request" | "curl">("response");
+  const [viewTab, setViewTab] = useState<string>("response");
 
-  // Initial params populated from realistic presets
   const getInitialParamsForTool = (tool: ToolItem): Record<string, string> => {
     const params: Record<string, string> = {};
     Object.keys(tool.parameters).forEach((paramKey) => {
-      params[paramKey] = PARAM_PRESETS[paramKey] ?? (paramKey === "category" ? tool.category : "default_value");
+      params[paramKey] =
+        PARAM_PRESETS[paramKey] ??
+        (paramKey === "category" ? tool.category : "default_value");
     });
     return params;
   };
@@ -110,10 +132,6 @@ export function McpPlayground() {
   const totalLiveToolsCount = useMemo(() => {
     return MCP_CATEGORIES.reduce((acc, cat) => acc + cat.tools.length, 0);
   }, []);
-
-  const toggleCategory = (id: string) => {
-    setOpenCategoryId((prev) => (prev === id ? "" : id));
-  };
 
   const selectTool = (tool: ToolItem) => {
     setActiveTool(tool);
@@ -236,7 +254,8 @@ export function McpPlayground() {
         executedAt: new Date().toISOString(),
         requestParams: parsedArguments,
         latencyMs: execTime > 0 ? execTime : 3.8,
-        mode: "edge_processed",
+        mode: "synthetic_demo_fallback",
+        _syntheticNotice: "Offline / preview fallback: synthetic demonstration response",
       });
     } finally {
       setIsRunning(false);
@@ -268,7 +287,6 @@ export function McpPlayground() {
     }
   };
 
-  // Filter categories and tools based on search query
   const filteredCategories: ToolCategory[] = MCP_CATEGORIES.map((cat) => {
     if (!searchQuery.trim()) return cat;
     const q = searchQuery.toLowerCase();
@@ -282,30 +300,44 @@ export function McpPlayground() {
   }).filter((cat) => !searchQuery.trim() || cat.tools.length > 0);
 
   return (
-    <div id="playground" className="scroll-mt-24 py-16 sm:py-24">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Section Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold mb-3">
-            <Terminal className="w-3.5 h-3.5" />
-            Live MCP Console
+    <section
+      id="playground"
+      className="scroll-mt-16 py-16 sm:py-24 border-b-2 border-[#111315] bg-background"
+    >
+      <div className="mx-auto max-w-7xl px-4">
+        {/* Section Header: Heading leads first, badge & quick pick buttons below */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10 pb-6 border-b border-[#111315]">
+          <div className="space-y-3 max-w-2xl">
+            <h2 className="font-display text-3xl sm:text-5xl font-black tracking-tight text-foreground leading-[1.02]">
+              Interactive Playground
+            </h2>
+            <p className="text-muted-foreground text-base leading-relaxed max-w-[65ch]">
+              Progressive context disclosure in action: inspect schemas, configure arguments, and execute edge-native MCP gateway calls with live JSON-RPC 2.0 feedback.
+            </p>
+            <div className="pt-1 flex items-center gap-2">
+              <Badge variant="ink">
+                <Terminal className="w-3.5 h-3.5" />
+                Live MCP Console
+              </Badge>
+              <Badge variant="outline" className="font-mono">
+                {totalLiveToolsCount} Interactive Demo Tools
+              </Badge>
+            </div>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-white mb-3">
-            Interactive Playground
-          </h2>
-          <p className="text-zinc-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-            Progressive context disclosure in action: inspect schemas, configure arguments, and execute edge-native MCP gateway calls with live feedback.
-          </p>
 
           {/* Quick Tool Chips */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
-            <span className="text-xs text-zinc-500 font-mono">Quick Pick:</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">
+              Quick Pick:
+            </span>
             {POPULAR_TOOLS.map((item) => {
               const isCurrent = activeTool.name === item.name;
               return (
-                <button
+                <Button
                   key={item.name}
                   type="button"
+                  size="sm"
+                  variant={isCurrent ? "default" : "outline"}
                   onClick={() => {
                     const foundCat = MCP_CATEGORIES.find((c) => c.id === item.categoryId);
                     const foundTool = foundCat?.tools.find((t) => t.name === item.name);
@@ -314,326 +346,338 @@ export function McpPlayground() {
                       selectTool(foundTool);
                     }
                   }}
-                  className={`text-xs font-mono px-3 py-1 rounded-full border transition-all ${
-                    isCurrent
-                      ? "bg-cyan-500/20 text-cyan-300 border-cyan-400/40 font-semibold"
-                      : "bg-white/5 text-zinc-400 border-white/10 hover:text-white hover:bg-white/10"
-                  }`}
+                  className="font-mono text-xs h-8 px-2.5"
                 >
                   {item.name}
-                </button>
+                </Button>
               );
             })}
           </div>
         </div>
 
-        {/* 2-Column Grid */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Column: Category & Tool Browser */}
-          <div className="w-full lg:w-80 shrink-0">
-            <div className="glass-1 glass-edge rounded-2xl p-4 shadow-xl border border-white/10 sticky top-24 max-h-[720px] flex flex-col">
-              {/* Header & Search */}
-              <div className="mb-3 px-2">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                    Categories & Tools
-                  </h3>
-                  <span className="text-[11px] text-cyan-400 font-mono">
-                    {totalLiveToolsCount} live tools
-                  </span>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
-                  <input
-                    id="tool-search-input"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search tools or categories..."
-                    className="w-full rounded-xl bg-black/40 border border-white/10 pl-8 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition-all"
-                  />
-                </div>
+        {/* 2-Column Playground Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column (4 cols): Category & Tool Browser Card */}
+          <Card className="lg:col-span-4 min-w-0 border-2 border-[#111315] overflow-hidden">
+            <CardHeader className="p-4 border-b border-[#111315] bg-secondary/60 space-y-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold">
+                  Categories &amp; Tools
+                </CardTitle>
+                <Badge variant="cobalt" className="font-mono text-[11px]">
+                  {totalLiveToolsCount} live tools
+                </Badge>
               </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="tool-search-input"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tools or categories..."
+                  className="pl-9 h-9 text-xs"
+                />
+              </div>
+            </CardHeader>
 
-              {/* Accordion List */}
-              <div className="overflow-y-auto space-y-1 pr-1 flex-1 custom-scrollbar">
+            <CardContent className="p-3">
+              <ScrollArea className="max-h-[560px] pr-1">
                 {filteredCategories.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-zinc-500">
+                  <div className="text-center py-8 text-xs text-muted-foreground">
                     No tools match &ldquo;{searchQuery}&rdquo;
                   </div>
                 ) : (
-                  filteredCategories.map((cat) => {
-                    const Icon = CATEGORY_ICONS[cat.icon] || Layers;
-                    const isOpen = openCategoryId === cat.id || searchQuery.length > 0;
+                  <Accordion
+                    type="single"
+                    value={openCategoryId}
+                    onValueChange={setOpenCategoryId}
+                  >
+                    {filteredCategories.map((cat) => {
+                      const Icon = CATEGORY_ICONS[cat.icon] || Layers;
+                      const forceOpen = searchQuery.trim().length > 0;
 
-                    return (
-                      <div key={cat.id} className="rounded-xl overflow-hidden mb-1">
-                        <button
-                          type="button"
-                          onClick={() => toggleCategory(cat.id)}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      return (
+                        <AccordionItem
+                          key={cat.id}
+                          value={cat.id}
+                          forceOpen={forceOpen}
                         >
-                          <Icon className="h-4 w-4 text-cyan-400 shrink-0" />
-                          <span className="flex-1 text-left truncate">{cat.name}</span>
-                          <span className="bg-black/30 border border-white/10 rounded-full px-2 py-0.5 text-[10px] text-zinc-400 font-mono">
-                            {cat.tools.length} {cat.tools.length === 1 ? "tool" : "tools"}
-                          </span>
-                          {isOpen ? (
-                            <ChevronDown className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-                          ) : (
-                            <ChevronRight className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-                          )}
-                        </button>
-
-                        {isOpen && (
-                          <div className="pl-6 pr-1 py-1 space-y-1 bg-black/20 rounded-b-lg">
-                            {cat.tools.map((tool) => {
-                              const isSelected = activeTool.name === tool.name;
-                              return (
-                                <button
-                                  key={tool.name}
-                                  type="button"
-                                  onClick={() => selectTool(tool)}
-                                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-mono transition-all flex items-center justify-between ${
-                                    isSelected
-                                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30"
-                                      : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"
-                                  }`}
-                                >
-                                  <span className="truncate">{tool.name}</span>
-                                  {isSelected && <Zap className="w-3 h-3 text-cyan-400 shrink-0 ml-1" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
+                          <AccordionTrigger>
+                            <span className="flex items-center gap-2 min-w-0 flex-1">
+                              <Icon className="h-4 w-4 text-primary shrink-0" />
+                              <span className="truncate font-semibold">{cat.name}</span>
+                            </span>
+                            <Badge
+                              variant="secondary"
+                              className="font-mono text-[10px] px-2 py-0 shrink-0"
+                            >
+                              {cat.tools.length} {cat.tools.length === 1 ? "tool" : "tools"}
+                            </Badge>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-1">
+                              {cat.tools.map((tool) => {
+                                const isSelected = activeTool.name === tool.name;
+                                return (
+                                  <Button
+                                    key={tool.name}
+                                    type="button"
+                                    variant={isSelected ? "ink" : "ghost"}
+                                    size="sm"
+                                    onClick={() => selectTool(tool)}
+                                    className="w-full justify-between font-mono text-xs h-8 px-2.5"
+                                  >
+                                    <span className="truncate">{tool.name}</span>
+                                    {isSelected && (
+                                      <Zap className="w-3 h-3 text-primary shrink-0 ml-1" />
+                                    )}
+                                  </Button>
+                                );
+                              })}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
                 )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Right Column (8 cols): Dispatch Terminal Card */}
+          <Card className="lg:col-span-8 min-w-0 border-2 border-[#111315] overflow-hidden">
+            {/* Terminal Top Rail: Tabular Swiss Instrument Controls (no decorative traffic-light dots) */}
+            <div className="flex items-center justify-between px-4 py-3 bg-[#111315] text-[#F5F4F0] border-b border-[#111315]">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="inline-flex items-center border border-[#343942] rounded-sm overflow-hidden shrink-0" role="group" aria-label="Terminal actions">
+                  <button
+                    type="button"
+                    onClick={handleClearOutput}
+                    title="Clear terminal output"
+                    aria-label="Clear output"
+                    className="px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider bg-[#1B1E23] text-[#F5F4F0] hover:bg-primary hover:text-white border-r border-[#343942] transition-colors cursor-pointer"
+                  >
+                    CLR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetParams}
+                    title="Reset parameters to defaults"
+                    aria-label="Reset parameters"
+                    className="px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider bg-[#1B1E23] text-[#F5F4F0] hover:bg-[#0047BB] hover:text-white border-r border-[#343942] transition-colors cursor-pointer"
+                  >
+                    RST
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRunTool}
+                    title="Quick run (Cmd+Enter)"
+                    aria-label="Quick run tool"
+                    className="px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider bg-[#0D7A5F] text-white hover:opacity-90 transition-opacity cursor-pointer"
+                  >
+                    RUN
+                  </button>
+                </div>
+                <div className="text-xs text-[#B8BDC7] font-mono flex items-center gap-1.5 truncate">
+                  <span className="truncate">spike.land MCP Gateway</span>
+                  <span>/</span>
+                  <span className="text-[#F5F4F0] font-semibold truncate">{activeTool.category}</span>
+                </div>
               </div>
+
+              <Badge variant="emerald" className="hidden sm:inline-flex font-mono text-[11px] shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-dispatch-pulse" />
+                Edge Isolate Active
+              </Badge>
             </div>
-          </div>
 
-          {/* Right Column: Terminal Window */}
-          <div className="flex-1 min-w-0">
-            <div className="glass-1 glass-edge rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-              {/* Terminal Header with interactive traffic dots */}
-              <div className="flex items-center justify-between px-4 py-3 bg-[#131924] border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1.5" role="group" aria-label="Terminal actions">
-                    <button
-                      type="button"
-                      onClick={handleClearOutput}
-                      title="Clear terminal output"
-                      aria-label="Clear output"
-                      className="w-3 h-3 rounded-full bg-[#ff5f56] hover:brightness-125 transition-transform active:scale-90"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleResetParams}
-                      title="Reset parameters to defaults"
-                      aria-label="Reset parameters"
-                      className="w-3 h-3 rounded-full bg-[#ffbd2e] hover:brightness-125 transition-transform active:scale-90"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRunTool}
-                      title="Quick run (Cmd+Enter)"
-                      aria-label="Quick run tool"
-                      className="w-3 h-3 rounded-full bg-[#27c93f] hover:brightness-125 transition-transform active:scale-90"
-                    />
+            {/* Tool Detail & Parameters (with authored mechanical split-flap reveal on tool change) */}
+            <CardHeader
+              key={activeTool.name}
+              className="p-5 bg-card border-b border-[#111315] space-y-4 animate-dispatch-flap"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="text-lg font-mono text-foreground">
+                      {activeTool.name}
+                    </CardTitle>
+                    <Badge variant="outline" className="font-mono text-[11px]">
+                      {activeTool.category}
+                    </Badge>
                   </div>
-                  <div className="ml-3 text-xs text-zinc-400 font-mono flex items-center gap-2">
-                    <span>spike.land MCP Gateway</span>
-                    <span className="text-zinc-600">/</span>
-                    <span className="text-cyan-400 font-semibold">{activeTool.category}</span>
-                  </div>
+                  <CardDescription className="text-xs sm:text-sm max-w-[65ch]">
+                    {activeTool.description}
+                  </CardDescription>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-mono">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Edge Isolate Active
-                  </span>
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetParams}
+                    title="Reset arguments to default values"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={handleRunTool}
+                    disabled={isRunning}
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    {isRunning ? "Executing..." : "Execute Tool"}
+                  </Button>
                 </div>
               </div>
 
-              {/* Tool Detail & Controls */}
-              <div className="p-5 bg-[#0a0f1a] border-b border-white/[0.06]">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <h4 className="text-lg font-bold font-mono text-white">{activeTool.name}</h4>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-400/20">
-                        {activeTool.category}
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl">
-                      {activeTool.description}
-                    </p>
+              {/* Parameters Editor */}
+              {Object.keys(activeTool.parameters).length > 0 ? (
+                <div className="bg-secondary/60 rounded-lg p-4 border border-[#111315] space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs font-semibold text-foreground">
+                    <span>Arguments (JSON-RPC 2.0 params)</span>
+                    <span className="text-muted-foreground font-mono font-normal">
+                      Press ⌘+Enter to execute
+                    </span>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                    <button
-                      type="button"
-                      onClick={handleResetParams}
-                      title="Reset arguments to default values"
-                      className="inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-mono text-zinc-400 border border-white/10 hover:text-white hover:bg-white/5 transition-colors"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Reset</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRunTool}
-                      disabled={isRunning}
-                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
-                    >
-                      <Play className={`w-3.5 h-3.5 fill-white ${isRunning ? "animate-spin" : ""}`} />
-                      {isRunning ? "Executing..." : "Execute Tool"}
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {Object.entries(activeTool.parameters).map(([key, schema]) => (
+                      <div key={key} className="space-y-1.5">
+                        <Label className="block font-mono text-xs">
+                          {key}{" "}
+                          {schema.required && <span className="text-primary">*</span>}
+                          <span className="text-muted-foreground text-[10px] ml-1">
+                            ({schema.type})
+                          </span>
+                        </Label>
+                        <Input
+                          type="text"
+                          value={paramInputs[key] ?? ""}
+                          onKeyDown={handleKeyDownInputs}
+                          onChange={(e) =>
+                            setParamInputs((prev) => ({
+                              ...prev,
+                              [key]: e.target.value,
+                            }))
+                          }
+                          placeholder={schema.description}
+                          className="h-9 font-mono text-xs"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
+              ) : (
+                <div className="bg-secondary/50 rounded-lg px-3.5 py-2.5 border border-[#C8C5BC] text-xs text-muted-foreground font-mono">
+                  Zero arguments required. Ready for instant edge execution.
+                </div>
+              )}
+            </CardHeader>
 
-                {/* Parameters Editor */}
-                {Object.keys(activeTool.parameters).length > 0 ? (
-                  <div className="bg-black/40 rounded-xl p-3.5 border border-white/10 space-y-2.5">
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                      <span>Arguments (JSON-RPC 2.0 params)</span>
-                      <span className="text-zinc-500 font-mono font-normal">Press ⌘+Enter to execute</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {Object.entries(activeTool.parameters).map(([key, schema]) => (
-                        <div key={key}>
-                          <label className="block text-[11px] font-mono text-zinc-300 mb-1">
-                            {key}{" "}
-                            {schema.required && <span className="text-red-400">*</span>}
-                            <span className="text-zinc-500 text-[10px] ml-1">({schema.type})</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={paramInputs[key] ?? ""}
-                            onKeyDown={handleKeyDownInputs}
-                            onChange={(e) =>
-                              setParamInputs((prev) => ({ ...prev, [key]: e.target.value }))
-                            }
-                            placeholder={schema.description}
-                            className="w-full bg-[#111622] border border-white/10 rounded-lg px-3 py-1.5 text-xs font-mono text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-400 transition-colors"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-black/20 rounded-xl px-3 py-2 border border-white/[0.06] text-[11px] text-zinc-500 font-mono">
-                    Zero arguments required. Ready for instant edge execution.
-                  </div>
-                )}
-              </div>
-
-              {/* View Tabs & Output Area */}
-              <div className="bg-[#080d16] p-4 font-mono text-xs">
-                {/* Tabs Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setViewTab("response")}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
-                        viewTab === "response"
-                          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
+            {/* View Tabs & Output Console */}
+            <CardContent className="p-5 bg-[#111315] text-[#F5F4F0]">
+              <Tabs value={viewTab} onValueChange={setViewTab}>
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#2E323B]">
+                  <TabsList className="flex-wrap h-auto bg-[#1B1E23] border-[#343942]">
+                    <TabsTrigger
+                      value="response"
+                      className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
                     >
                       <FileJson className="w-3.5 h-3.5" />
                       Response (JSON)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewTab("request")}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
-                        viewTab === "request"
-                          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="request"
+                      className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
                     >
                       <Code className="w-3.5 h-3.5" />
                       JSON-RPC Request
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewTab("curl")}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono transition-colors ${
-                        viewTab === "curl"
-                          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="curl"
+                      className="font-mono text-xs text-[#B8BDC7] data-[state=active]:bg-primary data-[state=active]:text-white"
                     >
                       <Terminal className="w-3.5 h-3.5" />
                       cURL
-                    </button>
-                  </div>
+                    </TabsTrigger>
+                  </TabsList>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     {viewTab === "response" && (
-                      <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
-                        <span className="text-emerald-400 font-mono font-medium">{executionStatus}</span>
-                        <span className="text-zinc-600">•</span>
-                        <span className="flex items-center gap-1 text-zinc-300">
-                          <Clock className="w-3 h-3 text-cyan-400" />
+                      <div className="flex items-center gap-2 text-xs font-mono">
+                        <span className="text-[#34D399] font-semibold">
+                          {executionStatus}
+                        </span>
+                        <span className="text-[#6B7280]">•</span>
+                        <span className="flex items-center gap-1 text-[#F5F4F0]">
+                          <Clock className="w-3 h-3 text-primary" />
                           {executionTime}ms
                         </span>
                       </div>
                     )}
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="icon"
                       onClick={handleClearOutput}
                       title="Clear output"
-                      className="text-zinc-500 hover:text-zinc-300 p-1 rounded hover:bg-white/5 transition-colors"
                       aria-label="Clear output"
+                      className="h-7 w-7"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="secondary"
+                      size="sm"
                       onClick={copyActiveContent}
-                      className="flex items-center gap-1 text-[11px] text-zinc-300 hover:text-white bg-white/5 hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 transition-colors"
+                      className="h-7 px-2.5 text-xs font-mono"
                     >
                       {copiedResponse ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
+                        <Check className="w-3 h-3 text-[#0D7A5F]" />
                       ) : (
                         <Copy className="w-3 h-3" />
                       )}
                       <span>{copiedResponse ? "Copied" : "Copy"}</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
-                {/* Terminal Content Display */}
-                <div className="rounded-xl bg-black/60 border border-white/10 p-4 overflow-x-auto max-h-[340px]">
-                  {viewTab === "response" && (
-                    <pre className="text-cyan-300/95 leading-relaxed">
+                <TabsContent value="response">
+                  <ScrollArea className="rounded-lg bg-[#181B20] border border-[#343942] p-4 max-h-[340px]">
+                    <pre className="text-xs font-mono text-[#F5F4F0] leading-relaxed">
                       <code>{JSON.stringify(terminalOutput, null, 2)}</code>
                     </pre>
-                  )}
-                  {viewTab === "request" && (
-                    <pre className="text-purple-300/95 leading-relaxed">
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="request">
+                  <ScrollArea className="rounded-lg bg-[#181B20] border border-[#343942] p-4 max-h-[340px]">
+                    <pre className="text-xs font-mono text-[#93C5FD] leading-relaxed">
                       <code>{JSON.stringify(jsonRpcPayload, null, 2)}</code>
                     </pre>
-                  )}
-                  {viewTab === "curl" && (
-                    <pre className="text-emerald-300/95 leading-relaxed">
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="curl">
+                  <ScrollArea className="rounded-lg bg-[#181B20] border border-[#343942] p-4 max-h-[340px]">
+                    <pre className="text-xs font-mono text-[#6EE7B7] leading-relaxed">
                       <code>{curlCommand}</code>
                     </pre>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Modern Developer Infrastructure Standard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1440px; height: 900px; overflow: hidden;
+    background: #09090B; color: #FAFAFA;
+    font-family: 'Inter', sans-serif;
+    display: flex; flex-direction: column;
+  }
+  .nav {
+    height: 64px; border-bottom: 1px solid #27272A;
+    display: flex; align-items: center; justify-content: space-between; padding: 0 48px;
+  }
+  .hero {
+    flex: 1; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px;
+    padding: 72px 64px; align-items: center;
+  }
+  h1 { font-size: 72px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.02; margin: 20px 0; }
+  .card {
+    background: #121215; border: 1px solid #27272A; border-radius: 12px; padding: 28px;
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div style="font-weight:700;font-size:20px;">spike.land</div>
+    <div style="background:#FAFAFA;color:#09090B;padding:8px 16px;border-radius:6px;font-weight:600;font-size:14px;">Join Waitlist</div>
+  </div>
+  <div class="hero">
+    <div>
+      <div style="display:inline-block;border:1px solid #27272A;background:#18181B;padding:6px 12px;border-radius:999px;font-size:13px;color:#10B981;">Progressive Disclosure MCP</div>
+      <h1>455 AI Tools.<br/>One Protocol.</h1>
+      <p style="font-size:20px;color:#A1A1AA;line-height:1.5;margin-bottom:32px;">Connect your AI agent to 5 lightweight gateway tools and progressively discover 455 tools across 88 categories.</p>
+      <div style="display:flex;gap:16px;">
+        <div class="card"><b>455</b> Tools</div>
+        <div class="card"><b>88</b> Categories</div>
+        <div class="card"><b>5</b> Gateway Tools</div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="color:#A1A1AA;margin-bottom:12px;">.mcp.json</div>
+      <pre style="color:#10B981;line-height:1.6;">{
+  "mcpServers": {
+    "spike-land": {
+      "url": "https://spike.land/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}</pre>
+    </div>
+  </div>
+</body>
+</html>

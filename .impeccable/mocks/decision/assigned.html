@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Nagra Signal Attenuator Matrix</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1440px; height: 900px; overflow: hidden;
+    background: #181A1E; color: #EAE6DF;
+    font-family: 'Barlow', sans-serif;
+    display: flex; flex-direction: column;
+    border: 8px solid #24272D;
+  }
+  .telemetry-rail {
+    height: 44px; background: #111316; border-bottom: 2px solid #2E323B;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+  }
+  .rail-tag { color: #F2A900; font-weight: 700; letter-spacing: 0.08em; }
+  .rail-metrics { display: flex; gap: 28px; color: #9DA3AE; }
+  .rail-metrics b { color: #EAE6DF; }
+  .main-grid {
+    flex: 1; display: grid; grid-template-columns: 1.15fr 0.85fr;
+    border-bottom: 2px solid #2E323B;
+  }
+  .left-panel {
+    padding: 48px 44px; border-right: 2px solid #2E323B;
+    display: flex; flex-direction: column; justify-content: space-between;
+    background: radial-gradient(circle at 20% 20%, #22262E 0%, #181A1E 75%);
+  }
+  .kicker {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: #181A1E; background: #F2A900; padding: 6px 14px;
+    font-weight: 700; text-transform: uppercase; width: fit-content;
+  }
+  h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 86px; line-height: 0.92; text-transform: uppercase;
+    letter-spacing: -0.02em; color: #EAE6DF; margin: 22px 0;
+  }
+  h1 span { color: #F2A900; display: block; }
+  .lead {
+    font-size: 20px; line-height: 1.45; color: #B8B4AC; max-width: 620px;
+  }
+  /* Parchment VU / Token Attenuation Scale */
+  .vu-meter-box {
+    background: #EAE6DF; color: #181A1E; padding: 24px 28px;
+    border: 3px solid #2E323B; box-shadow: inset 0 2px 8px rgba(0,0,0,0.22);
+    margin-top: 24px;
+  }
+  .vu-header {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    border-bottom: 1.5px solid #181A1E; padding-bottom: 8px; margin-bottom: 16px;
+  }
+  .vu-row { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
+  .vu-label { width: 170px; font-size: 13px; font-weight: 700; }
+  .vu-track { flex: 1; height: 22px; background: #D5D0C5; position: relative; border: 1px solid #181A1E; }
+  .vu-fill-bad { width: 96%; height: 100%; background: #E03C1F; }
+  .vu-fill-good { width: 4%; height: 100%; background: #1A8754; }
+  .vu-val { width: 140px; text-align: right; font-size: 15px; font-weight: 700; }
+  .cta-row { display: flex; gap: 16px; margin-top: 28px; }
+  .btn-primary {
+    background: #F2A900; color: #181A1E; font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 15px; padding: 16px 28px; border: 2px solid #F2A900;
+    text-transform: uppercase;
+  }
+  .btn-secondary {
+    background: #22262C; color: #EAE6DF; font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; font-size: 15px; padding: 16px 24px; border: 2px solid #3A3F4B;
+  }
+  .right-panel {
+    padding: 36px; background: #14161A; display: flex; flex-direction: column; gap: 20px;
+  }
+  .patch-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #9DA3AE;
+    border-bottom: 1px solid #2E323B; padding-bottom: 12px;
+  }
+  .channels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .channel {
+    background: #20232A; border: 1.5px solid #343944; padding: 14px 10px;
+    font-family: 'JetBrains Mono', monospace; text-align: center;
+  }
+  .channel.active { border-color: #F2A900; background: #262318; }
+  .ch-num { font-size: 12px; color: #F2A900; font-weight: 700; }
+  .ch-name { font-size: 12px; color: #EAE6DF; margin-top: 6px; font-weight: 600; }
+  .terminal-card {
+    flex: 1; background: #0E1013; border: 2px solid #2E323B; padding: 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #EAE6DF;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .code-pre { color: #F2A900; line-height: 1.55; white-space: pre; }
+  .stat-strip {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .stat-cell {
+    background: #20232A; border: 1.5px solid #2E323B; padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .stat-num { font-size: 34px; font-weight: 700; color: #EAE6DF; }
+  .stat-lbl { font-size: 12px; color: #9DA3AE; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="telemetry-rail">
+    <div class="rail-tag">SPIKE.LAND // NAGRA-MCP EDGE MULTIPLEXER</div>
+    <div class="rail-metrics">
+      <span>COLO: <b>LHR-V8-ISOLATE</b></span>
+      <span>COLD START: <b>3.8ms</b></span>
+      <span>ATTENUATION: <b>-98.7% TOKENS</b></span>
+    </div>
+  </div>
+  <div class="main-grid">
+    <div class="left-panel">
+      <div>
+        <div class="kicker">CH 01–05 // PROGRESSIVE CONTEXT DISCLOSURE</div>
+        <h1>455 AI TOOLS.<span>ONE CLEAN SIGNAL.</span></h1>
+        <p class="lead">Static MCP dumps 50,050 tokens of schema noise into every turn. Spike Land exposes 5 lightweight gateway channels and patches in 455 tools across 88 categories on demand.</p>
+      </div>
+      <div class="vu-meter-box">
+        <div class="vu-header">
+          <span>FIG 1. CONTEXT WINDOW ATTENUATION METER</span>
+          <span>SCALE: TOKENS / TURN</span>
+        </div>
+        <div class="vu-row">
+          <div class="vu-label">STATIC MCP (OVERLOAD)</div>
+          <div class="vu-track"><div class="vu-fill-bad"></div></div>
+          <div class="vu-val">50,050 TOK</div>
+        </div>
+        <div class="vu-row">
+          <div class="vu-label">SPIKE.LAND GATEWAY</div>
+          <div class="vu-track"><div class="vu-fill-good"></div></div>
+          <div class="vu-val">660 TOK</div>
+        </div>
+      </div>
+      <div class="cta-row">
+        <div class="btn-primary">PATCH INTO PLAYGROUND →</div>
+        <div class="btn-secondary">JOIN DEVELOPER WAITLIST [COHORT 2]</div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="patch-header">
+        <span>ACTIVE GATEWAY CHANNELS [05 / 455]</span>
+        <span>STATUS: LOCKED 99.2% ACC</span>
+      </div>
+      <div class="channels">
+        <div class="channel active"><div class="ch-num">CH 01</div><div class="ch-name">search_tools</div></div>
+        <div class="channel active"><div class="ch-num">CH 02</div><div class="ch-name">list_cats</div></div>
+        <div class="channel active"><div class="ch-num">CH 03</div><div class="ch-name">enable_cat</div></div>
+        <div class="channel"><div class="ch-num">CH 04</div><div class="ch-name">get_balance</div></div>
+        <div class="channel"><div class="ch-num">CH 05</div><div class="ch-name">get_status</div></div>
+      </div>
+      <div class="terminal-card">
+        <div style="color:#9DA3AE;font-size:12px;">// .mcp.json — ONE-LINE STREAMABLE HTTP ENDPOINT</div>
+        <div class="code-pre">{
+  "mcpServers": {
+    "spike-land": {
+      "url": "https://spike.land/api/mcp",
+      "headers": { "Authorization": "Bearer YOUR_KEY" }
+    }
+  }
+}</div>
+        <div style="display:flex;justify-content:space-between;color:#1A8754;font-size:13px;font-weight:700;">
+          <span>● READY FOR CURSOR / CLAUDE CODE</span>
+          <span>[COPY CONFIG]</span>
+        </div>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-cell"><div class="stat-num">455</div><div class="stat-lbl">Catalog Tools</div></div>
+        <div class="stat-cell"><div class="stat-num">88</div><div class="stat-lbl">Categories</div></div>
+        <div class="stat-cell"><div class="stat-num">05</div><div class="stat-lbl">Gateway Channels</div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -8,14 +8,26 @@ import {
   Cpu,
   Copy,
   Check,
-  Sparkles,
   ArrowRight,
   Flame,
   Layers,
   DollarSign,
   Gauge,
-  Percent,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 interface ModelOption {
   id: string;
@@ -107,10 +119,8 @@ export function TokenSavingsSimulator() {
 
   // Accuracy model: LLM accuracy degrades steeply past 30 tools in prompt context
   const staticAccuracy = Math.max(32, Math.min(92, Math.round(98 - (toolsInCatalog / 455) * 52)));
-  const spikeLandAccuracy = 99.2; // Fixed high accuracy because only 3-6 tools are active in context
+  const spikeLandAccuracy = 99.2;
 
-  // Spike Land Edge COGS margin
-  const cloudflareEdgeCogsPerMonth = (totalTurnsPerMonth / 1_000_000) * 0.45; // $0.45 per 1M turns on CF Workers
   const grossMargin = 96.5;
 
   const applyPreset = (preset: Preset) => {
@@ -160,40 +170,36 @@ Verified live at https://spike.land/mcp
   };
 
   return (
-    <section id="simulator" className="relative py-24 sm:py-32 bg-[#0b0e14] overflow-hidden border-t border-b border-white/[0.08]">
-      {/* Background glow effects */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute w-[500px] h-[500px] rounded-full bg-cyan-500/[0.06] blur-[150px]"
-          style={{ top: "20%", left: "5%" }}
-        />
-        <div
-          className="absolute w-[600px] h-[600px] rounded-full bg-purple-500/[0.06] blur-[160px]"
-          style={{ bottom: "10%", right: "5%" }}
-        />
-      </div>
-
-      <div className="container relative mx-auto px-4 max-w-7xl z-10">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-medium text-cyan-400 mb-4 backdrop-blur-md">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Interactive Unit Economics Simulator</span>
+    <section
+      id="simulator"
+      className="py-16 sm:py-24 bg-secondary/50 border-b-2 border-[#111315] scroll-mt-16"
+    >
+      <div className="mx-auto max-w-7xl px-4">
+        {/* Section Header: Heading leads first, badges and presets below */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-12 pb-6 border-b border-[#111315]">
+          <div className="space-y-3 max-w-2xl">
+            <h2 className="font-display text-3xl sm:text-5xl font-black tracking-tight text-foreground leading-[1.02]">
+              See How Much You Cut Your{" "}
+              <span className="text-primary">AI Agent Token Bills</span>
+            </h2>
+            <p className="text-base text-muted-foreground leading-relaxed max-w-[65ch]">
+              Standard MCP servers force models to ingest your entire catalog on every turn. Spike Land replaces context bloat with{" "}
+              <strong className="text-foreground font-semibold">
+                Progressive Context Disclosure
+              </strong>{" "}
+              on Cloudflare&apos;s global edge.
+            </p>
+            <div className="pt-1">
+              <Badge variant="cobalt">
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Interactive Unit Economics Simulator</span>
+              </Badge>
+            </div>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4">
-            See How Much You Cut Your <br className="hidden sm:block" />
-            <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-purple-400 bg-clip-text text-transparent">
-              AI Agent Token Bills
-            </span>
-          </h2>
-          <p className="text-base sm:text-lg text-zinc-400 leading-relaxed">
-            Standard MCP servers force models to ingest your entire catalog on every turn. Spike Land replaces
-            context bloat with <strong>Progressive Context Disclosure</strong> on Cloudflare&apos;s global edge.
-          </p>
 
-          {/* Quick Presets */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-8">
-            <span className="text-xs uppercase tracking-wider text-zinc-500 font-semibold mr-1">
+          {/* Scenario Presets */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground mr-1">
               Investor Scenarios:
             </span>
             {PRESETS.map((preset) => {
@@ -202,20 +208,22 @@ Verified live at https://spike.land/mcp
                 toolsInCatalog === preset.toolsInCatalog &&
                 selectedModelId === preset.modelId;
               return (
-                <button
+                <Button
                   key={preset.name}
+                  type="button"
+                  variant={isActive ? "ink" : "outline"}
+                  size="sm"
                   onClick={() => applyPreset(preset)}
-                  className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 border ${
-                    isActive
-                      ? "bg-cyan-500/20 border-cyan-400/50 text-cyan-200 shadow-[0_0_15px_rgba(0,229,255,0.2)]"
-                      : "bg-white/[0.04] border-white/10 text-zinc-300 hover:bg-white/[0.08] hover:text-white"
-                  }`}
+                  className="gap-2"
                 >
                   <span>{preset.name}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/[0.08] text-zinc-400 font-mono">
+                  <Badge
+                    variant={isActive ? "default" : "secondary"}
+                    className="font-mono text-[10px] px-1.5 py-0"
+                  >
                     {preset.badge}
-                  </span>
-                </button>
+                  </Badge>
+                </Button>
               );
             })}
           </div>
@@ -224,313 +232,347 @@ Verified live at https://spike.land/mcp
         {/* Simulator Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Controls Panel (Left, 5 cols) */}
-          <div className="lg:col-span-5 rounded-2xl bg-white/[0.03] border border-white/10 p-6 sm:p-8 backdrop-blur-xl shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
-                  <Gauge className="w-5 h-5" />
+          <Card className="lg:col-span-5 min-w-0 border-2 border-[#111315]">
+            <CardHeader className="border-b border-[#111315] bg-secondary/60 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-md border border-[#111315] bg-card">
+                    <Gauge className="w-4 h-4 text-primary" />
+                  </span>
+                  <div>
+                    <CardTitle className="text-base">Workload Parameters</CardTitle>
+                    <CardDescription className="text-xs">
+                      Adjust team scale &amp; catalog size
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-white">Workload Parameters</h3>
-                  <p className="text-xs text-zinc-400">Adjust team scale &amp; catalog size</p>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-6">
+              {/* Slider 1: Developers / Agents */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center gap-2">
+                  <Label htmlFor="input-developers" className="text-sm font-semibold">
+                    Team Size (Engineers / Agents)
+                  </Label>
+                  <Badge variant="outline" className="font-mono text-xs font-bold shrink-0">
+                    {developers} devs
+                  </Badge>
+                </div>
+                <Slider
+                  id="input-developers"
+                  min={1}
+                  max={200}
+                  step={1}
+                  value={developers}
+                  accentColor="vermilion"
+                  onChange={(e) => setDevelopers(Number(e.target.value))}
+                />
+                <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                  <span>1 dev</span>
+                  <span>50 devs</span>
+                  <span>100 devs</span>
+                  <span>200 devs</span>
                 </div>
               </div>
-            </div>
 
-            {/* Slider 1: Developers / Agents */}
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-center text-sm">
-                <label htmlFor="input-developers" className="text-zinc-300 font-medium">Team Size (Engineers / Agents)</label>
-                <span className="font-mono text-cyan-400 font-bold bg-cyan-500/10 px-2.5 py-0.5 rounded border border-cyan-500/20">
-                  {developers} devs
-                </span>
+              {/* Slider 2: Turns per Dev per Day */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center gap-2">
+                  <Label htmlFor="input-turns" className="text-sm font-semibold">
+                    Turns / Agent Prompts per Day
+                  </Label>
+                  <Badge variant="cobalt" className="font-mono text-xs font-bold shrink-0">
+                    {turnsPerDay} turns/day
+                  </Badge>
+                </div>
+                <Slider
+                  id="input-turns"
+                  min={20}
+                  max={400}
+                  step={10}
+                  value={turnsPerDay}
+                  accentColor="cobalt"
+                  onChange={(e) => setTurnsPerDay(Number(e.target.value))}
+                />
+                <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                  <span>20 (Casual)</span>
+                  <span>150 (Active)</span>
+                  <span>400 (Swarm)</span>
+                </div>
               </div>
-              <input
-                id="input-developers"
-                type="range"
-                min="1"
-                max="200"
-                step="1"
-                value={developers}
-                onChange={(e) => setDevelopers(Number(e.target.value))}
-                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-              />
-              <div className="flex justify-between text-[11px] text-zinc-500 font-mono">
-                <span>1 dev</span>
-                <span>50 devs</span>
-                <span>100 devs</span>
-                <span>200 devs</span>
-              </div>
-            </div>
 
-            {/* Slider 2: Turns per Dev per Day */}
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-center text-sm">
-                <label htmlFor="input-turns" className="text-zinc-300 font-medium">Turns / Agent Prompts per Day</label>
-                <span className="font-mono text-teal-300 font-bold bg-teal-500/10 px-2.5 py-0.5 rounded border border-teal-500/20">
-                  {turnsPerDay} turns/day
-                </span>
+              {/* Slider 3: Tools in Catalog */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center gap-2">
+                  <Label htmlFor="input-tools" className="text-sm font-semibold">
+                    Total Tools in Catalog
+                  </Label>
+                  <Badge variant="emerald" className="font-mono text-xs font-bold shrink-0">
+                    {toolsInCatalog} tools
+                  </Badge>
+                </div>
+                <Slider
+                  id="input-tools"
+                  min={20}
+                  max={1000}
+                  step={15}
+                  value={toolsInCatalog}
+                  accentColor="emerald"
+                  onChange={(e) => setToolsInCatalog(Number(e.target.value))}
+                />
+                <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                  <span>20 (Mini)</span>
+                  <span>455 (Spike Land)</span>
+                  <span>1,000+ (Hub)</span>
+                </div>
               </div>
-              <input
-                id="input-turns"
-                type="range"
-                min="20"
-                max="400"
-                step="10"
-                value={turnsPerDay}
-                onChange={(e) => setTurnsPerDay(Number(e.target.value))}
-                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-teal-400"
-              />
-              <div className="flex justify-between text-[11px] text-zinc-500 font-mono">
-                <span>20 (Casual)</span>
-                <span>150 (Active)</span>
-                <span>400 (Swarm)</span>
-              </div>
-            </div>
 
-            {/* Slider 3: Tools in Catalog */}
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-center text-sm">
-                <label htmlFor="input-tools" className="text-zinc-300 font-medium">Total Tools in Catalog</label>
-                <span className="font-mono text-purple-400 font-bold bg-purple-500/10 px-2.5 py-0.5 rounded border border-purple-500/20">
-                  {toolsInCatalog} tools
-                </span>
-              </div>
-              <input
-                id="input-tools"
-                type="range"
-                min="20"
-                max="1000"
-                step="15"
-                value={toolsInCatalog}
-                onChange={(e) => setToolsInCatalog(Number(e.target.value))}
-                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-400"
-              />
-              <div className="flex justify-between text-[11px] text-zinc-500 font-mono">
-                <span>20 (Mini)</span>
-                <span>455 (Spike Land)</span>
-                <span>1,000+ (Hub)</span>
-              </div>
-            </div>
+              <Separator />
 
-            {/* Model Selector */}
-            <div className="space-y-2.5 pt-2">
-              <label htmlFor="select-model" className="text-sm font-medium text-zinc-300 block">LLM Pricing Model</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {LLM_MODELS.map((model) => {
-                  const isSelected = model.id === selectedModelId;
-                  return (
-                    <button
-                      key={model.id}
-                      onClick={() => setSelectedModelId(model.id)}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        isSelected
-                          ? "bg-cyan-500/10 border-cyan-400/60 shadow-[0_0_12px_rgba(0,229,255,0.15)]"
-                          : "bg-white/[0.02] border-white/[0.08] hover:bg-white/[0.05]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-white truncate">{model.name}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-1 font-mono">
-                        <span>{model.provider}</span>
-                        <span className="text-cyan-300 font-medium">${model.inputCostPerMillion.toFixed(2)}/M</span>
-                      </div>
-                    </button>
-                  );
-                })}
+              {/* Model Selector */}
+              <div className="space-y-2.5">
+                <Label className="text-sm font-semibold block">LLM Pricing Model</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {LLM_MODELS.map((model) => {
+                    const isSelected = model.id === selectedModelId;
+                    return (
+                      <Button
+                        key={model.id}
+                        type="button"
+                        variant={isSelected ? "ink" : "outline"}
+                        onClick={() => setSelectedModelId(model.id)}
+                        className="h-auto p-3 flex flex-col items-stretch text-left justify-start"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-bold truncate">{model.name}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                        </div>
+                        <div className="flex items-center justify-between w-full text-[11px] opacity-85 mt-1 font-mono">
+                          <span>{model.provider}</span>
+                          <span className="font-semibold">
+                            ${model.inputCostPerMillion.toFixed(2)}/M
+                          </span>
+                        </div>
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            </CardContent>
 
-            {/* Copy Investor One-Pager Button */}
-            <button
-              onClick={copyInvestorSummary}
-              className="w-full py-3 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/15 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all group shadow-lg"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-300">Investor Brief Copied to Clipboard!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                  <span>Copy Investor One-Pager / ROI Calculations</span>
-                </>
-              )}
-            </button>
-          </div>
+            <CardFooter className="border-t border-[#111315] bg-secondary/40 p-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={copyInvestorSummary}
+                className="w-full font-semibold whitespace-normal h-auto py-2.5 text-center"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-4 h-4 text-[#0D7A5F]" />
+                    <span className="text-[#0D7A5F]">
+                      Investor Brief Copied to Clipboard!
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 text-primary" />
+                    <span>Copy Investor One-Pager / ROI Calculations</span>
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
 
           {/* Results Dashboard (Right, 7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
-            {/* Big Headline Hero Card */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-cyan-950/40 via-purple-950/30 to-[#0b0e14] border border-cyan-500/30 p-6 sm:p-8 backdrop-blur-xl shadow-[0_0_50px_rgba(0,229,255,0.1)] overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Customer Value Proposition
-                  </span>
-                  <h3 className="text-2xl sm:text-3xl font-black text-white mt-1">
-                    ${Math.round(monthlySavings).toLocaleString()}
-                    <span className="text-sm sm:text-base font-normal text-zinc-400 ml-2">saved / month</span>
-                  </h3>
-                </div>
-                <div className="text-left sm:text-right">
-                  <div className="text-xs text-zinc-400">Annual LLM Spend Avoided</div>
-                  <div className="text-xl sm:text-2xl font-mono font-bold text-emerald-400">
-                    ${Math.round(annualSavings).toLocaleString()} / yr
+          <div className="lg:col-span-7 min-w-0 space-y-6">
+            {/* Big Headline Hero Card (Numbers lead first, labels below/beside) */}
+            <Card className="border-2 border-[#111315] overflow-hidden">
+              <CardHeader className="bg-[#111315] text-[#F5F4F0] p-6 sm:p-8 border-b border-[#111315]">
+                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
+                  <div>
+                    <div className="font-mono text-4xl sm:text-5xl font-bold text-[#F5F4F0] tabular-nums">
+                      ${Math.round(monthlySavings).toLocaleString()}
+                      <span className="text-sm sm:text-base font-sans font-normal text-[#B8BDC7] ml-2">
+                        saved / month
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="default">Customer Value Proposition</Badge>
+                      <span className="text-xs text-[#B8BDC7] font-mono">
+                        {totalTurnsPerMonth.toLocaleString()} turns/mo
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <div className="text-2xl sm:text-3xl font-mono font-bold text-[#34D399] tabular-nums">
+                      ${Math.round(annualSavings).toLocaleString()} / yr
+                    </div>
+                    <div className="text-xs text-[#B8BDC7] mt-1">
+                      Annual LLM Spend Avoided
+                    </div>
                   </div>
                 </div>
-              </div>
+              </CardHeader>
 
               {/* Side-by-Side Token Overhead Comparison */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/10">
+              <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-card">
                 {/* Standard MCP Box */}
-                <div className="p-4 rounded-xl bg-red-500/[0.06] border border-red-500/20">
-                  <div className="flex items-center justify-between text-xs text-red-300 font-semibold mb-2">
+                <div className="p-4 rounded-lg bg-[#FEF2F2] border border-[#BA1C1C]">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#7F1D1D] mb-2">
                     <span className="flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-red-400" />
+                      <Flame className="w-3.5 h-3.5 text-[#BA1C1C]" />
                       Status Quo (Static MCP)
                     </span>
-                    <span className="font-mono text-red-400">Context Bloat</span>
+                    <Badge variant="destructive" className="font-mono text-[10px]">
+                      Context Bloat
+                    </Badge>
                   </div>
-                  <div className="text-2xl font-mono font-bold text-white mb-1">
+                  <div className="text-2xl font-mono font-bold text-[#111315] mb-1 tabular-nums">
                     {staticTokensPerTurn.toLocaleString()}
-                    <span className="text-xs text-zinc-400 font-normal ml-1">tokens / turn</span>
+                    <span className="text-xs text-muted-foreground font-sans font-normal ml-1">
+                      tokens / turn
+                    </span>
                   </div>
-                  <div className="text-xs text-red-200/70 font-mono">
+                  <div className="text-xs text-[#7F1D1D] font-mono">
                     ${Math.round(staticMonthlyCost).toLocaleString()} / month on prompt waste
                   </div>
                 </div>
 
                 {/* Spike Land Box */}
-                <div className="p-4 rounded-xl bg-cyan-500/[0.08] border border-cyan-400/40 relative shadow-[0_0_20px_rgba(0,229,255,0.1)]">
-                  <div className="flex items-center justify-between text-xs text-cyan-300 font-semibold mb-2">
+                <div className="p-4 rounded-lg bg-[#ECFDF5] border-2 border-[#0D7A5F]">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#064E3B] mb-2">
                     <span className="flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400" />
+                      <Zap className="w-3.5 h-3.5 text-[#0D7A5F] fill-[#0D7A5F]" />
                       Spike Land Edge Gateway
                     </span>
-                    <span className="font-mono text-cyan-400 bg-cyan-500/20 px-1.5 py-0.5 rounded text-[10px]">
+                    <Badge variant="emerald" className="font-mono text-[10px]">
                       {percentageSaved.toFixed(1)}% OFF
+                    </Badge>
+                  </div>
+                  <div className="text-2xl font-mono font-bold text-[#111315] mb-1 tabular-nums">
+                    {spikeLandTokensPerTurn.toLocaleString()}
+                    <span className="text-xs text-muted-foreground font-sans font-normal ml-1">
+                      tokens / turn (avg active turn: 3 gateway + 3 domain)
                     </span>
                   </div>
-                  <div className="text-2xl font-mono font-bold text-cyan-300 mb-1">
-                    {spikeLandTokensPerTurn.toLocaleString()}
-                    <span className="text-xs text-zinc-400 font-normal ml-1">tokens / turn</span>
-                  </div>
-                  <div className="text-xs text-emerald-300 font-mono">
-                    ${Math.round(spikeLandMonthlyCost).toLocaleString()} / month (${Math.round(monthlySavings).toLocaleString()} saved)
+                  <div className="text-xs text-[#065F46] font-mono font-semibold">
+                    ${Math.round(spikeLandMonthlyCost).toLocaleString()} / month ($
+                    {Math.round(monthlySavings).toLocaleString()} saved)
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Context Window Visualizer Bar */}
-            <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-6 backdrop-blur-xl space-y-4">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-200 font-medium flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-cyan-400" />
-                  Context Window Consumption per Single Turn
-                </span>
-                <span className="text-xs font-mono text-cyan-400 font-bold">
-                  {percentageSaved.toFixed(1)}% Headroom Preserved
-                </span>
-              </div>
-
-              {/* Visual Bars */}
-              <div className="space-y-2">
+            <Card className="border-2 border-[#111315]">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#0047BB]" />
+                    Context Window Consumption per Single Turn
+                  </CardTitle>
+                  <Badge variant="cobalt" className="font-mono">
+                    {percentageSaved.toFixed(1)}% Headroom Preserved
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                     <span>Static MCP ({toolsInCatalog} tools loaded upfront)</span>
-                    <span className="font-mono text-red-400 font-semibold">{staticTokensPerTurn.toLocaleString()} tokens</span>
+                    <span className="font-mono text-[#BA1C1C] font-bold">
+                      {staticTokensPerTurn.toLocaleString()} tokens
+                    </span>
                   </div>
-                  <div className="w-full h-3 rounded-full bg-white/5 overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-red-500 to-amber-500 rounded-full w-full" />
-                  </div>
+                  <Progress value={100} indicatorClassName="bg-[#BA1C1C]" />
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                     <span>Spike Land Gateway (3 gateway tools + dynamic active tools)</span>
-                    <span className="font-mono text-cyan-400 font-semibold">{spikeLandTokensPerTurn.toLocaleString()} tokens</span>
+                    <span className="font-mono text-[#0D7A5F] font-bold">
+                      {spikeLandTokensPerTurn.toLocaleString()} tokens
+                    </span>
                   </div>
-                  <div className="w-full h-3 rounded-full bg-white/5 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-400 to-teal-400 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.max(2, (spikeLandTokensPerTurn / staticTokensPerTurn) * 100)}%`,
-                      }}
-                    />
+                  <Progress
+                    value={(spikeLandTokensPerTurn / staticTokensPerTurn) * 100}
+                    indicatorClassName="bg-[#0D7A5F]"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3 Secondary Metric Cells (Number leads first, label and description below) */}
+            <Card className="border-2 border-[#111315] overflow-hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#111315]">
+                {/* Cell 1: Tool Selection Accuracy */}
+                <div className="p-5 bg-card space-y-1.5">
+                  <div className="text-2xl font-bold text-foreground font-mono tabular-nums">
+                    {spikeLandAccuracy}%
+                    <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                      vs {staticAccuracy}%
+                    </span>
                   </div>
+                  <div className="flex items-center gap-1.5 text-foreground font-semibold text-xs">
+                    <ShieldCheck className="w-4 h-4 text-[#0D7A5F]" />
+                    <span>Tool Accuracy</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Prevents hallucinated parameters by keeping active tool context under 6 tools.
+                  </p>
                 </div>
-              </div>
-            </div>
 
-            {/* 3 Secondary Metric Cards: Accuracy, Latency, Gross Margin */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Card 1: Tool Selection Accuracy */}
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-2">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Tool Accuracy</span>
+                {/* Cell 2: Zero Cold Start Latency */}
+                <div className="p-5 bg-card space-y-1.5">
+                  <div className="text-2xl font-bold text-foreground font-mono tabular-nums">
+                    &lt; 5ms
+                    <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                      vs 1,200ms
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-foreground font-semibold text-xs">
+                    <Cpu className="w-4 h-4 text-[#0047BB]" />
+                    <span>Edge Startup Latency</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Cloudflare V8 isolates eliminate container spin-up delays across 300+ edge cities.
+                  </p>
                 </div>
-                <div className="text-xl font-bold text-white font-mono">
-                  {spikeLandAccuracy}%
-                  <span className="text-xs font-normal text-zinc-400 ml-1">vs {staticAccuracy}%</span>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-tight">
-                  Prevents hallucinated parameters by keeping active tool context under 6 tools.
-                </p>
-              </div>
 
-              {/* Card 2: Zero Cold Start Latency */}
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-2">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs">
-                  <Cpu className="w-4 h-4 text-cyan-400" />
-                  <span>Edge Startup Latency</span>
+                {/* Cell 3: Business Gross Margin */}
+                <div className="p-5 bg-card space-y-1.5">
+                  <div className="text-2xl font-bold text-foreground font-mono tabular-nums">
+                    {grossMargin}%
+                    <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                      gross margin
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-foreground font-semibold text-xs">
+                    <DollarSign className="w-4 h-4 text-primary" />
+                    <span>Spike Land Margin</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Serverless edge compute COGS is under $0.45 per million agent turns.
+                  </p>
                 </div>
-                <div className="text-xl font-bold text-white font-mono">
-                  &lt; 5ms
-                  <span className="text-xs font-normal text-zinc-400 ml-1">vs 1,200ms</span>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-tight">
-                  Cloudflare V8 isolates eliminate container spin-up delays across 300+ edge cities.
-                </p>
               </div>
-
-              {/* Card 3: Business Gross Margin */}
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-2">
-                <div className="flex items-center gap-2 text-zinc-400 text-xs">
-                  <DollarSign className="w-4 h-4 text-purple-400" />
-                  <span>Spike Land Margin</span>
-                </div>
-                <div className="text-xl font-bold text-white font-mono">
-                  {grossMargin}%
-                  <span className="text-xs font-normal text-zinc-400 ml-1">gross margin</span>
-                </div>
-                <p className="text-[11px] text-zinc-400 leading-tight">
-                  Serverless edge compute COGS is under $0.45 per million agent turns.
-                </p>
-              </div>
-            </div>
+            </Card>
 
             {/* Call to action strip */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
-              <div className="text-xs text-cyan-200">
+            <Card className="border-2 border-[#111315] bg-card p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-xs sm:text-sm font-medium text-foreground">
                 Ready to verify this in your AI agent? Connect Cursor, Claude Code, or Windsurf in 30 seconds.
               </div>
-              <a
-                href="#playground"
-                className="shrink-0 px-4 py-2 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-black font-semibold text-xs flex items-center gap-1.5 transition-colors"
-              >
-                <span>Try Live Gateway</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
+              <Button variant="default" size="sm" asChild className="shrink-0">
+                <a href="#playground">
+                  <span>Try Live Gateway</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </Button>
+            </Card>
           </div>
         </div>
       </div>

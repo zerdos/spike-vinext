@@ -11,7 +11,7 @@ export const revalidate = 300;
 
 export default function McpPage() {
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-foreground flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header />
       <main className="flex-1">
         <HeroSection />

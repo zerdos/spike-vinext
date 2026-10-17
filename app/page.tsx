@@ -11,9 +11,9 @@ export const revalidate = 300;
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-[#0b0e14] text-foreground flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-background text-foreground flex flex-col">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 w-full min-w-0">
         <HeroSection />
         <TokenSavingsSimulator />
         <McpPlayground />

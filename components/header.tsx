@@ -12,8 +12,10 @@ import {
   Sparkles,
   Plug,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-function GithubIcon({ className = "h-5 w-5" }: { className?: string }) {
+function GithubIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -65,149 +67,192 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0b0e14]/85 backdrop-blur-md border-b border-white/[0.08]">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <a className="flex items-center gap-2 group" href="/">
-            <div className="inline-flex items-center gap-2" role="img" aria-label="Spike Land logo">
-              <Zap className="h-6 w-6 fill-cyan-400 text-cyan-400 group-hover:scale-110 transition-transform" />
-              <span className="font-bold tracking-tight lowercase text-xl text-white">
-                spike<span className="text-cyan-400">.land</span>
-              </span>
+    <header className="sticky top-0 z-50 w-full bg-background border-b-2 border-[#111315]">
+      <div className="mx-auto max-w-7xl px-4 xl:border-x-2 xl:border-[#111315]">
+        <div className="flex h-16 items-stretch justify-between">
+          {/* Brand Identity Cell */}
+          <div className="flex items-center gap-3 pr-4 md:pr-6 md:border-r-2 md:border-[#111315]">
+            <a className="flex items-center gap-2.5 group" href="/">
+              <div
+                className="inline-flex items-center gap-2.5"
+                role="img"
+                aria-label="Spike Land logo"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary text-primary-foreground border border-[#111315]">
+                  <Zap className="h-4 w-4 fill-current" />
+                </span>
+                <span className="font-display font-black tracking-tight lowercase text-xl text-foreground">
+                  spike<span className="text-primary">.land</span>
+                </span>
+              </div>
+            </a>
+            <Badge variant="outline" className="hidden sm:inline-flex font-mono text-[11px]">
+              MCP v2025
+            </Badge>
+          </div>
+
+          {/* Desktop Navigation Cell */}
+          <nav className="hidden md:flex flex-1 items-center justify-between pl-4 lg:pl-6">
+            <div className="flex items-center gap-1 lg:gap-1.5">
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/#how-it-works">
+                  <BookOpen className="h-4 w-4" />
+                  Docs
+                </a>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/#playground">
+                  <Terminal className="h-4 w-4 text-primary" />
+                  Playground
+                </a>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/#simulator">
+                  <TrendingUp className="h-4 w-4 text-[#0D7A5F]" />
+                  ROI Simulator
+                </a>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/#get-connected">
+                  <Plug className="h-4 w-4 text-[#0047BB]" />
+                  Setup Guide
+                </a>
+              </Button>
             </div>
-          </a>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-5 lg:gap-6">
-            <a
-              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5"
-              href="/#how-it-works"
-            >
-              <BookOpen className="h-4 w-4" />
-              Docs
-            </a>
-            <a
-              className="text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1.5"
-              href="/#playground"
-            >
-              <Terminal className="h-4 w-4" />
-              Playground
-            </a>
-            <a
-              className="text-sm font-medium text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1.5"
-              href="/#simulator"
-            >
-              <TrendingUp className="h-4 w-4" />
-              ROI Simulator
-            </a>
-            <a
-              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5"
-              href="/#get-connected"
-            >
-              <Plug className="h-4 w-4 text-cyan-400" />
-              Setup Guide
-            </a>
+            <div className="flex items-stretch h-full">
+              <div className="flex items-center gap-1.5 pr-4 border-r-2 border-[#111315]">
+                {/* Quick Search */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSearchClick}
+                  aria-label="Search tools"
+                  className="gap-2 bg-card"
+                >
+                  <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="hidden lg:inline text-muted-foreground font-normal">
+                    Search tools...
+                  </span>
+                  <kbd className="hidden lg:inline-flex h-5 items-center rounded-sm border border-[#C8C5BC] bg-secondary px-1.5 font-mono text-[10px] font-semibold text-foreground">
+                    Cmd+K
+                  </kbd>
+                </Button>
 
-            {/* Quick Search */}
-            <button
-              type="button"
-              onClick={handleSearchClick}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition-colors text-xs"
-              aria-label="Search tools"
-            >
-              <Search className="h-3.5 w-3.5" />
-              <span className="hidden lg:inline">Search tools...</span>
-              <kbd className="hidden lg:inline-flex h-5 items-center rounded border border-white/10 bg-white/10 px-1.5 font-mono text-[10px]">
-                Cmd+K
-              </kbd>
-            </button>
+                {/* GitHub */}
+                <Button variant="ghost" size="icon" asChild>
+                  <a
+                    href="https://github.com/zerdos/spike.land"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="GitHub"
+                  >
+                    <GithubIcon className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
 
-            {/* GitHub */}
-            <a
-              href="https://github.com/zerdos/spike.land"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-zinc-400 hover:text-white transition-colors"
-              aria-label="GitHub"
-            >
-              <GithubIcon className="h-5 w-5" />
-            </a>
-
-            {/* Actions: Replaced Sign In with Join Waiting List */}
-            <a
-              className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-semibold tracking-wide transition-all duration-300 active:scale-[0.98] bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:brightness-110"
-              href="/waitlist"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Join Waitlist
-            </a>
+              {/* Primary Action Cell: Join Waitlist */}
+              <div className="flex items-center pl-4">
+                <Button variant="default" size="sm" asChild>
+                  <a href="/waitlist">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Join Waitlist
+                  </a>
+                </Button>
+              </div>
+            </div>
           </nav>
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle navigation menu"
-          >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center md:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-white/10 flex flex-col gap-3">
-            <a
-              href="/#how-it-works"
+          <div className="md:hidden py-4 border-t border-[#111315] flex flex-col gap-2 bg-background">
+            <Button
+              variant="ghost"
+              className="justify-start"
+              asChild
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-300 hover:bg-white/5"
             >
-              <BookOpen className="h-4 w-4" />
-              Docs
-            </a>
-            <a
-              href="/#playground"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-cyan-400 hover:bg-white/5"
-            >
-              <Terminal className="h-4 w-4" />
-              Playground
-            </a>
-            <a
-              href="/#simulator"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-emerald-400 hover:bg-white/5"
-            >
-              <TrendingUp className="h-4 w-4" />
-              ROI Simulator
-            </a>
-            <a
-              href="/#get-connected"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-300 hover:bg-white/5"
-            >
-              <Plug className="h-4 w-4 text-cyan-400" />
-              Setup Guide
-            </a>
-            <a
-              href="https://github.com/zerdos/spike.land"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-300 hover:bg-white/5"
-            >
-              <GithubIcon className="h-4 w-4" />
-              GitHub
-            </a>
-            <div className="pt-2">
-              <a
-                href="/waitlist"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-1.5 text-center py-2.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 text-white shadow-lg"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Join Waiting List
+              <a href="/#how-it-works">
+                <BookOpen className="h-4 w-4" />
+                Docs
               </a>
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/#playground">
+                <Terminal className="h-4 w-4 text-primary" />
+                Playground
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/#simulator">
+                <TrendingUp className="h-4 w-4 text-[#0D7A5F]" />
+                ROI Simulator
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/#get-connected">
+                <Plug className="h-4 w-4 text-[#0047BB]" />
+                Setup Guide
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a
+                href="https://github.com/zerdos/spike.land"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <GithubIcon className="h-4 w-4" />
+                GitHub
+              </a>
+            </Button>
+            <div className="pt-2">
+              <Button
+                variant="default"
+                className="w-full"
+                asChild
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <a href="/waitlist">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Join Waiting List
+                </a>
+              </Button>
             </div>
           </div>
         )}

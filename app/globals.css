@@ -1,27 +1,116 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Chivo";
+  src: url("/fonts/chivo-latin-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Chivo";
+  src: url("/fonts/chivo-latin-900.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/fonts/archivo-latin-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/fonts/archivo-latin-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/fonts/archivo-latin-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Archivo";
+  src: url("/fonts/archivo-latin-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-latin-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-latin-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-mono-latin-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
-    --background: 222.2 47.4% 6.3%; /* #0b0e14 */
-    --foreground: 210 40% 98%;
-    --card: 222.2 47.4% 8%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 47.4% 8%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 187 100% 50%; /* #00e5ff cyan */
-    --primary-foreground: 222.2 47.4% 6.3%;
-    --secondary: 217.2 32.6% 15%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 14%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 18%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 16%;
-    --input: 217.2 32.6% 16%;
-    --ring: 187 100% 50%;
+    /* Swiss Dispatch & Cartographic Atlas Palette */
+    --background: 48 17% 95%; /* #F5F4F0 Warm Alabaster Paper */
+    --foreground: 210 11% 7%; /* #111315 Carbon Ink */
+    --card: 0 0% 100%; /* #FFFFFF Crisp Sheet */
+    --card-foreground: 210 11% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 11% 7%;
+    --primary: 9 76% 50%; /* #E03C1F SBB Signal Vermilion */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 47 16% 90%; /* #EAE8E1 Stone Index Surface */
+    --secondary-foreground: 210 11% 7%;
+    --muted: 47 16% 90%;
+    --muted-foreground: 218 11% 27%; /* #3D434D High-contrast technical slate (8.6:1 contrast) */
+    --accent: 217 100% 37%; /* #0047BB Swiss Route Cobalt */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 74% 42%; /* #BA1C1C */
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 11% 7%; /* #111315 Exposed Structural Hairline */
+    --border-subtle: 45 12% 76%; /* #C8C5BC Secondary Cell Rule */
+    --input: 210 11% 7%;
+    --ring: 217 100% 37%;
     --radius: 0.75rem;
+
+    /* Named World Tokens */
+    --paper: #F5F4F0;
+    --paper-recessed: #EAE8E1;
+    --sheet: #FFFFFF;
+    --ink: #111315;
+    --ink-secondary: #3D434D;
+    --vermilion: #E03C1F;
+    --cobalt: #0047BB;
+    --emerald: #0D7A5F;
+    --amber: #B45309;
+
+    /* Scrollbar Tokens */
+    --scrollbar-thumb: #3D434D;
+    --scrollbar-track: #EAE8E1;
   }
 }
 
@@ -50,86 +139,121 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --color-aurora-green: #10b981;
-  --color-aurora-teal: #06b6d4;
-  --color-aurora-cyan: #00e5ff;
-  --color-aurora-purple: #a855f7;
-  --color-aurora-pink: #ec4899;
+  --font-display: "Chivo", "Archivo", sans-serif;
+  --font-sans: "Archivo", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+html {
+  color-scheme: light;
+  accent-color: #E03C1F;
+  caret-color: #E03C1F;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
   margin: 0;
-  background-color: #0b0e14;
-  color: hsl(var(--foreground));
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
   overflow-x: hidden;
+  max-width: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Glassmorphism helpers */
-.glass-1 {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+::selection {
+  background-color: #E03C1F;
+  color: #FFFFFF;
 }
 
-.glass-2 {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+:focus-visible {
+  outline: 2px solid #0047BB;
+  outline-offset: 2px;
 }
 
-.glass-edge {
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+input:user-invalid,
+select:user-invalid,
+textarea:user-invalid {
+  border-color: #BA1C1C;
 }
 
-.glass-input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.font-display {
+  font-family: var(--font-display);
 }
 
-@keyframes shimmer {
+.font-mono,
+code,
+pre,
+kbd,
+.tabular-nums {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.custom-scrollbar {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+@supports not (scrollbar-color: auto) {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+}
+
+/* Authored signature motion: Swiss split-flap / dispatch row reveal */
+@keyframes dispatch-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes dispatch-flap-in {
   0% {
-    transform: translateX(-100%);
+    opacity: 0;
+    transform: translateY(-6px) rotateX(-18deg);
   }
   100% {
-    transform: translateX(100%);
+    opacity: 1;
+    transform: translateY(0) rotateX(0deg);
   }
 }
 
-.animate-shimmer {
-  animation: shimmer 2.5s infinite;
+.animate-dispatch-pulse {
+  animation: dispatch-pulse 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
-@keyframes float-slow {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-25px) scale(1.05);
-  }
+.animate-dispatch-flap {
+  animation: dispatch-flap-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top center;
 }
 
-@keyframes float-slow-reverse {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
+@media (prefers-reduced-motion: reduce) {
+  .animate-dispatch-pulse,
+  .animate-dispatch-flap {
+    animation: none !important;
   }
-  50% {
-    transform: translateY(25px) scale(0.95);
-  }
-}
-
-.animate-float-slow {
-  animation: float-slow 14s ease-in-out infinite;
-}
-
-.animate-float-slow-reverse {
-  animation: float-slow-reverse 16s ease-in-out infinite;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+  text-underline-offset: 4px;
 }

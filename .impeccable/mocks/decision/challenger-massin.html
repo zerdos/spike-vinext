@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Massin Typographic Stage</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1440px; height: 900px; overflow: hidden;
+    background: #FAF8F5; color: #0F0F10;
+    font-family: 'JetBrains Mono', monospace;
+    display: grid; grid-template-rows: 60px 1fr;
+  }
+  .header {
+    border-bottom: 3px solid #0F0F10; display: flex; justify-content: space-between;
+    align-items: center; padding: 0 36px; font-weight: 700;
+  }
+  .stage {
+    display: grid; grid-template-columns: 1fr 1fr;
+  }
+  .bloat-wall {
+    background: #0F0F10; color: #FAF8F5; padding: 44px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .huge-shout {
+    font-family: 'Anton', sans-serif; font-size: 108px; line-height: 0.88;
+    text-transform: uppercase; letter-spacing: -0.02em;
+  }
+  .clean-lane {
+    padding: 48px; display: flex; flex-direction: column; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <span>SPIKE.LAND // PROGRESSIVE DISCLOSURE MCP</span>
+    <span style="background:#D92B2B;color:#FAF8F5;padding:8px 18px;">JOIN WAITLIST</span>
+  </div>
+  <div class="stage">
+    <div class="bloat-wall">
+      <div style="color:#D92B2B;font-weight:700;">STATIC MCP BLOAT: 50,050 TOKENS / TURN</div>
+      <div class="huge-shout">455 AI TOOLS.<br/><span style="color:#D92B2B;">ONE PROTOCOL.</span></div>
+      <div style="font-size:16px;color:#A1A1AA;">Stop shouting all 455 tool schemas into every prompt turn.</div>
+    </div>
+    <div class="clean-lane">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#D92B2B;">THE 660-TOKEN WHISPER // SPIKE LAND GATEWAY</div>
+        <h2 style="font-family:'Anton',sans-serif;font-size:64px;line-height:1;margin:16px 0;">5 GATEWAY TOOLS.<br/>88 CATEGORIES.</h2>
+        <p style="font-size:17px;line-height:1.5;">Agents start with 5 lightweight tools and discover 455 tools strictly on demand.</p>
+      </div>
+      <div style="border:3px solid #0F0F10;padding:24px;background:#FFF;">
+        <pre style="font-size:14px;">"spike-land": { "url": "https://spike.land/api/mcp" }</pre>
+      </div>
+      <div style="background:#0F0F10;color:#FAF8F5;padding:18px;text-align:center;font-weight:700;">
+        EXPLORE TOOLS IN PLAYGROUND →
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Swiss Dispatch & Cartographic Atlas</title>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1440px; height: 900px; overflow: hidden;
+    background: #F5F4F0; color: #111315;
+    font-family: 'Inter', sans-serif;
+    display: flex; flex-direction: column;
+  }
+  .top-bar {
+    height: 64px; border-bottom: 2px solid #111315;
+    display: grid; grid-template-columns: 260px 1fr 240px;
+    align-items: center;
+  }
+  .brand {
+    padding: 0 28px; font-family: 'Chivo', sans-serif; font-weight: 900;
+    font-size: 24px; letter-spacing: -0.03em; border-right: 2px solid #111315;
+    height: 100%; display: flex; align-items: center; gap: 10px;
+  }
+  .brand-dot { width: 14px; height: 14px; background: #E03C1F; display: inline-block; }
+  .nav-links {
+    display: flex; gap: 36px; padding: 0 32px; font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+  }
+  .nav-cta {
+    height: 100%; background: #E03C1F; color: #F5F4F0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px;
+    border-left: 2px solid #111315; text-transform: uppercase;
+  }
+  .atlas-grid {
+    flex: 1; display: grid; grid-template-columns: 7fr 5fr;
+  }
+  .hero-col {
+    padding: 56px 48px; border-right: 2px solid #111315;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .stamp {
+    display: inline-flex; align-items: center; gap: 12px;
+    border: 2px solid #111315; padding: 6px 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    background: #FFFFFF; width: fit-content;
+  }
+  .stamp-red { color: #E03C1F; }
+  h1 {
+    font-family: 'Chivo', sans-serif; font-weight: 900;
+    font-size: 88px; line-height: 0.94; letter-spacing: -0.04em;
+    margin: 24px 0; color: #111315;
+  }
+  h1 em { font-style: normal; color: #E03C1F; text-decoration: underline; text-decoration-thickness: 6px; }
+  .sub { font-size: 21px; line-height: 1.45; color: #373A40; max-width: 640px; }
+  .metrics-table {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border: 2px solid #111315; background: #FFFFFF; margin-top: 32px;
+  }
+  .metric-cell {
+    padding: 22px 24px; border-right: 2px solid #111315;
+  }
+  .metric-cell:last-child { border-right: none; }
+  .m-idx { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #E03C1F; font-weight: 700; }
+  .m-val { font-family: 'Chivo', sans-serif; font-size: 54px; font-weight: 900; line-height: 1; margin: 8px 0 4px; }
+  .m-lbl { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; color: #525866; }
+  .dispatch-col {
+    display: flex; flex-direction: column; background: #EAE8E1;
+  }
+  .panel-head {
+    padding: 18px 28px; background: #111315; color: #F5F4F0;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    display: flex; justify-content: space-between;
+  }
+  .timetable {
+    padding: 28px; border-bottom: 2px solid #111315; background: #FFFFFF;
+  }
+  .tt-row {
+    display: flex; justify-content: space-between; padding: 12px 0;
+    border-bottom: 1px solid #D5D3CC; font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  }
+  .tt-badge { background: #0047BB; color: #FFF; padding: 2px 8px; font-size: 12px; }
+  .code-sheet {
+    flex: 1; padding: 28px; background: #111315; color: #F5F4F0;
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="brand"><span class="brand-dot"></span>spike.land</div>
+    <div class="nav-links">
+      <span>01 // Playground</span>
+      <span>02 // ROI Simulator</span>
+      <span>03 // Architecture</span>
+      <span>04 // Setup Guide</span>
+    </div>
+    <div class="nav-cta">Join Waitlist →</div>
+  </div>
+  <div class="atlas-grid">
+    <div class="hero-col">
+      <div>
+        <div class="stamp"><span class="stamp-red">TIMETABLE 2026</span> // PROGRESSIVE DISCLOSURE MCP</div>
+        <h1>455 AI Tools.<br/><em>One Protocol.</em></h1>
+        <p class="sub">Agents connect to 5 lightweight gateway tools (660 tokens) and dynamically route across 88 tool categories on Cloudflare's global edge—cutting prompt token waste by 98.7%.</p>
+      </div>
+      <div class="metrics-table">
+        <div class="metric-cell">
+          <div class="m-idx">SEC 01 // CATALOG</div>
+          <div class="m-val">455</div>
+          <div class="m-lbl">Verified Tools</div>
+        </div>
+        <div class="metric-cell">
+          <div class="m-idx">SEC 02 // TAXONOMY</div>
+          <div class="m-val">88</div>
+          <div class="m-lbl">Tool Categories</div>
+        </div>
+        <div class="metric-cell">
+          <div class="m-idx">SEC 03 // ENTRY</div>
+          <div class="m-val">5</div>
+          <div class="m-lbl">Gateway Tools</div>
+        </div>
+      </div>
+    </div>
+    <div class="dispatch-col">
+      <div class="panel-head">
+        <span>DISPATCH SCHEDULE // INITIAL GATEWAY SUITE</span>
+        <span>660 TOKENS TOTAL</span>
+      </div>
+      <div class="timetable">
+        <div class="tt-row"><span>01. search_tools(query)</span><span class="tt-badge">MOUNTED</span></div>
+        <div class="tt-row"><span>02. list_categories()</span><span class="tt-badge">MOUNTED</span></div>
+        <div class="tt-row"><span>03. enable_category(id)</span><span class="tt-badge">MOUNTED</span></div>
+        <div class="tt-row"><span>04. get_balance()</span><span class="tt-badge">MOUNTED</span></div>
+        <div class="tt-row"><span>05. get_status()</span><span class="tt-badge">MOUNTED</span></div>
+      </div>
+      <div class="code-sheet">
+        <div style="color:#E03C1F;font-weight:700;">// .mcp.json — ZERO-COLD-START EDGE ENDPOINT</div>
+        <pre style="line-height:1.6;">{
+  "mcpServers": {
+    "spike-land": {
+      "url": "https://spike.land/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}</pre>
+        <div style="background:#E03C1F;color:#FFF;padding:14px 20px;text-align:center;font-weight:700;">
+          EXPLORE LIVE MCP PLAYGROUND ↓
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
