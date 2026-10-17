@@ -22,49 +22,91 @@ export const MCP_CATEGORIES: ToolCategory[] = [
     icon: "layers",
     tools: [
       {
-        name: "search_tools",
-        description: "Search across all 455 tools by semantic query or keyword with progressive schema loading.",
+        name: "list_capability_categories",
+        description: "MCP 2026-07-28 Broker Meta-Tool: Returns a directory of deterministic capability categories with risk tiers, tool counts, and a server-minted SEP-2567 workspace_handle.",
         category: "Platform Core",
         parameters: {
-          query: { type: "string", description: "Search query or task requirement", required: true },
-          category: { type: "string", description: "Optional filter category" },
+          workspace_handle: { type: "string", description: "Optional SEP-2567 workspace state handle" },
+          domain_filter: { type: "string", description: "Optional domain keyword filter (e.g. 'development', 'billing')" },
         },
         mockResponse: {
-          matchedTools: [
-            { name: "generate_image", category: "AI & Creative", score: 0.98 },
-            { name: "modify_image", category: "AI & Creative", score: 0.94 },
-            { name: "check_job", category: "AI & Creative", score: 0.89 },
+          protocolVersion: "2026-07-28",
+          workspace_handle: "spk_hdl_v2.eyJzdWIiOiJhbm9uIiwiY2F0cyI6WyJQbGF0Zm9ybSBDb3JlIl19.9f8a7b6c",
+          positionZeroCacheStatus: "100% immutable (cacheScope: public, ttlMs: 3600000)",
+          totalCategories: 88,
+          categories: [
+            { id: "development", name: "Development", riskTier: "low-readonly", readOnlyHint: true, count: 69 },
+            { id: "fintech-billing", name: "FinTech & Billing", riskTier: "elevated-write", readOnlyHint: false, count: 38 },
           ],
-          totalMatches: 8,
-          executionTimeMs: 4.2,
         },
       },
       {
-        name: "list_categories",
-        description: "List all 88 tool categories with available tool counts and enablement status.",
+        name: "configure_active_categories",
+        description: "MCP 2026-07-28 Broker Meta-Tool: Updates active category grants on workspace_handle and discloses JSON Schema 2020-12 definitions in-band at the conversation tail (preserving Position-Zero LLM prefix cache).",
         category: "Platform Core",
         parameters: {
-          enabledOnly: { type: "boolean", description: "Filter only currently activated categories" },
+          workspace_handle: { type: "string", description: "SEP-2567 workspace handle", required: true },
+          enable_categories: { type: "array", description: "JSON array of category IDs or names to activate", required: true },
+          disable_categories: { type: "array", description: "Optional JSON array of categories to deactivate" },
         },
         mockResponse: {
-          categoriesCount: 88,
-          totalTools: 455,
-          activeCategories: ["Platform Core"],
-          gatewayTools: ["search_tools", "list_categories", "enable_category", "get_balance", "get_status"],
+          resultType: "complete",
+          workspace_handle: "spk_hdl_v2.eyJzdWIiOiJhbm9uIiwiY2F0cyI6WyJQbGF0Zm9ybSBDb3JlIiwiRGV2ZWxvcG1lbnQiXX0.3c2d1e0f",
+          activeCategories: ["Platform Core", "Development"],
+          positionZeroInvalidated: false,
+          disclosedToolsCount: 3,
+          tools_hash: "th_9e8d7c6b5a",
         },
       },
       {
-        name: "enable_category",
-        description: "Dynamically mount all schemas and endpoints for a specific category into active context.",
+        name: "inspect_tool_schema",
+        description: "MCP 2026-07-28 Broker Meta-Tool: Fetches extended JSON Schema 2020-12 documentation, $ref sub-schemas, x-mcp-header policy status, and SEP-1865 MCP Apps UI metadata on demand.",
         category: "Platform Core",
         parameters: {
-          category: { type: "string", description: "Name or ID of category to enable", required: true },
+          workspace_handle: { type: "string", description: "Optional SEP-2567 workspace handle" },
+          tool_name: { type: "string", description: "Target tool name to inspect", required: true },
         },
         mockResponse: {
-          status: "success",
-          category: "AI & Creative",
-          unlockedTools: 60,
-          tokensConsumed: 120,
+          tool_name: "code_runner",
+          dialect: "https://json-schema.org/draft/2020-12/schema",
+          headerPolicyAudit: "clean (no sensitive x-mcp-header bindings)",
+          uiResourceUri: "ui://spike-land/sandbox-console",
+        },
+      },
+      {
+        name: "execute_tool",
+        description: "MCP 2026-07-28 Broker Meta-Tool: Verifies workspace_handle category grants, performs RFC 8707 OAuth 2.1 upstream token exchange (zero passthrough), executes the target tool, and slices oversized outputs.",
+        category: "Platform Core",
+        parameters: {
+          workspace_handle: { type: "string", description: "SEP-2567 workspace handle", required: true },
+          tool_name: { type: "string", description: "Target tool name to execute", required: true },
+          arguments: { type: "object", description: "JSON arguments for the target tool", required: true },
+        },
+        mockResponse: {
+          resultType: "complete",
+          executedTool: "code_runner",
+          rfc8707TokenExchange: {
+            inboundAudience: "https://spike.land/api/mcp",
+            upstreamResource: "https://mcp.upstream.spike.land/development",
+            tokenPassthrough: false,
+          },
+          _meta: { tools_hash: "th_9e8d7c6b5a" },
+        },
+      },
+      {
+        name: "inspect_result_slice",
+        description: "MCP 2026-07-28 Broker Meta-Tool: Output Progressive Disclosure — queries an oversized downstream tool response via result_cursor_handle and JSONPath/key filter, cutting response tokens by up to 98%.",
+        category: "Platform Core",
+        parameters: {
+          result_cursor_handle: { type: "string", description: "SEP-2567 result cursor handle from execute_tool", required: true },
+          jsonpath_or_filter: { type: "string", description: "JSONPath or property filter (e.g. '$.rows[0]' or 'markdown')" },
+        },
+        mockResponse: {
+          resultType: "complete",
+          result_cursor_handle: "spk_res_v2.7f6e5d4c",
+          filter: "$.rows[0]",
+          sliceTokens: 28,
+          originalPayloadTokensSaved: "96.4%",
         },
       },
       {
@@ -466,9 +508,10 @@ export const CLIENT_CONFIGS = [
     code: `{
   "mcpServers": {
     "spike-land": {
-      "url": "https://next.spike.land/api/mcp/sse",
+      "url": "https://next.spike.land/api/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY",
+        "MCP-Protocol-Version": "2026-07-28"
       }
     }
   }
@@ -479,7 +522,7 @@ export const CLIENT_CONFIGS = [
     name: "Claude Code",
     icon: "terminal",
     filename: "Terminal Command",
-    code: `claude mcp add spike-land https://next.spike.land/api/mcp/sse --header "Authorization: Bearer YOUR_API_KEY"`,
+    code: `claude mcp add spike-land https://next.spike.land/api/mcp --header "Authorization: Bearer YOUR_API_KEY" --header "MCP-Protocol-Version: 2026-07-28"`,
   },
   {
     id: "cursor",
@@ -489,9 +532,27 @@ export const CLIENT_CONFIGS = [
     code: `{
   "mcpServers": {
     "spike-land": {
-      "url": "https://next.spike.land/api/mcp/sse",
+      "url": "https://next.spike.land/api/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY",
+        "MCP-Protocol-Version": "2026-07-28"
+      }
+    }
+  }
+}`,
+  },
+  {
+    id: "virtual-gateway",
+    name: "Virtual Gateway (Pattern C)",
+    icon: "settings",
+    filename: "virtual-gateway-mcp.json",
+    code: `{
+  "mcpServers": {
+    "spike-land-dev": {
+      "url": "https://next.spike.land/api/mcp/g/development",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY",
+        "MCP-Protocol-Version": "2026-07-28"
       }
     }
   }
@@ -505,14 +566,24 @@ export const CLIENT_CONFIGS = [
     code: `curl -X POST https://next.spike.land/api/mcp \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
+  -H "MCP-Protocol-Version: 2026-07-28" \\
+  -H "Mcp-Method: tools/call" \\
+  -H "Mcp-Name: configure_active_categories" \\
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
     "method": "tools/call",
     "params": {
-      "name": "search_tools",
-      "arguments": { "query": "image" }
+      "name": "configure_active_categories",
+      "arguments": {
+        "workspace_handle": "spk_hdl_v2...",
+        "enable_categories": ["Development"]
+      },
+      "_meta": {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28"
+      }
     }
   }'`,
   },
 ];
+

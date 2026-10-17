@@ -86,8 +86,8 @@ export function Header() {
                 </span>
               </div>
             </a>
-            <Badge variant="outline" className="hidden sm:inline-flex font-mono text-[11px]">
-              MCP v2025
+            <Badge variant="cobalt" className="hidden sm:inline-flex font-mono text-[11px]">
+              MCP 2026-07-28
             </Badge>
           </div>
 

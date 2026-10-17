@@ -1,11 +1,19 @@
-import { dispatchJsonRpc, GATEWAY_TOOL_NAMES, ALL_TOOLS } from "@/lib/mcp-gateway";
-import { JSONRPCRequest, RequestContext } from "@/lib/mcp-types";
+import {
+  dispatchJsonRpc,
+  GATEWAY_TOOL_NAMES,
+  BROKER_2026_TOOL_NAMES,
+  SUPPORTED_PROTOCOL_VERSIONS,
+  ALL_TOOLS,
+  getProtectedResourceMetadata,
+} from "@/lib/mcp-gateway";
+import { JSONRPCRequest, RequestContext, TransportHeaders } from "@/lib/mcp-types";
 
 function getCorsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, Mcp-Session-Id",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, MCP-Protocol-Version, Mcp-Method, Mcp-Name",
   };
 }
 
@@ -18,28 +26,33 @@ export async function OPTIONS() {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const sessionId = url.searchParams.get("sessionId");
+  const gatewaySlug = url.searchParams.get("gateway") || undefined;
   const colo = (request as unknown as { cf?: { colo?: string } }).cf?.colo || "LHR";
 
   return Response.json(
     {
       service: "Spike Land Progressive MCP Gateway",
       name: "spike-land-gateway",
-      version: "1.0.0-mvp",
+      version: "2.0.0-mcp2026",
       protocol: "mcp-jsonrpc-2.0",
+      protocolVersion: "2026-07-28",
+      supportedProtocolVersions: [...SUPPORTED_PROTOCOL_VERSIONS],
       runtime: "Cloudflare Workers Edge (V8 isolates)",
       datacenter: colo,
-      description: "Progressively Disclosed MCP Server & MCP Registry Gateway",
+      description:
+        "MCP 2026-07-28 Stateless Progressive-Disclosure Relay & Capability Broker (SEP-2567, SEP-2575, SEP-2549, SEP-2243, SEP-2322)",
       endpoints: {
         httpPost: "/api/mcp",
-        sse: "/api/mcp/sse",
+        virtualGateways: "/api/mcp/g/{gateway_slug}",
+        oauthProtectedResource: "/.well-known/oauth-protected-resource",
       },
+      broker2026Tools: [...BROKER_2026_TOOL_NAMES],
       gatewayTools: [...GATEWAY_TOOL_NAMES],
-      universalGatewayTools: ["discover_tools", "run_tool", "get_gateway_status"],
       totalCatalogTools: Object.keys(ALL_TOOLS).length,
-      initialExposedTools: 3,
-      estimatedTokenSavings: "98.2%",
-      currentSession: sessionId || null,
+      initialExposedTools: 5,
+      positionZeroCacheStatus: "100% immutable (cacheScope: public, ttlMs: 3600000)",
+      estimatedTokenSavings: "98.7%",
+      oauthProtectedResource: getProtectedResourceMetadata(gatewaySlug),
       documentation: "https://spike.land/mcp",
     },
     {
@@ -52,21 +65,34 @@ export async function POST(request: Request) {
   const url = new URL(request.url);
   const authHeader = request.headers.get("authorization") || "";
   const apiKey = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
-  const headerSessionId = request.headers.get("mcp-session-id");
-  const querySessionId = url.searchParams.get("sessionId");
-
-  // Derive or use provided session ID
-  const sessionId = querySessionId || headerSessionId || (apiKey ? `auth_${apiKey.slice(-8)}` : "default_session");
-  const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
+  const callerSubject = apiKey ? `sub_${apiKey.slice(-8)}` : "anonymous";
+  const ip =
+    request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
   const colo = (request as unknown as { cf?: { colo?: string } }).cf?.colo || "LHR";
-  const profile = (url.searchParams.get("profile") || request.headers.get("x-mcp-profile") || request.headers.get("mcp-profile")) as ("standard" | "universal" | undefined);
+  const gatewaySlug = url.searchParams.get("gateway") || undefined;
+
+  // SEP-2243: Extract HTTP Transport Headers (MCP-Protocol-Version, Mcp-Method, Mcp-Name, Mcp-Param-*)
+  const mcpParams: Record<string, string> = {};
+  request.headers.forEach((value, key) => {
+    if (key.toLowerCase().startsWith("mcp-param-")) {
+      mcpParams[key.slice(10)] = value;
+    }
+  });
+
+  const transportHeaders: TransportHeaders = {
+    mcpProtocolVersion: request.headers.get("mcp-protocol-version") || undefined,
+    mcpMethod: request.headers.get("mcp-method") || undefined,
+    mcpName: request.headers.get("mcp-name") || undefined,
+    mcpParams: Object.keys(mcpParams).length > 0 ? mcpParams : undefined,
+  };
 
   const ctx: RequestContext = {
-    sessionId,
     apiKey,
+    callerSubject,
     ip,
     colo,
-    profile,
+    gatewaySlug,
+    transportHeaders,
   };
 
   let body: unknown;
@@ -111,7 +137,15 @@ export async function POST(request: Request) {
     });
   }
 
+  // SEP-2575 / SEP-2243: Return HTTP 400 for UnsupportedProtocolVersionError (-32022) or HeaderMismatchError (-32020)
+  const httpStatus =
+    response.error && (response.error.code === -32022 || response.error.code === -32020)
+      ? 400
+      : 200;
+
   return Response.json(response, {
+    status: httpStatus,
     headers: getCorsHeaders(),
   });
 }
+

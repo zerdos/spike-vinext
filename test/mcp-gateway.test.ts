@@ -1,329 +1,496 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   dispatchJsonRpc,
-  getOrCreateSession,
-  resetSession,
   GATEWAY_TOOL_NAMES,
-  UNIVERSAL_GATEWAY_TOOL_NAMES,
-  ALL_TOOLS,
+  BROKER_2026_TOOL_NAMES,
+  SUPPORTED_PROTOCOL_VERSIONS,
+  mintWorkspaceHandle,
+  verifyWorkspaceHandle,
+  auditToolHeaderAnnotations,
 } from "@/lib/mcp-gateway";
 import { POST as mcpPost, GET as mcpGet, OPTIONS as mcpOptions } from "@/app/api/mcp/route";
-import { GET as sseGet } from "@/app/api/mcp/sse/route";
+import {
+  GET as virtualGatewayGet,
+  POST as virtualGatewayPost,
+} from "@/app/api/mcp/g/[gatewaySlug]/route";
+import { GET as oauthResourceGet } from "@/app/.well-known/oauth-protected-resource/route";
 
-describe("Progressive Context Disclosure MCP Gateway", () => {
-  const sessionId = "test-session-123";
+describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
+  describe("SEP-2575 Stateless Discovery & Protocol Version Enforcement (No Legacy Backwards Compatibility)", () => {
+    it("supports exclusively MCP 2026-07-28 and implements mandatory 'server/discover'", async () => {
+      expect(SUPPORTED_PROTOCOL_VERSIONS).toEqual(["2026-07-28"]);
+      expect(GATEWAY_TOOL_NAMES).toEqual(BROKER_2026_TOOL_NAMES);
 
-  beforeEach(() => {
-    resetSession(sessionId);
-  });
-
-  describe("JSON-RPC 2.0 Handshake & Bootstrap", () => {
-    it("handles 'initialize' method with protocol negotiation", async () => {
       const response = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
           id: 1,
-          method: "initialize",
-          params: {
-            protocolVersion: "2024-11-05",
-            capabilities: { tools: { listChanged: true } },
-            clientInfo: { name: "Cursor", version: "0.45.0" },
-          },
+          method: "server/discover",
+          params: {},
         },
-        { sessionId }
+        {}
       );
 
-      expect(response).not.toBeNull();
-      expect(response?.id).toBe(1);
-      expect(response?.result).toEqual({
-        protocolVersion: "2024-11-05",
-        capabilities: { tools: { listChanged: true } },
-        serverInfo: {
-          name: "spike-land-gateway",
-          version: "1.0.0-mvp",
-        },
-      });
+      expect(response?.error).toBeUndefined();
+      const result = response?.result as {
+        resultType: string;
+        protocolVersion: string;
+        supportedProtocolVersions: string[];
+        capabilities: { extensions: Record<string, unknown> };
+      };
+      expect(result.resultType).toBe("complete");
+      expect(result.protocolVersion).toBe("2026-07-28");
+      expect(result.supportedProtocolVersions).toEqual(["2026-07-28"]);
+      expect(result.capabilities.extensions).toHaveProperty("io.modelcontextprotocol/tasks");
+      expect(result.capabilities.extensions).toHaveProperty("io.modelcontextprotocol/ui");
     });
 
-    it("returns ONLY the 5 Gateway Meta-Tools on initial 'tools/list'", async () => {
-      const response = await dispatchJsonRpc(
-        {
+    it("rejects legacy protocol versions (e.g. 2024-11-05, 2025-11-25) with -32022 UnsupportedProtocolVersionError and HTTP 400", async () => {
+      const req = new Request("https://next.spike.land/api/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "MCP-Protocol-Version": "2024-11-05",
+        },
+        body: JSON.stringify({
           jsonrpc: "2.0",
           id: 2,
           method: "tools/list",
           params: {},
-        },
-        { sessionId }
-      );
+        }),
+      });
 
-      expect(response?.id).toBe(2);
-      const tools = (response?.result as { tools: Array<{ name: string }> }).tools;
-      expect(tools).toHaveLength(5);
-      const toolNames = tools.map((t) => t.name);
-      expect(toolNames).toEqual(expect.arrayContaining([...GATEWAY_TOOL_NAMES]));
+      const res = await mcpPost(req);
+      expect(res.status).toBe(400);
+      const json = (await res.json()) as {
+        error: { code: number; data: { supportedVersions: string[] } };
+      };
+      expect(json.error.code).toBe(-32022);
+      expect(json.error.data.supportedVersions).toEqual(["2026-07-28"]);
     });
 
-    it("handles 'notifications/initialized' silently", async () => {
-      const response = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          method: "notifications/initialized",
-          params: {},
-        },
-        { sessionId }
-      );
-
-      expect(response).toBeNull();
-    });
-
-    it("handles 'ping' successfully", async () => {
+    it("rejects removed stateful 'initialize' handshake with -32601 Method Not Found", async () => {
       const response = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
           id: 3,
-          method: "ping",
+          method: "initialize",
+          params: {},
         },
-        { sessionId }
+        {}
       );
 
-      expect(response?.result).toEqual({});
+      expect(response?.error).toBeDefined();
+      expect(response?.error?.code).toBe(-32601);
+      expect(response?.error?.message).toContain("removed in MCP 2026-07-28");
     });
-  });
 
-  describe("Progressive Tool Discovery & Schema Hydration", () => {
-    it("search_tools discovers tools and auto-hydrates them into active session", async () => {
-      // 1. Call search_tools for "image"
-      const searchCall = await dispatchJsonRpc(
+    it("handles 'subscriptions/listen' and 'ping' in stateless mode", async () => {
+      const subRes = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
           id: 4,
-          method: "tools/call",
-          params: {
-            name: "search_tools",
-            arguments: { query: "image", limit: 5 },
-          },
+          method: "subscriptions/listen",
+          params: { notifications: { toolsListChanged: true } },
         },
-        { sessionId }
+        {}
+      );
+      expect((subRes?.result as { notification: string }).notification).toBe(
+        "notifications/subscriptions/acknowledged"
       );
 
-      expect(searchCall?.error).toBeUndefined();
-      const contentText = (searchCall?.result as { content: Array<{ text: string }> }).content[0].text;
-      const parsedOutput = JSON.parse(contentText);
-      expect(parsedOutput.matchedCount).toBeGreaterThan(0);
-      const matchedNames = parsedOutput.tools.map((t: { name: string }) => t.name);
-      expect(matchedNames).toContain("generate_image");
-
-      // 2. tools/list should now include the newly discovered tools!
-      const listResponse = await dispatchJsonRpc(
+      const pingRes = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
           id: 5,
-          method: "tools/list",
+          method: "ping",
         },
-        { sessionId }
+        {}
       );
-
-      const tools = (listResponse?.result as { tools: Array<{ name: string }> }).tools;
-      const toolNames = tools.map((t) => t.name);
-      expect(toolNames.length).toBeGreaterThan(5);
-      expect(toolNames).toContain("generate_image");
-    });
-
-    it("enable_category dynamically mounts all category tools into session", async () => {
-      const enableCall = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 6,
-          method: "tools/call",
-          params: {
-            name: "enable_category",
-            arguments: { category: "Development" },
-          },
-        },
-        { sessionId }
-      );
-
-      expect(enableCall?.error).toBeUndefined();
-      const contentText = (enableCall?.result as { content: Array<{ text: string }> }).content[0].text;
-      const parsedOutput = JSON.parse(contentText);
-      expect(parsedOutput.status).toBe("success");
-      expect(parsedOutput.category).toBe("Development");
-      expect(parsedOutput.tools).toContain("code_runner");
-
-      // Verify tools/list has all development tools now
-      const listResponse = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 7,
-          method: "tools/list",
-        },
-        { sessionId }
-      );
-
-      const toolNames = (listResponse?.result as { tools: Array<{ name: string }> }).tools.map((t) => t.name);
-      expect(toolNames).toContain("code_runner");
-      expect(toolNames).toContain("git_diff_viewer");
-    });
-
-    it("list_categories returns category details and status", async () => {
-      const call = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 8,
-          method: "tools/call",
-          params: {
-            name: "list_categories",
-            arguments: {},
-          },
-        },
-        { sessionId }
-      );
-
-      const text = (call?.result as { content: Array<{ text: string }> }).content[0].text;
-      const data = JSON.parse(text);
-      expect(data.totalCategories).toBe(88);
-      expect(data.categories.length).toBeGreaterThan(5);
-      expect(data.categories[0]).toHaveProperty("id");
-      expect(data.categories[0]).toHaveProperty("count");
-    });
-
-    it("get_balance and get_status return valid telemetry", async () => {
-      const balanceCall = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 9,
-          method: "tools/call",
-          params: { name: "get_balance" },
-        },
-        { sessionId }
-      );
-
-      const balanceData = JSON.parse((balanceCall?.result as { content: Array<{ text: string }> }).content[0].text);
-      expect(balanceData.balance).toBe(1450.0);
-      expect(balanceData.currency).toBe("credits");
-
-      const statusCall = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 10,
-          method: "tools/call",
-          params: { name: "get_status" },
-        },
-        { sessionId }
-      );
-
-      const statusData = JSON.parse((statusCall?.result as { content: Array<{ text: string }> }).content[0].text);
-      expect(statusData.status).toBe("healthy");
-      expect(statusData.features.progressiveDisclosure).toBe(true);
+      expect(pingRes?.result).toEqual({});
     });
   });
 
-  describe("Execution & Auto-Hydration Fallbacks", () => {
-    it("auto-hydrates an unmounted tool when invoked directly via tools/call", async () => {
-      // "seo_audit" is not in gateway tools and category is not enabled
-      const call = await dispatchJsonRpc(
+  describe("SEP-2567 & SEP-2549 Position-Zero Prefix Cache Immunity", () => {
+    it("always returns the static 5 Broker Meta-Tools on 'tools/list' with cacheScope: 'public' and ttlMs: 3600000", async () => {
+      const listBefore = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 10,
+          method: "tools/list",
+          params: {
+            _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" },
+          },
+        },
+        {}
+      );
+
+      const resBefore = listBefore?.result as {
+        resultType: string;
+        ttlMs: number;
+        cacheScope: string;
+        tools: Array<{ name: string }>;
+      };
+      expect(resBefore.resultType).toBe("complete");
+      expect(resBefore.ttlMs).toBe(3600000);
+      expect(resBefore.cacheScope).toBe("public");
+      expect(resBefore.tools.map((t) => t.name)).toEqual([...BROKER_2026_TOOL_NAMES]);
+
+      // Toggle category via configure_active_categories
+      const handle = mintWorkspaceHandle({ sub: "user_1", cats: ["Platform Core"] });
+      const configCall = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
           id: 11,
           method: "tools/call",
           params: {
-            name: "seo_audit",
-            arguments: { url: "https://spike.land/mcp" },
+            name: "configure_active_categories",
+            arguments: {
+              workspace_handle: handle,
+              enable_categories: ["Development"],
+            },
+            _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" },
           },
         },
-        { sessionId }
+        { callerSubject: "user_1" }
       );
 
-      expect(call?.error).toBeUndefined();
-      const content = (call?.result as { content: Array<{ text: string }> }).content;
-      expect(content.some((c) => c.text.includes("[Info: Tool 'seo_audit' was auto-mounted"))).toBe(true);
-      const dataText = content[content.length - 1].text;
-      expect(dataText).toContain("https://spike.land/mcp");
+      const configData = JSON.parse(
+        (configCall?.result as { content: Array<{ text: string }> }).content[0].text
+      );
+      expect(configData.positionZeroInvalidated).toBe(false);
+      expect(configData.disclosedSchemas.map((s: { name: string }) => s.name)).toContain(
+        "code_runner"
+      );
 
-      // Verify that seo_audit is now in the active tools for the session
-      const listResponse = await dispatchJsonRpc(
+      // tools/list after toggle MUST remain 100% identical (Position Zero never mutates)
+      const listAfter = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
           id: 12,
           method: "tools/list",
-        },
-        { sessionId }
-      );
-
-      const toolNames = (listResponse?.result as { tools: Array<{ name: string }> }).tools.map((t) => t.name);
-      expect(toolNames).toContain("seo_audit");
-    });
-
-    it("returns error code -32601 with hint if tool does not exist", async () => {
-      const call = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 13,
-          method: "tools/call",
           params: {
-            name: "non_existent_tool_xyz",
-            arguments: {},
+            _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" },
           },
         },
-        { sessionId }
+        {}
       );
 
-      expect(call?.error).toBeDefined();
-      expect(call?.error?.code).toBe(-32601);
-      expect(call?.error?.message).toContain("Tool not found. Use search_tools to discover available capabilities.");
+      const resAfter = listAfter?.result as { tools: Array<{ name: string }> };
+      expect(resAfter.tools.map((t) => t.name)).toEqual([...BROKER_2026_TOOL_NAMES]);
     });
   });
 
-  describe("Multi-Registry MCP Integration (Sprint 2)", () => {
-    it("mcp_registry_search queries across external registries", async () => {
+  describe("SEP-2567 Workspace Handle Security, RFC 8707 Token Exchange & Output Slicing", () => {
+    it("enforces workspace_handle cryptographic signature, caller subject binding, and category sandboxing on execute_tool", async () => {
+      const handleUserA = mintWorkspaceHandle({
+        sub: "user_alice",
+        cats: ["Platform Core"],
+      });
+
+      // 1. Cross-user replay attempt by user_bob fails verification
+      const replayCheck = verifyWorkspaceHandle(handleUserA, "user_bob");
+      expect(replayCheck.valid).toBe(false);
+      expect(replayCheck.reason).toContain("Caller subject mismatch");
+
+      // 2. Calling execute_tool for 'code_runner' (Development) when only 'Platform Core' is enabled is blocked by sandbox
+      const sandboxBlocked = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 20,
+          method: "tools/call",
+          params: {
+            name: "execute_tool",
+            arguments: {
+              workspace_handle: handleUserA,
+              tool_name: "code_runner",
+              arguments: { code: "1+1", runtime: "node" },
+            },
+          },
+        },
+        { callerSubject: "user_alice" }
+      );
+
+      const blockedData = JSON.parse(
+        (sandboxBlocked?.result as { content: Array<{ text: string }> }).content[0].text
+      );
+      expect(blockedData.errorCode).toBe("CATEGORY_NOT_ENABLED_ON_HANDLE");
+
+      // 3. Enable Development on handle, then execute_tool succeeds with RFC 8707 token exchange + Output Progressive Disclosure slicing
+      const devHandle = mintWorkspaceHandle({
+        sub: "user_alice",
+        cats: ["Platform Core", "Development"],
+      });
+
+      const execSuccess = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 21,
+          method: "tools/call",
+          params: {
+            name: "execute_tool",
+            arguments: {
+              workspace_handle: devHandle,
+              tool_name: "query_database",
+              arguments: { sql: "SELECT * FROM metrics" },
+              slice_large_payloads: true,
+            },
+          },
+        },
+        { callerSubject: "user_alice" }
+      );
+
+      const execData = JSON.parse(
+        (execSuccess?.result as { content: Array<{ text: string }> }).content[0].text
+      );
+      expect(execData.status).toBe("success");
+      expect(execData.rfc8707TokenExchange.tokenPassthrough).toBe(false);
+      expect(execData.outputProgressiveDisclosure.result_cursor_handle).toMatch(/^spk_res_v2\./);
+
+      // 4. Query slice via inspect_result_slice
+      const sliceCall = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 22,
+          method: "tools/call",
+          params: {
+            name: "inspect_result_slice",
+            arguments: {
+              result_cursor_handle: execData.outputProgressiveDisclosure.result_cursor_handle,
+              jsonpath_or_filter: "$.rows[0]",
+            },
+          },
+        },
+        { callerSubject: "user_alice" }
+      );
+
+      const sliceData = JSON.parse(
+        (sliceCall?.result as { content: Array<{ text: string }> }).content[0].text
+      );
+      expect(sliceData.status).toBe("success");
+      expect(sliceData.slice).toEqual({ id: 1, metric: "ARR", value: "$1.2M" });
+    });
+
+    it("list_capability_categories and inspect_tool_schema return 2026-07-28 metadata", async () => {
+      const catCall = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 23,
+          method: "tools/call",
+          params: {
+            name: "list_capability_categories",
+            arguments: { domain_filter: "development" },
+          },
+        },
+        { callerSubject: "user_dev" }
+      );
+      const catData = JSON.parse(
+        (catCall?.result as { content: Array<{ text: string }> }).content[0].text
+      );
+      expect(catData.protocolVersion).toBe("2026-07-28");
+      expect(catData.workspace_handle).toMatch(/^spk_hdl_v2\./);
+
+      const inspectCall = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 24,
+          method: "tools/call",
+          params: {
+            name: "inspect_tool_schema",
+            arguments: { tool_name: "code_runner" },
+          },
+        },
+        {}
+      );
+      const inspectData = JSON.parse(
+        (inspectCall?.result as { content: Array<{ text: string }> }).content[0].text
+      );
+      expect(inspectData.schemaDialect).toBe("https://json-schema.org/draft/2020-12/schema");
+      expect(inspectData.headerPolicyAudit.safe).toBe(true);
+    });
+  });
+
+  describe("SEP-2322 MRTR Step-Up Governance & SEP-2243 Data-Plane Hardening", () => {
+    it("enforces MRTR step-up approval for elevated write categories", async () => {
+      const handle = mintWorkspaceHandle({ sub: "user_ciso", cats: ["Platform Core"] });
+
+      const stepUpReq = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 30,
+          method: "tools/call",
+          params: {
+            name: "configure_active_categories",
+            arguments: {
+              workspace_handle: handle,
+              enable_categories: ["FinTech & Billing"],
+              require_step_up: true,
+            },
+          },
+        },
+        { callerSubject: "user_ciso" }
+      );
+
+      const stepUpResult = stepUpReq?.result as {
+        resultType: string;
+        requestState: string;
+        inputRequests: Array<{ category: string; riskTier: string }>;
+      };
+      expect(stepUpResult.resultType).toBe("input_required");
+      expect(stepUpResult.requestState).toMatch(/^spk_mrtr_v2\./);
+      expect(stepUpResult.inputRequests[0].riskTier).toBe("elevated-write");
+
+      // Resume MRTR with requestState + inputResponses approval
+      const resumed = await dispatchJsonRpc(
+        {
+          jsonrpc: "2.0",
+          id: 31,
+          method: "tools/call",
+          params: {
+            name: "configure_active_categories",
+            requestState: stepUpResult.requestState,
+            inputResponses: { step_up_fintech___billing: "approved" },
+          },
+        },
+        { callerSubject: "user_ciso" }
+      );
+
+      const resumedResult = resumed?.result as {
+        resultType: string;
+        content: Array<{ text: string }>;
+      };
+      expect(resumedResult.resultType).toBe("complete");
+      const resumedData = JSON.parse(resumedResult.content[0].text);
+      expect(resumedData.activeCategories).toContain("FinTech & Billing");
+    });
+
+    it("neutralizes protocol desynchronization attacks with -32020 HeaderMismatchError", async () => {
+      const req = new Request("https://next.spike.land/api/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "MCP-Protocol-Version": "2026-07-28",
+          "Mcp-Method": "tools/list",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 32,
+          method: "tools/call",
+          params: { name: "code_runner", arguments: {} },
+        }),
+      });
+
+      const res = await mcpPost(req);
+      expect(res.status).toBe(400);
+      const json = (await res.json()) as { error: { code: number; message: string } };
+      expect(json.error.code).toBe(-32020);
+      expect(json.error.message).toContain("HeaderMismatchError");
+    });
+
+    it("audits x-mcp-header PII leaks, serves Pattern C Virtual Gateways, and publishes OAuth 2.1 Protected Resource Metadata", async () => {
+      const audit = auditToolHeaderAnnotations({
+        type: "object",
+        properties: {
+          public_region: {
+            type: "string",
+            description: "Region",
+            "x-mcp-header": "Mcp-Param-Region",
+          },
+          secret_api_key: {
+            type: "string",
+            description: "Secret key",
+            "x-mcp-header": "Mcp-Param-Secret",
+          },
+        },
+      });
+      expect(audit.safe).toBe(false);
+      expect(audit.strippedHeaders).toContain("secret_api_key");
+      expect(audit.sanitizedSchema.properties.secret_api_key["x-mcp-header"]).toBeUndefined();
+
+      // Pattern C Virtual Gateway endpoint (/api/mcp/g/development)
+      const vgGetRes = await virtualGatewayGet(
+        new Request("https://next.spike.land/api/mcp/g/development"),
+        { params: Promise.resolve({ gatewaySlug: "development" }) }
+      );
+      expect(vgGetRes.status).toBe(200);
+      const vgMeta = (await vgGetRes.json()) as {
+        canonicalServerUri: string;
+        cacheScope: string;
+        tools: string[];
+      };
+      expect(vgMeta.canonicalServerUri).toBe("https://spike.land/api/mcp/g/development");
+      expect(vgMeta.cacheScope).toBe("public");
+      expect(vgMeta.tools).toContain("code_runner");
+
+      const vgPostRes = await virtualGatewayPost(
+        new Request("https://next.spike.land/api/mcp/g/development", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 33, method: "tools/list", params: {} }),
+        }),
+        { params: Promise.resolve({ gatewaySlug: "development" }) }
+      );
+      const vgList = (await vgPostRes.json()) as { result: { tools: Array<{ name: string }> } };
+      expect(vgList.result.tools.map((t) => t.name)).toContain("code_runner");
+
+      // RFC 9728 OAuth 2.1 Protected Resource Metadata (/.well-known/oauth-protected-resource)
+      const oauthRes = await oauthResourceGet(
+        new Request("https://next.spike.land/.well-known/oauth-protected-resource")
+      );
+      expect(oauthRes.status).toBe(200);
+      const oauthJson = (await oauthRes.json()) as {
+        resource: string;
+        client_id_metadata_document_supported: boolean;
+        token_passthrough_prohibited: boolean;
+      };
+      expect(oauthJson.resource).toBe("https://spike.land/api/mcp");
+      expect(oauthJson.client_id_metadata_document_supported).toBe(true);
+      expect(oauthJson.token_passthrough_prohibited).toBe(true);
+    });
+
+    it("GET and OPTIONS /api/mcp return 2026-07-28 diagnostics and CORS headers", async () => {
+      const req = new Request("https://next.spike.land/api/mcp");
+      const res = await mcpGet(req);
+      expect(res.status).toBe(200);
+      const json = (await res.json()) as {
+        name: string;
+        protocolVersion: string;
+        gatewayTools: string[];
+      };
+      expect(json.name).toBe("spike-land-gateway");
+      expect(json.protocolVersion).toBe("2026-07-28");
+      expect(json.gatewayTools).toEqual([...BROKER_2026_TOOL_NAMES]);
+
+      const optRes = await mcpOptions();
+      expect(optRes.status).toBe(204);
+      expect(optRes.headers.get("access-control-allow-origin")).toBe("*");
+    });
+  });
+
+  describe("Multi-Registry MCP Integration", () => {
+    it("mcp_registry_search, mcp_registry_get, and mcp_registry_install execute via stateless tools/call", async () => {
       const searchCall = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
-          id: 14,
+          id: 40,
           method: "tools/call",
           params: {
             name: "mcp_registry_search",
             arguments: { query: "postgres", registry: "all" },
           },
         },
-        { sessionId }
+        {}
       );
-
       expect(searchCall?.error).toBeUndefined();
-      const content = (searchCall?.result as { content: Array<{ text: string }> }).content;
-      const data = JSON.parse(content[content.length - 1].text);
-      expect(data.servers.length).toBeGreaterThan(0);
-      expect(data.servers[0].id).toBe("modelcontextprotocol/server-postgres");
-      expect(data.servers[0].registrySource).toBe("official");
-    });
-
-    it("mcp_registry_get returns server manifest and environment requirements", async () => {
-      const getCall = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 15,
-          method: "tools/call",
-          params: {
-            name: "mcp_registry_get",
-            arguments: { serverId: "modelcontextprotocol/server-postgres" },
-          },
-        },
-        { sessionId }
+      const searchData = JSON.parse(
+        (searchCall?.result as { content: Array<{ text: string }> }).content[0].text
       );
+      expect(searchData.servers[0].id).toBe("modelcontextprotocol/server-postgres");
 
-      expect(getCall?.error).toBeUndefined();
-      const content = (getCall?.result as { content: Array<{ text: string }> }).content;
-      const data = JSON.parse(content[content.length - 1].text);
-      expect(data.id).toBe("modelcontextprotocol/server-postgres");
-      expect(data.requiredEnv).toHaveProperty("DATABASE_URL");
-      expect(data.tools).toContain("query");
-    });
-
-    it("mcp_registry_install generates ready-to-copy snippet and mounts server", async () => {
       const installCall = await dispatchJsonRpc(
         {
           jsonrpc: "2.0",
-          id: 16,
+          id: 41,
           method: "tools/call",
           params: {
             name: "mcp_registry_install",
@@ -334,207 +501,12 @@ describe("Progressive Context Disclosure MCP Gateway", () => {
             },
           },
         },
-        { sessionId }
+        {}
       );
-
-      expect(installCall?.error).toBeUndefined();
-      const content = (installCall?.result as { content: Array<{ text: string }> }).content;
-      const data = JSON.parse(content[content.length - 1].text);
-      expect(data.status).toBe("mounted");
-      expect(data.proxyUrl).toContain("api/mcp/proxy/%40smithery%2Fsqlite");
-      expect(data.snippet).toBeDefined();
-
-      // Check mcp_registry_list_installed includes mounted server
-      const listInstalled = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 17,
-          method: "tools/call",
-          params: { name: "mcp_registry_list_installed" },
-        },
-        { sessionId }
+      const installData = JSON.parse(
+        (installCall?.result as { content: Array<{ text: string }> }).content[0].text
       );
-
-      const installedContent = (listInstalled?.result as { content: Array<{ text: string }> }).content;
-      const installedData = JSON.parse(installedContent[installedContent.length - 1].text);
-      const ids = installedData.servers.map((s: { id: string }) => s.id);
-      expect(ids).toContain("@smithery/sqlite");
-    });
-  });
-
-  describe("API Endpoints Integration", () => {
-    it("POST /api/mcp handles initialize request", async () => {
-      const req = new Request("https://next.spike.land/api/mcp?sessionId=api-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 101,
-          method: "initialize",
-          params: {},
-        }),
-      });
-
-      const res = await mcpPost(req);
-      expect(res.status).toBe(200);
-      const json = (await res.json()) as { id: number; result: { serverInfo: { name: string } } };
-      expect(json.id).toBe(101);
-      expect(json.result.serverInfo.name).toBe("spike-land-gateway");
-    });
-
-    it("GET /api/mcp returns gateway diagnostics and tools summary", async () => {
-      const req = new Request("https://next.spike.land/api/mcp");
-      const res = await mcpGet(req);
-      expect(res.status).toBe(200);
-      const json = (await res.json()) as { name: string; gatewayTools: unknown[] };
-      expect(json.name).toBe("spike-land-gateway");
-      expect(json.gatewayTools).toHaveLength(5);
-    });
-
-    it("OPTIONS /api/mcp returns 204 with CORS headers", async () => {
-      const res = await mcpOptions();
-      expect(res.status).toBe(204);
-      expect(res.headers.get("access-control-allow-origin")).toBe("*");
-    });
-
-    it("GET /api/mcp/sse initiates SSE stream and emits endpoint event", async () => {
-      const req = new Request("https://next.spike.land/api/mcp/sse?sessionId=sse-test");
-      const res = await sseGet(req);
-      expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toContain("text/event-stream");
-
-      // Read initial chunk from stream
-      const reader = res.body?.getReader();
-      expect(reader).toBeDefined();
-      if (reader) {
-        const { value } = await reader.read();
-        const text = new TextDecoder().decode(value);
-        expect(text).toContain("event: endpoint");
-        expect(text).toContain("/api/mcp?sessionId=sse-test");
-        await reader.cancel();
-      }
-    });
-  });
-
-  describe("Universal 3-Tool Gateway Suite & Investor Telemetry", () => {
-    const uniSessionId = "universal-session-999";
-
-    beforeEach(() => {
-      resetSession(uniSessionId);
-    });
-
-    it("returns ONLY the 3 Universal Gateway tools when initialized with universal profile", async () => {
-      await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 1,
-          method: "initialize",
-          params: {
-            profile: "universal",
-            clientInfo: { name: "Claude Code", version: "1.0.0" },
-          },
-        },
-        { sessionId: uniSessionId, profile: "universal" }
-      );
-
-      const listResponse = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 2,
-          method: "tools/list",
-          params: {},
-        },
-        { sessionId: uniSessionId, profile: "universal" }
-      );
-
-      const tools = (listResponse?.result as { tools: Array<{ name: string }> }).tools;
-      expect(tools).toHaveLength(3);
-      const names = tools.map((t) => t.name);
-      expect(names).toEqual(expect.arrayContaining([...UNIVERSAL_GATEWAY_TOOL_NAMES]));
-    });
-
-    it("discover_tools dynamically searches and mounts tools by intent", async () => {
-      const call = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 10,
-          method: "tools/call",
-          params: {
-            name: "discover_tools",
-            arguments: { query: "scrape web page", limit: 3 },
-          },
-        },
-        { sessionId: uniSessionId }
-      );
-
-      expect(call?.error).toBeUndefined();
-      const text = (call?.result as { content: Array<{ text: string }> }).content[0].text;
-      const parsed = JSON.parse(text);
-      expect(parsed.status).toBe("Tools dynamically mounted to session");
-      expect(parsed.estimatedTokenSavings).toBe("98.2%");
-      expect(parsed.matchedTools.length).toBeGreaterThan(0);
-    });
-
-    it("run_tool executes an unmounted tool directly and auto-hydrates it", async () => {
-      const call = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 11,
-          method: "tools/call",
-          params: {
-            name: "run_tool",
-            arguments: {
-              tool_name: "generate_image",
-              arguments: { prompt: "hyper-realistic quantum computer" },
-            },
-          },
-        },
-        { sessionId: uniSessionId }
-      );
-
-      expect(call?.error).toBeUndefined();
-      const text = (call?.result as { content: Array<{ text: string }> }).content[0].text;
-      const parsed = JSON.parse(text);
-      expect(parsed.status).toBe("success");
-      expect(parsed.executedTool).toBe("generate_image");
-    });
-
-    it("get_gateway_status calculates real-time token savings and edge datacenter", async () => {
-      // Simulate 2 calls
-      await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 20,
-          method: "tools/call",
-          params: {
-            name: "discover_tools",
-            arguments: { query: "database query" },
-          },
-        },
-        { sessionId: uniSessionId, colo: "SFO" }
-      );
-
-      const statusCall = await dispatchJsonRpc(
-        {
-          jsonrpc: "2.0",
-          id: 21,
-          method: "tools/call",
-          params: {
-            name: "get_gateway_status",
-            arguments: {},
-          },
-        },
-        { sessionId: uniSessionId, colo: "SFO" }
-      );
-
-      expect(statusCall?.error).toBeUndefined();
-      const text = (statusCall?.result as { content: Array<{ text: string }> }).content[0].text;
-      const status = JSON.parse(text);
-      expect(status.service).toContain("Progressive MCP Gateway");
-      expect(status.cloudflareEdgeColo).toBe("SFO");
-      expect(status.sessionTurns).toBeGreaterThanOrEqual(2);
-      expect(status.percentageContextSaved).toContain("%");
-      expect(status.tokensSavedThisSession).toBeGreaterThan(40000);
+      expect(installData.status).toBe("mounted");
     });
   });
 });

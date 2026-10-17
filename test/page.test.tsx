@@ -10,6 +10,7 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
     expect(screen.getByText(/455 AI Tools\./i)).toBeInTheDocument();
     expect(screen.getByText(/One Protocol\./i)).toBeInTheDocument();
     expect(screen.getByText(/Progressive Disclosure MCP/i)).toBeInTheDocument();
+    expect(screen.getByText(/Position-Zero Broker Meta-Tools/i)).toBeInTheDocument();
 
     // Metrics
     expect(screen.getByText("455")).toBeInTheDocument();
@@ -18,16 +19,22 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
     expect(screen.getByText("Gateway Tools")).toBeInTheDocument();
   });
 
-  it("renders How It Works section with 3 progressive disclosure steps", () => {
+  it("renders How It Works section with 3 progressive disclosure steps and architectural comparison table", () => {
     render(<Home />);
 
     expect(screen.getByText("How It Works")).toBeInTheDocument();
     expect(screen.getByText("Connect")).toBeInTheDocument();
     expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getByText("Activate")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Why Stateful tools\/list Mutation Fails Under MCP 2026-07-28/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Deterministic Capability Packs & Virtual Gateways/i)
+    ).toBeInTheDocument();
   });
 
-  it("allows switching tabs in the Get Connected section", () => {
+  it("allows switching tabs in the Get Connected section including Virtual Gateway (Pattern C)", () => {
     render(<Home />);
 
     expect(screen.getByText("Get Connected")).toBeInTheDocument();
@@ -44,6 +51,11 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
     const cursorTab = screen.getByRole("tab", { name: /Cursor/i });
     fireEvent.click(cursorTab);
     expect(screen.getByText(/cursor-mcp-settings\.json/i)).toBeInTheDocument();
+
+    // Click Virtual Gateway tab
+    const vgTab = screen.getByRole("tab", { name: /Virtual Gateway/i });
+    fireEvent.click(vgTab);
+    expect(screen.getByText(/virtual-gateway-mcp\.json/i)).toBeInTheDocument();
 
     // Click HTTP tab
     const httpTab = screen.getByRole("tab", { name: /HTTP/i });

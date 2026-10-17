@@ -64,6 +64,14 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 const PARAM_PRESETS: Record<string, string> = {
   query: "image",
   category: "AI & Creative",
+  workspace_handle: "spk_hdl_v2...",
+  domain_filter: "development",
+  enable_categories: '["Development"]',
+  disable_categories: "[]",
+  tool_name: "code_runner",
+  arguments: '{"code": "console.log(1 + 1)", "runtime": "node"}',
+  result_cursor_handle: "spk_res_v2.7f6e5d4c",
+  jsonpath_or_filter: "$.rows[0]",
   prompt: "Swiss railway station split-flap departure board, architectural daylight",
   aspectRatio: "16:9",
   imageUrl: "https://spike.land/assets/demo.png",
@@ -94,12 +102,13 @@ const PARAM_PRESETS: Record<string, string> = {
 };
 
 const POPULAR_TOOLS = [
-  { name: "search_tools", categoryId: "platform-core" },
+  { name: "list_capability_categories", categoryId: "platform-core" },
+  { name: "configure_active_categories", categoryId: "platform-core" },
+  { name: "inspect_tool_schema", categoryId: "platform-core" },
+  { name: "execute_tool", categoryId: "platform-core" },
+  { name: "inspect_result_slice", categoryId: "platform-core" },
   { name: "code_runner", categoryId: "development" },
   { name: "generate_image", categoryId: "ai-creative" },
-  { name: "git_diff_viewer", categoryId: "development" },
-  { name: "seo_audit", categoryId: "marketing-growth" },
-  { name: "mcp_registry_search", categoryId: "mcp-registry" },
 ];
 
 export function McpPlayground() {
@@ -183,24 +192,30 @@ export function McpPlayground() {
       params: {
         name: activeTool.name,
         arguments: parsedArguments,
+        _meta: {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        },
       },
     };
   }, [activeTool.name, parsedArguments]);
 
   const curlCommand = useMemo(() => {
     const payloadStr = JSON.stringify(jsonRpcPayload).replace(/'/g, "'\\''");
-    return `curl -X POST https://spike.land/api/mcp \\\n  -H "Content-Type: application/json" \\\n  -d '${payloadStr}'`;
-  }, [jsonRpcPayload]);
+    return `curl -X POST https://spike.land/api/mcp \\\n  -H "Content-Type: application/json" \\\n  -H "MCP-Protocol-Version: 2026-07-28" \\\n  -H "Mcp-Method: tools/call" \\\n  -H "Mcp-Name: ${activeTool.name}" \\\n  -d '${payloadStr}'`;
+  }, [jsonRpcPayload, activeTool.name]);
 
   const handleRunTool = async () => {
     setIsRunning(true);
     setViewTab("response");
     const startTime = performance.now();
     try {
-      const response = await fetch("/api/mcp?sessionId=web_playground", {
+      const response = await fetch("/api/mcp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "MCP-Protocol-Version": "2026-07-28",
+          "Mcp-Method": "tools/call",
+          "Mcp-Name": activeTool.name,
         },
         body: JSON.stringify(jsonRpcPayload),
       });
@@ -491,6 +506,23 @@ export function McpPlayground() {
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-dispatch-pulse" />
                 Edge Isolate Active
               </Badge>
+            </div>
+
+            {/* SEP-2243 Transport Headers & SEP-2567 Handle Telemetry Strip */}
+            <div className="px-4 py-2 bg-[#181B20] border-b border-[#111315] flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-[#B8BDC7]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[#34D399] font-semibold">SEP-2243:</span>
+                <span className="bg-[#111315] px-1.5 py-0.5 rounded border border-[#2E323B] text-[#F5F4F0]">
+                  MCP-Protocol-Version: 2026-07-28
+                </span>
+                <span className="bg-[#111315] px-1.5 py-0.5 rounded border border-[#2E323B] text-[#93C5FD]">
+                  Mcp-Name: {activeTool.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px]">
+                <span className="text-[#B8BDC7]">SEP-2567 Handle:</span>
+                <span className="text-[#F5F4F0] font-semibold">spk_hdl_v2...3c2d1e0f</span>
+              </div>
             </div>
 
             {/* Tool Detail & Parameters (with authored mechanical split-flap reveal on tool change) */}

@@ -35,7 +35,7 @@ export function Footer() {
               </h3>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              Open-source AI development platform powered by progressive context disclosure and edge runtimes.
+              MCP 2026-07-28 Stateless Progressive-Disclosure Relay &amp; Zero-Trust Governance Control Plane on Cloudflare Workers.
             </p>
 
             <div className="pt-2">
@@ -76,26 +76,26 @@ export function Footer() {
             <ul className="space-y-2 text-xs text-muted-foreground font-medium">
               <li>
                 <a className="hover:text-primary transition-colors" href="/#how-it-works">
-                  Docs
+                  Architecture (SEP-2567)
                 </a>
               </li>
               <li>
                 <a className="hover:text-primary transition-colors" href="/#playground">
-                  MCP Tools
+                  MCP 2026 Playground
                 </a>
               </li>
               <li>
                 <a className="hover:text-primary transition-colors" href="/#categories">
-                  App Store
+                  Capability Packs
                 </a>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="/#categories">
-                  Skills
+                <a className="hover:text-primary transition-colors" href="/.well-known/oauth-protected-resource">
+                  RFC 9728 Metadata
                 </a>
               </li>
               <li>
-                <a className="hover:text-primary transition-colors" href="/api/hello">
+                <a className="hover:text-primary transition-colors" href="/api/mcp">
                   API Reference
                 </a>
               </li>
@@ -157,7 +157,7 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <p>© 2026 Spike Land. All rights reserved.</p>
           <p className="font-mono">
-            DISPATCHED ON CLOUDFLARE WORKERS V8 EDGE ISOLATES
+            MCP 2026-07-28 STATELESS • CLOUDFLARE WORKERS V8 ISOLATES
           </p>
         </div>
       </div>

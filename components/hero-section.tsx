@@ -21,22 +21,37 @@ import {
 } from "@/components/ui/table";
 
 const INITIAL_GATEWAY_SUITE = [
-  { idx: "01", name: "search_tools", role: "Semantic & keyword catalog search", footprint: "118 tok" },
-  { idx: "02", name: "list_categories", role: "Enumerate 88 domain tool groups", footprint: "94 tok" },
-  { idx: "03", name: "enable_category", role: "Mount category schemas on demand", footprint: "112 tok" },
-  { idx: "04", name: "get_balance", role: "Inspect execution quota & rate state", footprint: "86 tok" },
-  { idx: "05", name: "get_status", role: "Edge isolate colo & latency telemetry", footprint: "92 tok" },
+  { idx: "01", name: "list_capability_categories", role: "SEP-2567 workspace_handle & pack directory", footprint: "108 tok" },
+  { idx: "02", name: "configure_active_categories", role: "In-band tail schema disclosure + MRTR step-up", footprint: "124 tok" },
+  { idx: "03", name: "inspect_tool_schema", role: "On-demand JSON Schema 2020-12 & MCP Apps UI", footprint: "92 tok" },
+  { idx: "04", name: "execute_tool", role: "RFC 8707 token exchange & sandboxed dispatch", footprint: "104 tok" },
+  { idx: "05", name: "inspect_result_slice", role: "Output payload slicing via result_cursor_handle", footprint: "88 tok" },
 ];
 
 export function HeroSection() {
   const [copied, setCopied] = useState(false);
+  const [configMode, setConfigMode] = useState<"broker" | "virtual">("broker");
 
-  const mcpConfig = `{
+  const mcpConfig =
+    configMode === "broker"
+      ? `{
   "mcpServers": {
     "spike-land": {
       "url": "https://spike.land/api/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY",
+        "MCP-Protocol-Version": "2026-07-28"
+      }
+    }
+  }
+}`
+      : `{
+  "mcpServers": {
+    "spike-land-dev": {
+      "url": "https://spike.land/api/mcp/g/development",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY",
+        "MCP-Protocol-Version": "2026-07-28"
       }
     }
   }
@@ -80,19 +95,19 @@ export function HeroSection() {
                   <span>Progressive Disclosure MCP</span>
                 </Badge>
                 <Badge variant="cobalt" className="font-mono">
-                  CLOUDFLARE V8 ISOLATES
+                  MCP 2026-07-28 STATELESS
                 </Badge>
                 <Badge variant="emerald" className="font-mono">
-                  -98.7% PROMPT OVERHEAD
+                  0% PREFIX CACHE INVALIDATION
                 </Badge>
               </div>
 
               <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch] leading-relaxed">
-                Spike Land&apos;s MCP server uses{" "}
+                Spike Land&apos;s MCP 2026-07-28 Relay uses{" "}
                 <strong className="text-foreground font-semibold underline decoration-primary decoration-2 underline-offset-4">
-                  Progressive Context Disclosure
+                  Two-Sided Progressive Context Disclosure
                 </strong>{" "}
-                — agents start with 5 lightweight gateway tools and progressively discover 455 tools across 88 categories strictly when the task requires them.
+                — keeping <code className="font-mono text-xs bg-secondary px-1.5 py-0.5 rounded">tools/list</code> static at Token Position Zero with 5 cache-stable Broker Meta-Tools while disclosing 455 tools across 88 deterministic capability packs in-band via SEP-2567 <code className="font-mono text-xs bg-secondary px-1.5 py-0.5 rounded">workspace_handle</code> tokens.
               </p>
             </div>
 
@@ -108,7 +123,7 @@ export function HeroSection() {
                   </div>
                   <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
                     <span>SEC 01 // CATALOG</span>
-                    <span className="text-primary">ON-DEMAND</span>
+                    <span className="text-primary">IN-BAND TAIL</span>
                   </div>
                 </div>
 
@@ -120,8 +135,8 @@ export function HeroSection() {
                     Categories
                   </div>
                   <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>SEC 02 // TAXONOMY</span>
-                    <span className="text-[#0047BB]">INDEXED</span>
+                    <span>SEC 02 // PACKS</span>
+                    <span className="text-[#0047BB]">RISK-TIERED</span>
                   </div>
                 </div>
 
@@ -133,8 +148,8 @@ export function HeroSection() {
                     Gateway Tools
                   </div>
                   <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>SEC 03 // ENTRY</span>
-                    <span className="text-[#0D7A5F]">~502 TOK</span>
+                    <span>SEC 03 // POS-ZERO</span>
+                    <span className="text-[#0D7A5F]">~516 TOK</span>
                   </div>
                 </div>
               </div>
@@ -166,10 +181,10 @@ export function HeroSection() {
               <CardHeader className="bg-[#111315] text-[#F5F4F0] py-4 px-5 border-b border-[#111315]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-base font-bold text-[#F5F4F0]">
-                    Initial Gateway Dispatch Suite
+                    Position-Zero Broker Meta-Tools
                   </CardTitle>
                   <Badge variant="default" className="font-mono text-[10px]">
-                    ~502 TOKENS (5 GATEWAY TOOLS)
+                    ~516 TOKENS • CACHE-SCOPE: PUBLIC
                   </Badge>
                 </div>
               </CardHeader>
@@ -178,8 +193,8 @@ export function HeroSection() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="px-3 sm:px-4">Gateway Tool</TableHead>
-                      <TableHead className="px-3 sm:px-4">Dispatch Role</TableHead>
+                      <TableHead className="px-3 sm:px-4">Broker Meta-Tool</TableHead>
+                      <TableHead className="px-3 sm:px-4">SEP-2567 Dispatch Role</TableHead>
                       <TableHead className="px-3 sm:px-4 text-right whitespace-nowrap">Schema</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -204,15 +219,36 @@ export function HeroSection() {
 
               {/* .mcp.json Snippet Panel */}
               <div className="border-t-2 border-[#111315] bg-[#111315] text-[#F5F4F0] p-4 sm:p-5 min-w-0">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-primary" />
                     <span className="font-mono text-xs font-semibold text-[#F5F4F0]">
                       .mcp.json
                     </span>
-                    <span className="font-mono text-[11px] text-[#B8BDC7]">
-                      — Streamable HTTP
-                    </span>
+                    <div className="inline-flex rounded-sm border border-[#343942] overflow-hidden font-mono text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setConfigMode("broker")}
+                        className={`px-2 py-0.5 cursor-pointer transition-colors ${
+                          configMode === "broker"
+                            ? "bg-primary text-white font-bold"
+                            : "bg-[#1B1E23] text-[#B8BDC7] hover:text-white"
+                        }`}
+                      >
+                        Pattern B: Broker
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfigMode("virtual")}
+                        className={`px-2 py-0.5 cursor-pointer transition-colors border-l border-[#343942] ${
+                          configMode === "virtual"
+                            ? "bg-[#0047BB] text-white font-bold"
+                            : "bg-[#1B1E23] text-[#B8BDC7] hover:text-white"
+                        }`}
+                      >
+                        Pattern C: Virtual URI
+                      </button>
+                    </div>
                   </div>
                   <Button
                     type="button"
@@ -242,7 +278,7 @@ export function HeroSection() {
 
               <CardFooter className="bg-secondary px-5 py-3 border-t border-[#111315] flex items-center justify-between text-xs">
                 <span className="font-medium text-foreground">
-                  Zero local Docker containers required
+                  SEP-2575 Self-Describing HTTP POST (No Handshake)
                 </span>
                 <span className="font-mono font-semibold text-[#0D7A5F]">
                   300+ Edge Colos
