@@ -20,7 +20,7 @@ describe("GET /api/auth/session", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.authenticated).toBe(false);
     expect(data.user).toBeNull();
   });
@@ -42,11 +42,11 @@ describe("GET /api/auth/session", () => {
     const response = await GET(request);
     expect(response.status).toBe(200);
 
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.authenticated).toBe(true);
-    expect(data.user.email).toBe("test@spike.land");
-    expect(data.user.name).toBe("Test Developer");
-    expect(data.user.provider).toBe("google");
+    expect((data.user as Record<string, unknown>).email).toBe("test@spike.land");
+    expect((data.user as Record<string, unknown>).name).toBe("Test Developer");
+    expect((data.user as Record<string, unknown>).provider).toBe("google");
   });
 
   it("returns authenticated user when Authorization Bearer token is provided", async () => {
@@ -66,9 +66,9 @@ describe("GET /api/auth/session", () => {
     const response = await GET(request);
     expect(response.status).toBe(200);
 
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.authenticated).toBe(true);
-    expect(data.user.email).toBe("test@spike.land");
+    expect((data.user as Record<string, unknown>).email).toBe("test@spike.land");
   });
 
   it("returns { authenticated: false, user: null } when expired token is provided", async () => {
@@ -86,7 +86,7 @@ describe("GET /api/auth/session", () => {
     });
 
     const response = await GET(request);
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.authenticated).toBe(false);
     expect(data.user).toBeNull();
   });

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ClientLayout } from "@/components/client-layout";
 
 export const metadata: Metadata = {
   title: "MCP Server - Spike Land",
@@ -39,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased min-h-screen bg-background text-foreground">
-        {children}
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

@@ -31,7 +31,7 @@ describe("GET & POST /api/auth/signout", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.success).toBe(true);
     expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
   });
@@ -43,7 +43,7 @@ describe("GET & POST /api/auth/signout", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.success).toBe(true);
     expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
   });

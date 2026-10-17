@@ -51,7 +51,7 @@ describe("GET & POST /api/auth/signin/google", () => {
     const response = await POST(request);
     expect(response.status).toBe(200);
 
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.url).toBeDefined();
     expect(data.url).toContain(GOOGLE_AUTH_ENDPOINT);
     expect(data.url).toContain("store");

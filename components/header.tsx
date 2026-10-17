@@ -11,9 +11,13 @@ import {
   TrendingUp,
   Sparkles,
   Plug,
+  LogIn,
+  LogOut,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@workos-inc/authkit-react";
 
 function GithubIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
@@ -34,8 +38,24 @@ function GithubIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
+function useSafeAuth() {
+  try {
+    return useAuth();
+  } catch {
+    return {
+      user: null,
+      isLoading: false,
+      signIn: () => {
+        window.location.href = "/login";
+      },
+      signOut: () => {},
+    };
+  }
+}
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, signIn, signOut, isLoading } = useSafeAuth();
 
   // Global Cmd+K / Ctrl+K listener
   useEffect(() => {
@@ -153,14 +173,26 @@ export function Header() {
                 </Button>
               </div>
 
-              {/* Primary Action Cell: Join Waitlist */}
-              <div className="flex items-center pl-4">
-                <Button variant="default" size="sm" asChild>
-                  <a href="/waitlist">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Join Waitlist
-                  </a>
-                </Button>
+              {/* Primary Action Cell: Auth */}
+              <div className="flex items-center pl-4 gap-2">
+                {isLoading ? (
+                  <div className="h-8 w-20 animate-pulse bg-muted rounded" />
+                ) : user ? (
+                  <>
+                    <span className="text-sm text-muted-foreground hidden lg:inline">
+                      {user.firstName ?? user.email}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={() => signOut()}>
+                      <LogOut className="h-3.5 w-3.5" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="default" size="sm" onClick={() => signIn()}>
+                    <LogIn className="h-3.5 w-3.5" />
+                    Sign In
+                  </Button>
+                )}
               </div>
             </div>
           </nav>
@@ -242,17 +274,39 @@ export function Header() {
               </a>
             </Button>
             <div className="pt-2">
-              <Button
-                variant="default"
-                className="w-full"
-                asChild
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <a href="/waitlist">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Join Waiting List
-                </a>
-              </Button>
+              {isLoading ? (
+                <div className="h-10 w-full animate-pulse bg-muted rounded" />
+              ) : user ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    {user.firstName ?? user.email}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      signOut();
+                    }}
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="default"
+                  className="w-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    signIn();
+                  }}
+                >
+                  <LogIn className="h-3.5 w-3.5" />
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
         )}

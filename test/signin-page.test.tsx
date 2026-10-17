@@ -3,6 +3,15 @@ import { render, screen } from "@testing-library/react";
 import SignInPage from "@/app/auth/signin/page";
 
 describe("SignInPage", () => {
+  it("renders WorkOS sign-in button linking to /login", async () => {
+    const page = await SignInPage({});
+    render(page);
+
+    const workosButton = screen.getByRole("link", { name: /continue with workos/i });
+    expect(workosButton).toBeInTheDocument();
+    expect(workosButton).toHaveAttribute("href", "/login");
+  });
+
   it("renders Google sign-in button linking to /api/auth/signin/google", async () => {
     const page = await SignInPage({});
     render(page);

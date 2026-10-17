@@ -103,10 +103,10 @@ describe("GET & POST /api/auth/callback/google", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(200);
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
 
     expect(data.success).toBe(true);
-    expect(data.user.email).toBe("user@spike.land");
+    expect((data.user as Record<string, unknown>).email).toBe("user@spike.land");
     expect(data.token).toBeDefined();
     expect(response.headers.get("Set-Cookie")).toContain(SESSION_COOKIE_NAME);
   });
@@ -140,7 +140,7 @@ describe("GET & POST /api/auth/callback/google", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(400);
-    const data = await response.json();
+    const data = (await response.json()) as Record<string, unknown>;
     expect(data.error).toBe("google_oauth_error");
   });
 
@@ -189,10 +189,10 @@ describe("GET & POST /api/auth/callback/google", () => {
       const response = await POST(request);
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as Record<string, unknown>;
 
       expect(data.success).toBe(true);
-      expect(data.user.email).toBe("user@spike.land");
+      expect((data.user as Record<string, unknown>).email).toBe("user@spike.land");
       expect(data.token).toBeDefined();
       expect(data.returnTo).toBe("/store");
       expect(response.headers.get("Set-Cookie")).toContain(SESSION_COOKIE_NAME);
@@ -210,7 +210,7 @@ describe("GET & POST /api/auth/callback/google", () => {
       const response = await POST(request);
 
       expect(response.status).toBe(400);
-      const data = await response.json();
+      const data = (await response.json()) as Record<string, unknown>;
       expect(data.error).toBe("missing_code");
     });
   });

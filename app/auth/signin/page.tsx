@@ -1,4 +1,4 @@
-import { Zap } from "lucide-react";
+import { Zap, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -97,6 +97,33 @@ export default async function SignInPage(props: SignInPageProps) {
               </Alert>
             )}
 
+            {/* WorkOS AuthKit Sign-in Button */}
+            <Button
+              variant="default"
+              size="lg"
+              asChild
+              className="w-full border-2 border-[#111315] font-semibold"
+            >
+              <a
+                href="/login"
+                aria-label="Continue with WorkOS"
+              >
+                <ShieldCheck className="h-5 w-5 mr-2" />
+                <span>Continue with WorkOS</span>
+              </a>
+            </Button>
+
+            <div className="relative my-2">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-[#111315]/20" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground font-mono">
+                  Or
+                </span>
+              </div>
+            </div>
+
             {/* Social Sign-in Button */}
             <Button
               variant="outline"
@@ -108,7 +135,7 @@ export default async function SignInPage(props: SignInPageProps) {
                 href="/api/auth/signin/google"
                 aria-label="Continue with Google"
               >
-                <GoogleIcon className="h-5 w-5" />
+                <GoogleIcon className="h-5 w-5 mr-2" />
                 <span>Continue with Google</span>
               </a>
             </Button>
