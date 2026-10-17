@@ -143,7 +143,7 @@ export function Header() {
                 {/* GitHub */}
                 <Button variant="ghost" size="icon" asChild>
                   <a
-                    href="https://github.com/zerdos/spike.land"
+                    href="https://github.com/zerdos/spike-vinext"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="GitHub"
@@ -233,7 +233,7 @@ export function Header() {
               onClick={() => setMobileMenuOpen(false)}
             >
               <a
-                href="https://github.com/zerdos/spike.land"
+                href="https://github.com/zerdos/spike-vinext"
                 target="_blank"
                 rel="noopener noreferrer"
               >

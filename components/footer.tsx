@@ -123,7 +123,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/zerdos/spike.land"
+                  href="https://github.com/zerdos/spike-vinext"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
