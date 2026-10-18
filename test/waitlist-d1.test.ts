@@ -69,7 +69,7 @@ function createMockD1(): D1Database {
             meta: {} as D1Response["meta"],
           };
         },
-        run: async (): Promise<D1Response> => {
+        run: async <T = Record<string, unknown>>(): Promise<D1Result<T>> => {
           if (sql.includes("INSERT INTO waitlist")) {
             rows.push({
               id: boundParams[0] as string,
@@ -85,6 +85,7 @@ function createMockD1(): D1Database {
             });
           }
           return {
+            results: [] as T[],
             success: true,
             meta: {
               duration: 1,
@@ -161,7 +162,7 @@ describe("D1 Database Waitlist Integration", () => {
   it("waitlist API route interacts directly with D1 database", async () => {
     // 1. Initial GET
     const getRes = await waitlistGet();
-    const getJson = await getRes.json();
+    const getJson = (await getRes.json()) as { totalWaitlistCount: number };
     expect(getJson.totalWaitlistCount).toBe(428);
 
     // 2. POST registration
@@ -178,7 +179,7 @@ describe("D1 Database Waitlist Integration", () => {
 
     const postRes = await waitlistPost(postReq);
     expect(postRes.status).toBe(201);
-    const postJson = await postRes.json();
+    const postJson = (await postRes.json()) as { success: boolean; ticket: { position: number; email: string } };
     expect(postJson.success).toBe(true);
     expect(postJson.ticket.position).toBe(429);
     expect(postJson.ticket.email).toBe("d1-tester@example.com");
@@ -200,7 +201,7 @@ describe("D1 Database Waitlist Integration", () => {
       })
     );
     expect(dupRes.status).toBe(200);
-    const dupJson = await dupRes.json();
+    const dupJson = (await dupRes.json()) as { alreadyRegistered: boolean; ticket: { position: number } };
     expect(dupJson.alreadyRegistered).toBe(true);
     expect(dupJson.ticket.position).toBe(429);
   });

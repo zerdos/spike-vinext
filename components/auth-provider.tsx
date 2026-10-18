@@ -4,8 +4,9 @@ import { AuthKitProvider } from "@workos-inc/authkit-react";
 
 function getClientId(): string {
   try {
-    if (typeof import.meta !== "undefined" && import.meta.env?.VITE_WORKOS_CLIENT_ID) {
-      return import.meta.env.VITE_WORKOS_CLIENT_ID;
+    const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env;
+    if (metaEnv?.VITE_WORKOS_CLIENT_ID) {
+      return metaEnv.VITE_WORKOS_CLIENT_ID;
     }
   } catch {
     // fallback
@@ -21,8 +22,9 @@ function getClientId(): string {
 
 function getRedirectUri(): string | undefined {
   try {
-    if (typeof import.meta !== "undefined" && import.meta.env?.VITE_WORKOS_REDIRECT_URI) {
-      return import.meta.env.VITE_WORKOS_REDIRECT_URI;
+    const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env;
+    if (metaEnv?.VITE_WORKOS_REDIRECT_URI) {
+      return metaEnv.VITE_WORKOS_REDIRECT_URI;
     }
   } catch {
     // fallback

@@ -556,7 +556,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
         }
         for (const [propName, propDef] of Object.entries(schema.properties || {})) {
           expect(
-            (propDef as Record<string, unknown>).required,
+            (propDef as unknown as Record<string, unknown>).required,
             `Tool '${tool.name}' property '${propName}' contains invalid boolean 'required' field`
           ).toBeUndefined();
         }
@@ -582,7 +582,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
       };
 
       const audited = auditToolHeaderAnnotations(mockSchema as unknown as import("@/lib/mcp-types").ToolInputSchema);
-      expect((audited.sanitizedSchema.properties.badProp as Record<string, unknown>).required).toBeUndefined();
+      expect((audited.sanitizedSchema.properties.badProp as unknown as Record<string, unknown>).required).toBeUndefined();
       expect(audited.sanitizedSchema.required).toEqual(["goodProp"]);
     });
 
@@ -592,7 +592,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
         if (!schema || !schema.properties) continue;
         for (const [propName, propDef] of Object.entries(schema.properties)) {
           expect(
-            (propDef as Record<string, unknown>).required,
+            (propDef as unknown as Record<string, unknown>).required,
             `Tool '${name}' property '${propName}' contains invalid boolean 'required'`
           ).toBeUndefined();
         }
