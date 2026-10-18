@@ -482,6 +482,8 @@ export function auditToolHeaderAnnotations(schema: ToolInputSchema): {
         strippedHeaders.push(propName);
         delete copy["x-mcp-header"];
       }
+    if ("required" in copy && typeof (copy as Record<string, unknown>).required === "boolean") {
+      delete (copy as Record<string, unknown>).required;
     }
     clonedProps[propName] = copy;
   }
@@ -659,7 +661,7 @@ export const GATEWAY_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search query or task requirement", required: true },
+        query: { type: "string", description: "Search query or task requirement" },
         category: { type: "string", description: "Optional category filter" },
         limit: { type: "number", description: "Maximum tools to return (default: 5)" },
       },
@@ -783,7 +785,7 @@ export const GATEWAY_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        category: { type: "string", description: "Category name or ID to mount", required: true },
+        category: { type: "string", description: "Category name or ID to mount" },
       },
       required: ["category"],
     },
@@ -888,7 +890,7 @@ export const REGISTRY_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Keywords (e.g. postgres, brave search, slack)", required: true },
+        query: { type: "string", description: "Keywords (e.g. postgres, brave search, slack)" },
         registry: { type: "string", description: "Registry filter: all, official, smithery, glama", enum: ["all", "official", "smithery", "glama"] },
         limit: { type: "number", description: "Maximum servers to return (default: 10)" },
       },
@@ -936,7 +938,7 @@ export const REGISTRY_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        serverId: { type: "string", description: "The server ID returned from registry search", required: true },
+        serverId: { type: "string", description: "The server ID returned from registry search" },
       },
       required: ["serverId"],
     },
@@ -980,7 +982,7 @@ export const REGISTRY_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        serverId: { type: "string", description: "Server ID to install", required: true },
+        serverId: { type: "string", description: "Server ID to install" },
         clientType: {
           type: "string",
           description: "Target client: cursor, claude_desktop, claude_code, http",
@@ -1085,7 +1087,7 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "What you want to accomplish (e.g., 'scrape a web page', 'run SQL', 'generate image')", required: true },
+        query: { type: "string", description: "What you want to accomplish (e.g., 'scrape a web page', 'run SQL', 'generate image')" },
         limit: { type: "number", description: "Maximum tools to return (default: 3)" },
       },
       required: ["query"],
@@ -1217,8 +1219,8 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
     inputSchema: {
       type: "object",
       properties: {
-        tool_name: { type: "string", description: "Exact name of the tool to run", required: true },
-        arguments: { type: "object", description: "JSON arguments matching the tool's schema", required: true },
+        tool_name: { type: "string", description: "Exact name of the tool to run" },
+        arguments: { type: "object", description: "JSON arguments matching the tool's schema" },
       },
       required: ["tool_name", "arguments"],
     },
@@ -1397,15 +1399,19 @@ export const BROKER_2026_TOOLS: ToolDefinition[] = [
         workspace_handle: {
           type: "string",
           description: "Server-minted SEP-2567 workspace handle",
-          required: true,
         },
         enable_categories: {
           type: "array",
+          items: {
+            type: "string",
+          },
           description: "Array of category IDs or names to activate as atomic capability packs",
-          required: true,
         },
         disable_categories: {
           type: "array",
+          items: {
+            type: "string",
+          },
           description: "Array of category IDs or names to deactivate and revoke from workspace_handle",
         },
         require_step_up: {
@@ -1589,7 +1595,6 @@ export const BROKER_2026_TOOLS: ToolDefinition[] = [
         tool_name: {
           type: "string",
           description: "Exact name of the tool to inspect",
-          required: true,
         },
       },
       required: ["tool_name"],
@@ -1649,17 +1654,14 @@ export const BROKER_2026_TOOLS: ToolDefinition[] = [
         workspace_handle: {
           type: "string",
           description: "Server-minted SEP-2567 workspace handle",
-          required: true,
         },
         tool_name: {
           type: "string",
           description: "Exact name of the tool to execute",
-          required: true,
         },
         arguments: {
           type: "object",
           description: "JSON arguments matching the tool's inputSchema",
-          required: true,
         },
         strict_sandbox: {
           type: "boolean",
@@ -1838,7 +1840,6 @@ export const BROKER_2026_TOOLS: ToolDefinition[] = [
         result_cursor_handle: {
           type: "string",
           description: "SEP-2567 result cursor handle returned by execute_tool",
-          required: true,
         },
         jsonpath_or_filter: {
           type: "string",
@@ -1901,14 +1902,13 @@ function initializeCatalog() {
     for (const item of cat.tools) {
       if (ALL_TOOLS[item.name]) continue;
 
-      const props: Record<string, { type: "string" | "number" | "boolean" | "object" | "array"; description: string; required?: boolean }> = {};
+      const props: Record<string, { type: "string" | "number" | "boolean" | "object" | "array"; description: string }> = {};
       const required: string[] = [];
 
       for (const [key, val] of Object.entries(item.parameters)) {
         props[key] = {
           type: (val.type as "string" | "number" | "boolean" | "object" | "array") || "string",
           description: val.description,
-          required: val.required,
         };
         if (val.required) required.push(key);
       }
@@ -1954,7 +1954,7 @@ function initializeCatalog() {
     inputSchema: {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
-      properties: { url: { type: "string", description: "Target URL to scrape", required: true } },
+      properties: { url: { type: "string", description: "Target URL to scrape" } },
       required: ["url"],
     },
     handler: async (args) => ({
@@ -1974,7 +1974,7 @@ function initializeCatalog() {
     inputSchema: {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
-      properties: { sql: { type: "string", description: "SELECT query to execute", required: true } },
+      properties: { sql: { type: "string", description: "SELECT query to execute" } },
       required: ["sql"],
     },
     handler: async (args) => ({
@@ -1993,7 +1993,7 @@ function initializeCatalog() {
     inputSchema: {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
-      properties: { prompt: { type: "string", description: "Image description", required: true } },
+      properties: { prompt: { type: "string", description: "Image description" } },
       required: ["prompt"],
     },
     handler: async (args) => ({

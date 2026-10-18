@@ -2544,7 +2544,6 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
         elements: {
           type: "array",
           description: "Non-empty array of CSS selector objects, e.g. [{ selector: 'h1' }, { selector: 'a' }]",
-          required: true,
         },
         gotoOptions: { type: "object", description: "Navigation options { waitUntil: 'networkidle0' }" },
         waitForSelector: { type: "object", description: "Wait for selector before scraping" },
@@ -2626,7 +2625,7 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
       properties: {
-        url: { type: "string", description: "Starting seed URL to crawl", required: true },
+        url: { type: "string", description: "Starting seed URL to crawl" },
         limit: { type: "number", description: "Maximum number of pages to crawl (default: 10, max: 100000)" },
         depth: { type: "number", description: "Maximum link depth from starting URL (default: 100000)" },
         source: {
@@ -2678,7 +2677,7 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
       properties: {
-        job_id: { type: "string", description: "Crawl job ID returned by browser_run_crawl_start", required: true },
+        job_id: { type: "string", description: "Crawl job ID returned by browser_run_crawl_start" },
         limit: { type: "number", description: "Maximum number of page records to return (use limit: 1 for lightweight status polling)" },
         cursor: { type: "number", description: "Pagination cursor for fetching the next page of records" },
         status: {
@@ -2713,7 +2712,7 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
       properties: {
-        job_id: { type: "string", description: "Crawl job ID to cancel", required: true },
+        job_id: { type: "string", description: "Crawl job ID to cancel" },
       },
       required: ["job_id"],
     },
