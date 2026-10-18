@@ -19,6 +19,10 @@ Spike Land solves **MCP Context Bloat and Position-Zero Prompt Cache Invalidatio
   - [1. Clone and Install](#1-clone-and-install)
   - [2. Environment Variables](#2-environment-variables)
   - [3. Start the Development Server](#3-start-the-development-server)
+- [Authentication & Account Management](#authentication--account-management)
+  - [Default Administrator Account](#default-administrator-account)
+  - [Username & Password Login](#username--password-login)
+  - [Settings Page & API Tokens](#settings-page--api-tokens)
 - [Available Scripts](#available-scripts)
 - [MCP Client Configuration](#mcp-client-configuration)
   - [Claude Code](#claude-code)
@@ -112,32 +116,42 @@ Standard Model Context Protocol (MCP) implementations require clients to preload
 spike-vinext/
 ├── app/                              # Next.js App Router routes
 │   ├── api/                          # Edge API routes
-│   │   ├── auth/                     # Google OAuth & session management
+│   │   ├── auth/                     # Authentication & session management
 │   │   │   ├── callback/google/      # OAuth callback handler
 │   │   │   ├── session/              # Session verification endpoint
+│   │   │   ├── signin/credentials/   # Username & password authentication endpoint
 │   │   │   ├── signin/google/        # OAuth initiation endpoint
 │   │   │   └── signout/              # Session invalidation endpoint
+│   │   ├── settings/                 # Account settings API
+│   │   │   ├── password/             # Password change endpoint
+│   │   │   └── tokens/               # API tokens management endpoint
 │   │   ├── mcp/                      # Core MCP 2026-07-28 Stateless Relay
 │   │   │   ├── route.ts              # Streamable HTTP MCP endpoint
 │   │   │   ├── g/[gatewaySlug]/      # Pattern C URI-scoped virtual gateways
 │   │   │   └── sse/                  # Legacy Dual-Era SSE endpoint
 │   │   ├── waitlist/                 # Developer preview registration API
 │   │   └── hello/                    # Diagnostic health check endpoint
-│   ├── auth/signin/                  # Sign-in UI page
+│   ├── auth/signin/                  # Sign-in UI page (Username/Password, WorkOS, Google)
+│   ├── settings/                     # User settings page (password, API keys)
 │   ├── mcp/                          # Standalone MCP documentation & playground page
 │   ├── waitlist/                     # Boarding pass / waitlist UI
 │   ├── layout.tsx                    # Root layout with fonts and metadata
 │   ├── page.tsx                      # Landing page with interactive simulator
 │   └── globals.css                   # Global styles and Tailwind v4 themes
 ├── components/                       # UI components
-│   ├── ui/                           # Primitive shadcn/ui components (Button, Card, etc.)
+│   ├── ui/                           # Primitive shadcn/ui components (Button, Card, Alert, etc.)
+│   ├── signin-credentials-form.tsx   # Username and password login form
 │   ├── client-configs.tsx            # Copyable client configs (Cursor, Claude, HTTP)
 │   ├── mcp-playground.tsx            # Live JSON-RPC 2.0 interactive test console
 │   ├── token-savings-simulator.tsx   # Interactive ROI / Position-Zero cache math
 │   ├── hero-section.tsx              # Landing page hero & key metrics counters
 │   └── how-it-works.tsx              # Three-Layer Separation visualization
 ├── lib/                              # Core domain logic
-│   ├── auth/                         # JWT signing, verification, and Google OAuth
+│   ├── auth/                         # JWT signing, verification, users DB, & Google OAuth
+│   │   ├── types.ts                  # Auth types and user definitions
+│   │   ├── session.ts                # Session cookie & token creation / verification
+│   │   ├── users-db.ts               # Password hashing, user account storage & API tokens
+│   │   └── google.ts                 # Google OAuth client logic
 │   ├── mcp-gateway.ts                # MCP 2026-07-28 engine, handles, & protocol router
 │   ├── mcp-types.ts                  # JSON-RPC, SEP specs, and schema TypeScript definitions
 │   ├── mcp-data.ts                   # 88 capability categories and tool definitions
@@ -216,6 +230,38 @@ The application will start with Vite and Cloudflare Worker runtime simulation at
 `http://localhost:5173`
 
 ---
+
+## Authentication & Account Management
+
+Spike Land provides multi-method authentication supporting direct **Username & Password**, **WorkOS AuthKit**, and **Google OAuth 2.0**.
+
+### Default Administrator Account
+
+A preconfigured administrator account is seeded by default:
+
+| Credential | Value |
+|---|---|
+| **Email / Username** | `admin@spike.land` (or `admin`) |
+| **Password** | `admin` |
+| **Role** | `admin` |
+
+### Username & Password Login
+
+Users can sign in at `/auth/signin` using their email or username and password:
+- Authenticates via `POST /api/auth/signin/credentials`.
+- Issues an HMAC-SHA256 signed JWT session token stored in an `HttpOnly`, `SameSite=Lax` session cookie (`spike_session`).
+- Password hashes are stored securely using salted SHA-256 with edge Web Crypto APIs (`crypto.subtle`).
+
+### Settings Page & API Tokens
+
+Once authenticated, navigate to **`/settings`** (or click **Settings** in the header navigation bar) to manage your account:
+
+1. **Change Password (`/api/settings/password`):**
+   - Verify current password and set a new password.
+2. **API Tokens Configuration (`/api/settings/tokens`):**
+   - **Provider API Keys:** Store upstream keys such as `SPIKE_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, and `CLOUDFLARE_API_TOKEN` directly in your workspace.
+   - **Personal MCP Tokens:** Generate and revoke personal bearer tokens for use in Claude Desktop, Cursor, and custom HTTP automation clients.
+
 
 ## Available Scripts
 
@@ -344,11 +390,16 @@ pnpm test -t "Position-Zero"
 
 ### Test Suite Architecture
 
-The repository contains 117+ automated tests across 16 test files:
+The repository contains 136+ automated tests across 19 test files:
 
 - **Protocol & Gateway (`test/mcp-gateway.test.ts`):** Validates MCP 2026-07-28 JSON-RPC handling, SEP-2243 header guards, SEP-2567 handles, schema hydration, broker tools, and error codes (`-32020`, `-32022`, `-32601`).
-- **Auth & Session Security (`test/auth-*.test.ts`, `test/api-auth-*.test.ts`):** Tests HMAC-SHA256 session token generation, cookie parsing, Google OAuth flow, CSRF state protection, and session verification.
+- **Auth & Session Security (`test/auth-*.test.ts`, `test/api-auth-*.test.ts`):**
+  - `auth-credentials-and-settings.test.ts`: Tests `admin@spike.land` credentials verification, password updates, and API tokens store.
+  - `signin-page.test.tsx`: Tests username & password login form interactions alongside WorkOS and Google buttons.
+  - `auth-session.test.ts`, `api-auth-session.test.ts`: Tests HMAC-SHA256 session token generation, cookie parsing, and session extraction.
+  - `auth-google.test.ts`, `api-auth-*.test.ts`: Tests Google OAuth flow, CSRF state protection, and callback processing.
 - **UI Components & Pages (`test/*.test.tsx`):**
+  - `settings-page.test.tsx`: Verifies password change forms and API tokens management UI.
   - `page.test.tsx`: Verifies landing page rendering, metric displays, and interactive tabs.
   - `token-savings-simulator.test.tsx`: Verifies slider controls, pricing formulas, and ROI calculations.
   - `waitlist.test.tsx`: Verifies form validation, submission states, and error handling.
