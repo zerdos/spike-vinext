@@ -482,6 +482,7 @@ export function auditToolHeaderAnnotations(schema: ToolInputSchema): {
         strippedHeaders.push(propName);
         delete copy["x-mcp-header"];
       }
+    }
     if ("required" in copy && typeof (copy as Record<string, unknown>).required === "boolean") {
       delete (copy as Record<string, unknown>).required;
     }

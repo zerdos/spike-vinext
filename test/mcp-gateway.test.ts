@@ -3,6 +3,8 @@ import {
   dispatchJsonRpc,
   GATEWAY_TOOL_NAMES,
   BROKER_2026_TOOL_NAMES,
+  BROKER_2026_TOOLS,
+  ALL_TOOLS,
   SUPPORTED_PROTOCOL_VERSIONS,
   mintWorkspaceHandle,
   verifyWorkspaceHandle,
@@ -541,6 +543,60 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
         (installCall?.result as { content: Array<{ text: string }> }).content[0].text
       );
       expect(installData.status).toBe("mounted");
+    });
+  });
+
+  describe("JSON Schema 2020-12 Input Schema Strict Compliance", () => {
+    it("ensures no tool schema in BROKER_2026_TOOLS places 'required' inside property definitions", () => {
+      for (const tool of BROKER_2026_TOOLS) {
+        const schema = tool.inputSchema;
+        expect(schema.type).toBe("object");
+        if (schema.required) {
+          expect(Array.isArray(schema.required)).toBe(true);
+        }
+        for (const [propName, propDef] of Object.entries(schema.properties || {})) {
+          expect(
+            (propDef as Record<string, unknown>).required,
+            `Tool '${tool.name}' property '${propName}' contains invalid boolean 'required' field`
+          ).toBeUndefined();
+        }
+      }
+    });
+
+    it("ensures auditToolHeaderAnnotations strips any boolean 'required' defensively and preserves valid arrays", () => {
+      const mockSchema = {
+        $schema: "https://json-schema.org/draft/2020-12/schema",
+        type: "object" as const,
+        properties: {
+          badProp: {
+            type: "string" as const,
+            description: "test",
+            required: true,
+          },
+          goodProp: {
+            type: "string" as const,
+            description: "test",
+          },
+        },
+        required: ["goodProp"],
+      };
+
+      const audited = auditToolHeaderAnnotations(mockSchema as unknown as import("@/lib/mcp-types").ToolInputSchema);
+      expect((audited.sanitizedSchema.properties.badProp as Record<string, unknown>).required).toBeUndefined();
+      expect(audited.sanitizedSchema.required).toEqual(["goodProp"]);
+    });
+
+    it("ensures all ALL_TOOLS have strictly compliant JSON Schema properties without boolean 'required'", () => {
+      for (const [name, tool] of Object.entries(ALL_TOOLS)) {
+        const schema = tool.inputSchema;
+        if (!schema || !schema.properties) continue;
+        for (const [propName, propDef] of Object.entries(schema.properties)) {
+          expect(
+            (propDef as Record<string, unknown>).required,
+            `Tool '${name}' property '${propName}' contains invalid boolean 'required'`
+          ).toBeUndefined();
+        }
+      }
     });
   });
 });

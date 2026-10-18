@@ -2794,7 +2794,7 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
       properties: {
-        sessionId: { type: "string", description: "Browser Run session ID to close", required: true },
+        sessionId: { type: "string", description: "Browser Run session ID to close" },
       },
       required: ["sessionId"],
     },
@@ -2814,7 +2814,7 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
       properties: {
-        sessionId: { type: "string", description: "Active Browser Run session ID", required: true },
+        sessionId: { type: "string", description: "Active Browser Run session ID" },
         mode: {
           type: "string",
           description: "Live View UI mode: 'devtools', 'tab', or 'full' (default: 'devtools')",
@@ -2854,7 +2854,7 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
       $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
       properties: {
-        sessionId: { type: "string", description: "Active Browser Run session ID", required: true },
+        sessionId: { type: "string", description: "Active Browser Run session ID" },
         action: {
           type: "string",
           description: "DevTools operation to execute",
@@ -2867,7 +2867,6 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
             "activateTarget",
             "closeTarget",
           ],
-          required: true,
         },
         targetId: {
           type: "string",
@@ -2916,7 +2915,6 @@ export const BROWSER_RUN_TOOLS: ToolDefinition[] = [
         method: {
           type: "string",
           description: "CDP method name (e.g. 'Browser.getVersion', 'Page.navigate', 'Runtime.evaluate')",
-          required: true,
         },
         params: {
           type: "object",
