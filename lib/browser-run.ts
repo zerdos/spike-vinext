@@ -1,4 +1,6 @@
 import { RequestContext, ToolDefinition } from "./mcp-types";
+import { env as cfEnv } from "cloudflare:workers";
+import { deflateSync } from "node:zlib";
 
 // ============================================================================
 // Cloudflare Browser Run Binding & API Types
@@ -731,8 +733,335 @@ function buildAccessibilityTree(
 }
 
 // ============================================================================
+// High-Resolution Simulated Screenshot Generation (Edge Fallback)
+// ============================================================================
+
+function crc32(buf: Uint8Array): number {
+  const table: number[] = [];
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    table[i] = c;
+  }
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    crc = (crc >>> 8) ^ table[(crc ^ buf[i]) & 0xff];
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function adler32(buf: Uint8Array): number {
+  let a = 1;
+  let b = 0;
+  for (let i = 0; i < buf.length; i++) {
+    a = (a + buf[i]) % 65521;
+    b = (b + a) % 65521;
+  }
+  return ((b << 16) | a) >>> 0;
+}
+
+function createUncompressedZlib(data: Uint8Array): Uint8Array {
+  const BLOCK_SIZE = 65535;
+  const numBlocks = Math.ceil(data.length / BLOCK_SIZE) || 1;
+  const parts: Uint8Array[] = [];
+  parts.push(new Uint8Array([0x78, 0x01])); // Zlib header
+
+  for (let i = 0; i < numBlocks; i++) {
+    const isFinal = i === numBlocks - 1 ? 1 : 0;
+    const start = i * BLOCK_SIZE;
+    const end = Math.min(start + BLOCK_SIZE, data.length);
+    const blockData = data.subarray(start, end);
+    const len = blockData.length;
+    const nlen = ~len & 0xffff;
+
+    const blockHeader = new Uint8Array(5);
+    blockHeader[0] = isFinal;
+    blockHeader[1] = len & 0xff;
+    blockHeader[2] = (len >>> 8) & 0xff;
+    blockHeader[3] = nlen & 0xff;
+    blockHeader[4] = (nlen >>> 8) & 0xff;
+    parts.push(blockHeader);
+    parts.push(blockData);
+  }
+
+  const adlerVal = adler32(data);
+  const adlerBuf = new Uint8Array(4);
+  new DataView(adlerBuf.buffer).setUint32(0, adlerVal, false);
+  parts.push(adlerBuf);
+
+  const totalLength = parts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Uint8Array(totalLength);
+  let cur = 0;
+  for (const part of parts) {
+    combined.set(part, cur);
+    cur += part.length;
+  }
+  return combined;
+}
+
+function createPngChunk(type: string, data: Uint8Array): Uint8Array {
+  const len = new Uint8Array(4);
+  new DataView(len.buffer).setUint32(0, data.length, false);
+  const typeBytes = new Uint8Array([
+    type.charCodeAt(0),
+    type.charCodeAt(1),
+    type.charCodeAt(2),
+    type.charCodeAt(3),
+  ]);
+  const body = new Uint8Array(4 + data.length);
+  body.set(typeBytes, 0);
+  body.set(data, 4);
+
+  const crcVal = crc32(body);
+  const crcBytes = new Uint8Array(4);
+  new DataView(crcBytes.buffer).setUint32(0, crcVal, false);
+
+  const chunk = new Uint8Array(4 + body.length + 4);
+  chunk.set(len, 0);
+  chunk.set(body, 4);
+  chunk.set(crcBytes, 4 + body.length);
+  return chunk;
+}
+
+const FONT_GLYPHS: Record<string, number[]> = {
+  A: [0x7c, 0x12, 0x11, 0x12, 0x7c],
+  B: [0x7f, 0x49, 0x49, 0x49, 0x36],
+  C: [0x3e, 0x41, 0x41, 0x41, 0x22],
+  D: [0x7f, 0x41, 0x41, 0x22, 0x1c],
+  E: [0x7f, 0x49, 0x49, 0x49, 0x41],
+  F: [0x7f, 0x09, 0x09, 0x09, 0x01],
+  G: [0x3e, 0x41, 0x49, 0x49, 0x7a],
+  H: [0x7f, 0x08, 0x08, 0x08, 0x7f],
+  I: [0x00, 0x41, 0x7f, 0x41, 0x00],
+  J: [0x20, 0x40, 0x41, 0x3f, 0x01],
+  K: [0x7f, 0x08, 0x14, 0x22, 0x41],
+  L: [0x7f, 0x40, 0x40, 0x40, 0x40],
+  M: [0x7f, 0x02, 0x0c, 0x02, 0x7f],
+  N: [0x7f, 0x04, 0x08, 0x10, 0x7f],
+  O: [0x3e, 0x41, 0x41, 0x41, 0x3e],
+  P: [0x7f, 0x09, 0x09, 0x09, 0x06],
+  Q: [0x3e, 0x41, 0x51, 0x21, 0x5e],
+  R: [0x7f, 0x09, 0x19, 0x29, 0x46],
+  S: [0x46, 0x49, 0x49, 0x49, 0x31],
+  T: [0x01, 0x01, 0x7f, 0x01, 0x01],
+  U: [0x3f, 0x40, 0x40, 0x40, 0x3f],
+  V: [0x1f, 0x20, 0x40, 0x20, 0x1f],
+  W: [0x7f, 0x20, 0x18, 0x20, 0x7f],
+  X: [0x63, 0x14, 0x08, 0x14, 0x63],
+  Y: [0x07, 0x08, 0x70, 0x08, 0x07],
+  Z: [0x61, 0x51, 0x49, 0x45, 0x43],
+  "0": [0x3e, 0x51, 0x49, 0x45, 0x3e],
+  "1": [0x00, 0x42, 0x7f, 0x40, 0x00],
+  "2": [0x42, 0x61, 0x51, 0x49, 0x46],
+  "3": [0x21, 0x41, 0x45, 0x4b, 0x31],
+  "4": [0x18, 0x14, 0x12, 0x7f, 0x10],
+  "5": [0x27, 0x45, 0x45, 0x45, 0x39],
+  "6": [0x3c, 0x4a, 0x49, 0x49, 0x30],
+  "7": [0x01, 0x71, 0x09, 0x05, 0x03],
+  "8": [0x36, 0x49, 0x49, 0x49, 0x36],
+  "9": [0x06, 0x49, 0x49, 0x29, 0x1e],
+  ":": [0x00, 0x36, 0x36, 0x00, 0x00],
+  "/": [0x20, 0x10, 0x08, 0x04, 0x02],
+  ".": [0x00, 0x60, 0x60, 0x00, 0x00],
+  "-": [0x08, 0x08, 0x08, 0x08, 0x08],
+  _: [0x80, 0x80, 0x80, 0x80, 0x80],
+  " ": [0x00, 0x00, 0x00, 0x00, 0x00],
+};
+
+function drawBitmapString(
+  rawData: Uint8Array,
+  w: number,
+  h: number,
+  startX: number,
+  startY: number,
+  text: string,
+  color: [number, number, number],
+  scale = 1
+) {
+  const rowSize = 1 + w * 3;
+  let curX = startX;
+  for (let i = 0; i < text.length; i++) {
+    const glyph = FONT_GLYPHS[text[i].toUpperCase()] || FONT_GLYPHS[" "];
+    for (let col = 0; col < 5; col++) {
+      const bits = glyph[col];
+      for (let row = 0; row < 7; row++) {
+        if ((bits >> row) & 1) {
+          for (let dy = 0; dy < scale; dy++) {
+            for (let dx = 0; dx < scale; dx++) {
+              const pxX = curX + col * scale + dx;
+              const pxY = startY + row * scale + dy;
+              if (pxX >= 0 && pxX < w && pxY >= 0 && pxY < h) {
+                const offset = pxY * rowSize + 1 + pxX * 3;
+                rawData[offset] = color[0];
+                rawData[offset + 1] = color[1];
+                rawData[offset + 2] = color[2];
+              }
+            }
+          }
+        }
+      }
+    }
+    curX += 6 * scale;
+  }
+}
+
+export function generateSimulatedScreenshotPng(options: {
+  width?: number;
+  height?: number;
+  title?: string;
+  url?: string;
+}): Uint8Array {
+  const w = Math.min(Math.max(options.width || 1280, 320), 1920);
+  const h = Math.min(Math.max(options.height || 720, 240), 1080);
+  const title = options.title || "Spike Land";
+  const url = options.url || "https://spike.land";
+
+  const header = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const ihdr = new Uint8Array(13);
+  const ihdrView = new DataView(ihdr.buffer);
+  ihdrView.setUint32(0, w, false);
+  ihdrView.setUint32(4, h, false);
+  ihdr[8] = 8;
+  ihdr[9] = 2; // RGB
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+
+  const rowSize = 1 + w * 3;
+  const rawData = new Uint8Array(h * rowSize);
+
+  const topBarBg = [30, 35, 48];
+  const addrBarBg = [45, 52, 70];
+  const pageBg = [10, 15, 26];
+  const cardBg = [22, 30, 48];
+  const accent = [59, 130, 246];
+
+  for (let y = 0; y < h; y++) {
+    const rowOffset = y * rowSize;
+    rawData[rowOffset] = 0;
+    for (let x = 0; x < w; x++) {
+      const px = rowOffset + 1 + x * 3;
+      let r = pageBg[0];
+      let g = pageBg[1];
+      let b = pageBg[2];
+
+      if (y < 44) {
+        r = topBarBg[0];
+        g = topBarBg[1];
+        b = topBarBg[2];
+        const dRed = Math.hypot(x - 20, y - 22);
+        const dYellow = Math.hypot(x - 38, y - 22);
+        const dGreen = Math.hypot(x - 56, y - 22);
+        if (dRed <= 5) {
+          r = 239;
+          g = 68;
+          b = 68;
+        } else if (dYellow <= 5) {
+          r = 245;
+          g = 158;
+          b = 11;
+        } else if (dGreen <= 5) {
+          r = 16;
+          g = 185;
+          b = 129;
+        } else if (x >= 90 && x <= w - 90 && y >= 10 && y <= 34) {
+          r = addrBarBg[0];
+          g = addrBarBg[1];
+          b = addrBarBg[2];
+        }
+      } else if (y >= 44 && y <= 45) {
+        r = 40;
+        g = 48;
+        b = 65;
+      } else if (y > 70 && y < 140 && x > 60 && x < w - 60) {
+        r = cardBg[0];
+        g = cardBg[1];
+        b = cardBg[2];
+        if (y >= 137) {
+          r = accent[0];
+          g = accent[1];
+          b = accent[2];
+        }
+      } else if (y > 160 && y < h - 40 && x > 60 && x < w - 60) {
+        const colW = (w - 120 - 40) / 3;
+        const col1 = x > 60 && x < 60 + colW;
+        const col2 = x > 60 + colW + 20 && x < 60 + colW * 2 + 20;
+        const col3 = x > 60 + colW * 2 + 40 && x < w - 60;
+        if (col1 || col2 || col3) {
+          r = cardBg[0];
+          g = cardBg[1];
+          b = cardBg[2];
+          if (y <= 164) {
+            r = accent[0];
+            g = accent[1];
+            b = accent[2];
+          }
+        }
+      }
+      rawData[px] = r;
+      rawData[px + 1] = g;
+      rawData[px + 2] = b;
+    }
+  }
+
+  // Draw URL in address bar
+  drawBitmapString(rawData, w, h, 105, 18, url.slice(0, 80), [160, 175, 200], 1);
+  // Draw Title in Hero Banner
+  drawBitmapString(rawData, w, h, 85, 95, title.slice(0, 50), [255, 255, 255], 2);
+  // Draw Feature Cards
+  const colW = (w - 120 - 40) / 3;
+  drawBitmapString(rawData, w, h, 80, 185, "PROGRESSIVE MCP", [59, 130, 246], 1);
+  drawBitmapString(
+    rawData,
+    w,
+    h,
+    Math.round(80 + colW + 20),
+    185,
+    "BROWSER RUN ENGINE",
+    [59, 130, 246],
+    1
+  );
+  drawBitmapString(
+    rawData,
+    w,
+    h,
+    Math.round(80 + colW * 2 + 40),
+    185,
+    "TOKEN OPTIMIZATION",
+    [59, 130, 246],
+    1
+  );
+
+  let compressed: Uint8Array;
+  try {
+    compressed = new Uint8Array(deflateSync(rawData));
+  } catch {
+    compressed = createUncompressedZlib(rawData);
+  }
+
+  const ihdrChunk = createPngChunk("IHDR", ihdr);
+  const idatChunk = createPngChunk("IDAT", compressed);
+  const iendChunk = createPngChunk("IEND", new Uint8Array(0));
+
+  const totalLen = header.length + ihdrChunk.length + idatChunk.length + iendChunk.length;
+  const result = new Uint8Array(totalLen);
+  let offset = 0;
+  result.set(header, offset);
+  offset += header.length;
+  result.set(ihdrChunk, offset);
+  offset += ihdrChunk.length;
+  result.set(idatChunk, offset);
+  offset += idatChunk.length;
+  result.set(iendChunk, offset);
+  return result;
+}
+
+// ============================================================================
 // Core Execution Functions (Workers Binding -> REST API -> Edge Simulator)
 // ============================================================================
+
 
 export async function executeQuickAction(
   action: BrowserRunQuickActionType,
@@ -792,8 +1121,19 @@ export async function executeQuickAction(
   // 2. Attempt Cloudflare Workers Browser Run Binding (`env.BROWSER.quickAction`)
   if (env?.BROWSER && typeof env.BROWSER.quickAction === "function") {
     try {
-      const response = await env.BROWSER.quickAction(action, options);
+      let response: Response;
+      try {
+        response = await env.BROWSER.quickAction(action, options);
+      } catch (callErr: unknown) {
+        const callErrMsg = callErr instanceof Error ? callErr.message : String(callErr);
+        if (callErrMsg.includes('does not implement the method "quickAction"')) {
+          throw callErr;
+        }
+        const prefixed = action.startsWith("/") ? action : `/${action}`;
+        response = await env.BROWSER.quickAction(prefixed as any, options);
+      }
       const browserMsUsedHeader = response.headers.get("X-Browser-Ms-Used");
+
       const browserMsUsed = browserMsUsedHeader ? Number(browserMsUsedHeader) : undefined;
 
       if (!response.ok) {
@@ -936,10 +1276,30 @@ export async function executeQuickAction(
 
   // 4. Deterministic Local Edge Simulation Fallback
   const targetUrl = typeof options.url === "string" ? options.url : undefined;
-  const rawHtml =
-    typeof options.html === "string"
-      ? options.html
-      : `<!DOCTYPE html><html><head><title>Example Domain</title></head><body><h1>Example Domain</h1><p>This domain is for use in documentation examples without needing permission.</p><a href="https://www.iana.org/domains/example">More information...</a></body></html>`;
+  let rawHtml = typeof options.html === "string" ? options.html : "";
+
+  if (!rawHtml && targetUrl) {
+    try {
+      const resp = await fetch(targetUrl, {
+        headers: {
+          "User-Agent":
+            typeof options.userAgent === "string"
+              ? options.userAgent
+              : "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+      });
+      if (resp.ok) {
+        rawHtml = await resp.text();
+      }
+    } catch {
+      // Offline fallback
+    }
+  }
+
+  if (!rawHtml) {
+    rawHtml = `<!DOCTYPE html><html><head><title>Example Domain</title></head><body><h1>Example Domain</h1><p>This domain is for use in documentation examples without needing permission.</p><a href="https://www.iana.org/domains/example">More information...</a></body></html>`;
+  }
   const title = extractTitleFromHtml(rawHtml, targetUrl);
   const meta = {
     status: 200,
@@ -972,22 +1332,32 @@ export async function executeQuickAction(
       const screenshotOpts = (options.screenshotOptions as Record<string, unknown> | undefined) || {};
       const formatType = String(screenshotOpts.type || "png").replace(/^\./, "");
       const mime = `image/${formatType}`;
-      // Minimal valid 1x1 PNG base64
-      const syntheticPngB64 =
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      const viewport = (options.viewport as Record<string, unknown> | undefined) || {};
+      const width = typeof viewport.width === "number" ? viewport.width : 1280;
+      const height = typeof viewport.height === "number" ? viewport.height : 720;
+
+      const pngBytes = generateSimulatedScreenshotPng({
+        width,
+        height,
+        title,
+        url: targetUrl || "https://spike.land",
+      });
+      const b64 = toBase64(pngBytes);
+
       return {
         success: true,
         action: "screenshot",
         executionMode: "edge-simulation",
         contentType: mime,
         encoding: "base64",
-        byteLength: 68,
-        data: syntheticPngB64,
-        dataUri: `data:${mime};base64,${syntheticPngB64}`,
+        byteLength: pngBytes.byteLength,
+        data: b64,
+        dataUri: `data:${mime};base64,${b64}`,
         meta,
         browserMsUsed: 215,
       };
     }
+
 
     case "pdf": {
       const syntheticPdfB64 = toBase64("%PDF-1.7\n1 0 obj\n<< /Title (" + title + ") >>\nendobj\n%%EOF");
@@ -1884,9 +2254,63 @@ export async function executeBrowserCdpCommand(
 // Full MCP Tool Definitions for Cloudflare Browser Run (18 Tools)
 // ============================================================================
 
-function getEnvFromContext(ctx?: RequestContext): BrowserRunEnv | undefined {
-  return ctx?.browserEnv;
+export function getEnvFromContext(ctx?: RequestContext): BrowserRunEnv | undefined {
+  if (ctx?.browserEnv) {
+    return ctx.browserEnv;
+  }
+
+  // Check ambient binding from cloudflare:workers
+  try {
+    if (cfEnv && typeof cfEnv === "object") {
+      const typed = cfEnv as unknown as {
+        BROWSER?: BrowserRunBinding;
+        CLOUDFLARE_ACCOUNT_ID?: string;
+        CLOUDFLARE_API_TOKEN?: string;
+      };
+      if (typed.BROWSER || typed.CLOUDFLARE_ACCOUNT_ID) {
+        return {
+          BROWSER: typed.BROWSER,
+          CLOUDFLARE_ACCOUNT_ID:
+            typed.CLOUDFLARE_ACCOUNT_ID ||
+            (typeof process !== "undefined" ? process.env?.CLOUDFLARE_ACCOUNT_ID : undefined),
+          CLOUDFLARE_API_TOKEN:
+            typed.CLOUDFLARE_API_TOKEN ||
+            (typeof process !== "undefined" ? process.env?.CLOUDFLARE_API_TOKEN : undefined),
+        };
+      }
+    }
+  } catch {
+    // Ignore when cloudflare:workers binding is unavailable
+  }
+
+  // Check globalThis and process.env
+  const g = globalThis as unknown as {
+    env?: {
+      BROWSER?: BrowserRunBinding;
+      CLOUDFLARE_ACCOUNT_ID?: string;
+      CLOUDFLARE_API_TOKEN?: string;
+    };
+    BROWSER?: BrowserRunBinding;
+  };
+  const browser = g.env?.BROWSER || g.BROWSER;
+  const accountId =
+    g.env?.CLOUDFLARE_ACCOUNT_ID ||
+    (typeof process !== "undefined" ? process.env?.CLOUDFLARE_ACCOUNT_ID : undefined);
+  const apiToken =
+    g.env?.CLOUDFLARE_API_TOKEN ||
+    (typeof process !== "undefined" ? process.env?.CLOUDFLARE_API_TOKEN : undefined);
+
+  if (browser || (accountId && apiToken)) {
+    return {
+      BROWSER: browser,
+      CLOUDFLARE_ACCOUNT_ID: accountId,
+      CLOUDFLARE_API_TOKEN: apiToken,
+    };
+  }
+
+  return undefined;
 }
+
 
 export const BROWSER_RUN_TOOL_NAMES = [
   "browser_run_accessibility_tree",

@@ -7,6 +7,8 @@ import {
   getProtectedResourceMetadata,
 } from "@/lib/mcp-gateway";
 import { JSONRPCRequest, RequestContext, TransportHeaders } from "@/lib/mcp-types";
+import { getEnvFromContext } from "@/lib/browser-run";
+
 
 function getCorsHeaders() {
   return {
@@ -108,7 +110,9 @@ export async function POST(request: Request) {
     colo,
     gatewaySlug,
     transportHeaders,
+    browserEnv: getEnvFromContext(),
   };
+
 
   let body: unknown;
   try {

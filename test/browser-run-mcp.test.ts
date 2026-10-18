@@ -366,6 +366,8 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
       const sRes = await executeQuickAction("screenshot", { html: sampleHtml });
       expect(sRes.success).toBe(true);
       expect(String(sRes.dataUri)).toMatch(/^data:image\/png;base64,/);
+      expect(Number(sRes.byteLength)).toBeGreaterThan(1000);
+
 
       const pRes = await executeQuickAction("pdf", { html: sampleHtml });
       expect(pRes.success).toBe(true);
@@ -415,8 +417,19 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
       });
       expect(linksRes.success).toBe(true);
       expect(linksRes.result).toEqual(["https://spike.land/docs"]);
+
+      const urlScreenshotRes = await executeQuickAction("screenshot", {
+        url: "https://spike.land",
+        viewport: { width: 1280, height: 720 },
+      });
+      expect(urlScreenshotRes.success).toBe(true);
+      expect(urlScreenshotRes.executionMode).toBe("edge-simulation");
+      expect(Number(urlScreenshotRes.byteLength)).toBeGreaterThan(1000);
+      expect(String(urlScreenshotRes.dataUri)).toMatch(/^data:image\/png;base64,/);
+      expect((urlScreenshotRes.meta as Record<string, unknown>).finalUrl).toBe("https://spike.land");
     });
   });
+
 
   describe("2. Multi-Page Crawl API Unit Tests (POST /crawl, GET /crawl/{job_id}, DELETE /crawl/{job_id})", () => {
     it("validates crawl parameters and enforces Content Signals Policy (contentUse === 'immediate')", async () => {
