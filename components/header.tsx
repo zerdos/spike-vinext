@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Sparkles,
   Plug,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,6 +117,12 @@ export function Header() {
                 <a href="/#get-connected">
                   <Plug className="h-4 w-4 text-[#0047BB]" />
                   Setup Guide
+                </a>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/settings">
+                  <Settings className="h-4 w-4" />
+                  Settings
                 </a>
               </Button>
             </div>
@@ -224,6 +231,17 @@ export function Header() {
               <a href="/#get-connected">
                 <Plug className="h-4 w-4 text-[#0047BB]" />
                 Setup Guide
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/settings">
+                <Settings className="h-4 w-4" />
+                Settings
               </a>
             </Button>
             <Button

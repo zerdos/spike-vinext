@@ -21,9 +21,11 @@ export interface GoogleUserInfo {
 export interface AuthUser {
   id: string;
   email: string;
+  username?: string;
   name: string;
   picture?: string;
-  provider: "google";
+  role?: "admin" | "user";
+  provider: "google" | "credentials" | "workos";
   providerAccountId: string;
   emailVerified: boolean;
   createdAt: string;

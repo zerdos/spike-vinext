@@ -10,6 +10,8 @@ const alertVariants = cva(
         default: "bg-card text-foreground border-[#111315]",
         destructive:
           "border-[#BA1C1C] bg-[#FEF2F2] text-[#7F1D1D]",
+        emerald:
+          "border-[#0D7A5F] bg-[#ECFDF5] text-[#065F46]",
       },
     },
     defaultVariants: {

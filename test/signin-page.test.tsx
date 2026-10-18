@@ -1,8 +1,63 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import SignInPage from "@/app/auth/signin/page";
 
 describe("SignInPage", () => {
+  it("renders username and password login form", async () => {
+    const page = await SignInPage({});
+    render(page);
+
+    const usernameInput = screen.getByLabelText(/username or email/i);
+    const passwordInput = screen.getByLabelText(/^password$/i);
+    const signInButton = screen.getByRole("button", { name: /^sign in$/i });
+
+    expect(usernameInput).toBeInTheDocument();
+    expect(passwordInput).toBeInTheDocument();
+    expect(signInButton).toBeInTheDocument();
+  });
+
+  it("submits credentials to /api/auth/signin/credentials", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          authenticated: true,
+          returnTo: "/settings",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    const page = await SignInPage({
+      searchParams: Promise.resolve({ returnTo: "/settings" }),
+    });
+    render(page);
+
+    fireEvent.change(screen.getByLabelText(/username or email/i), {
+      target: { value: "admin@spike.land" },
+    });
+    fireEvent.change(screen.getByLabelText(/^password$/i), {
+      target: { value: "admin" },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/auth/signin/credentials",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          username: "admin@spike.land",
+          password: "admin",
+          returnTo: "/settings",
+        }),
+      })
+    );
+    fetchSpy.mockRestore();
+  });
+
   it("renders WorkOS sign-in button linking to /login", async () => {
     const page = await SignInPage({});
     render(page);

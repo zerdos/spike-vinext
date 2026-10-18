@@ -9,7 +9,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { SignInCredentialsForm } from "@/components/signin-credentials-form";
 
 function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
@@ -35,7 +35,7 @@ function GoogleIcon({ className = "h-5 w-5" }: { className?: string }) {
 }
 
 interface SignInPageProps {
-  searchParams?: Promise<{ error?: string; message?: string }>;
+  searchParams?: Promise<{ error?: string; message?: string; returnTo?: string }>;
 }
 
 export default async function SignInPage(props: SignInPageProps) {
@@ -44,6 +44,14 @@ export default async function SignInPage(props: SignInPageProps) {
     : undefined;
   const error = searchParams?.error;
   const message = searchParams?.message;
+  const returnTo = searchParams?.returnTo || "/";
+
+  const initialErrorMessage = error
+    ? message ||
+      (error === "access_denied"
+        ? "Access was cancelled or denied."
+        : error)
+    : undefined;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-center items-center px-4 py-12">
@@ -71,7 +79,7 @@ export default async function SignInPage(props: SignInPageProps) {
             Welcome to Spike Land
           </h1>
           <p className="text-sm text-muted-foreground">
-            Sign in or create an account to start building with AI agents.
+            Sign in with your username &amp; password or single sign-on to manage your MCP keys.
           </p>
         </div>
 
@@ -85,33 +93,11 @@ export default async function SignInPage(props: SignInPageProps) {
           </CardHeader>
 
           <CardContent className="p-6 space-y-5">
-            {error && (
-              <Alert variant="destructive">
-                <AlertTitle>Authentication Failed</AlertTitle>
-                <AlertDescription>
-                  {message ||
-                    (error === "access_denied"
-                      ? "Access was cancelled or denied."
-                      : error)}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* WorkOS AuthKit Sign-in Button */}
-            <Button
-              variant="default"
-              size="lg"
-              asChild
-              className="w-full border-2 border-[#111315] font-semibold"
-            >
-              <a
-                href="/login"
-                aria-label="Continue with WorkOS"
-              >
-                <ShieldCheck className="h-5 w-5 mr-2" />
-                <span>Continue with WorkOS</span>
-              </a>
-            </Button>
+            {/* Username & Password Form */}
+            <SignInCredentialsForm
+              initialError={initialErrorMessage}
+              returnTo={returnTo}
+            />
 
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
@@ -119,26 +105,44 @@ export default async function SignInPage(props: SignInPageProps) {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground font-mono">
-                  Or
+                  Or continue with SSO
                 </span>
               </div>
             </div>
 
-            {/* Social Sign-in Button */}
-            <Button
-              variant="outline"
-              size="lg"
-              asChild
-              className="w-full border-2 border-[#111315] font-semibold"
-            >
-              <a
-                href="/api/auth/signin/google"
-                aria-label="Continue with Google"
+            <div className="space-y-3">
+              {/* WorkOS AuthKit Sign-in Button */}
+              <Button
+                variant="cobalt"
+                size="lg"
+                asChild
+                className="w-full border-2 border-[#111315] font-semibold"
               >
-                <GoogleIcon className="h-5 w-5 mr-2" />
-                <span>Continue with Google</span>
-              </a>
-            </Button>
+                <a
+                  href="/login"
+                  aria-label="Continue with WorkOS"
+                >
+                  <ShieldCheck className="h-5 w-5 mr-2" />
+                  <span>Continue with WorkOS</span>
+                </a>
+              </Button>
+
+              {/* Social Sign-in Button */}
+              <Button
+                variant="outline"
+                size="lg"
+                asChild
+                className="w-full border-2 border-[#111315] font-semibold"
+              >
+                <a
+                  href="/api/auth/signin/google"
+                  aria-label="Continue with Google"
+                >
+                  <GoogleIcon className="h-5 w-5 mr-2" />
+                  <span>Continue with Google</span>
+                </a>
+              </Button>
+            </div>
           </CardContent>
 
           <CardFooter className="bg-secondary/40 border-t border-[#111315] px-6 py-4 text-center">
