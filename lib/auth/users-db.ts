@@ -95,6 +95,35 @@ const inMemoryApiTokens = new Map<string, ApiTokenRecord>();
 let adminSeededInMemory = false;
 let d1UsersSchemaEnsured = false;
 
+const USERS_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user',
+    api_tokens_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+  "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+  `CREATE TABLE IF NOT EXISTS api_tokens (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    token_value TEXT NOT NULL,
+    token_prefix TEXT NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'spike',
+    scopes TEXT NOT NULL DEFAULT 'mcp:tools:read,mcp:tools:execute',
+    last_used_at TEXT,
+    created_at TEXT NOT NULL
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id)",
+  "CREATE INDEX IF NOT EXISTS idx_api_tokens_value ON api_tokens(token_value)",
+];
+
 export async function seedDefaultAdminInMemory(): Promise<UserAccount> {
   const existing = inMemoryUsers.get(ADMIN_USER_ID);
   if (existing && adminSeededInMemory) {
@@ -154,39 +183,15 @@ export async function ensureUsersTables(customDb?: D1Database | null): Promise<v
   if (!db) return;
 
   if (!d1UsersSchemaEnsured) {
+    // NOTE: D1's `exec()` treats every *line* as a separate statement, so a
+    // multi-line CREATE TABLE fails with "incomplete input". Use one prepared
+    // statement per DDL statement in a batch instead.
     try {
-      await db.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-          id TEXT PRIMARY KEY,
-          email TEXT NOT NULL UNIQUE,
-          username TEXT NOT NULL UNIQUE,
-          name TEXT NOT NULL,
-          password_hash TEXT NOT NULL,
-          role TEXT NOT NULL DEFAULT 'user',
-          api_tokens_json TEXT NOT NULL DEFAULT '{}',
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-        CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-
-        CREATE TABLE IF NOT EXISTS api_tokens (
-          id TEXT PRIMARY KEY,
-          user_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          token_value TEXT NOT NULL,
-          token_prefix TEXT NOT NULL,
-          provider TEXT NOT NULL DEFAULT 'spike',
-          scopes TEXT NOT NULL DEFAULT 'mcp:tools:read,mcp:tools:execute',
-          last_used_at TEXT,
-          created_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
-        CREATE INDEX IF NOT EXISTS idx_api_tokens_value ON api_tokens(token_value);
-      `);
+      await db.batch(USERS_SCHEMA_STATEMENTS.map((sql) => db.prepare(sql)));
       d1UsersSchemaEnsured = true;
-    } catch {
-      d1UsersSchemaEnsured = true;
+    } catch (error) {
+      // Leave the flag unset so the next request retries schema creation.
+      console.error("ensureUsersTables: failed to create D1 schema:", error);
     }
   }
 
@@ -399,19 +404,43 @@ export async function updateUserPassword(
     updatedAt: now,
   };
 
-  inMemoryUsers.set(userId, updatedUser);
-
   const db = customDb !== undefined ? customDb : getAuthDatabase();
   if (db) {
+    // Persist to D1 *before* touching the in-memory cache. Workers isolates are
+    // ephemeral and not shared, so an in-memory-only update is silently lost on
+    // the next request served by a different isolate. Upsert so that a user
+    // known only in memory (e.g. the seeded admin) still gets a durable row.
     try {
       await db
-        .prepare("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?")
-        .bind(newHash, now, userId)
+        .prepare(
+          `INSERT INTO users (id, email, username, name, password_hash, role, api_tokens_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET
+             password_hash = excluded.password_hash,
+             updated_at = excluded.updated_at`
+        )
+        .bind(
+          updatedUser.id,
+          updatedUser.email,
+          updatedUser.username,
+          updatedUser.name,
+          updatedUser.passwordHash,
+          updatedUser.role,
+          JSON.stringify(updatedUser.providerTokens),
+          updatedUser.createdAt,
+          updatedUser.updatedAt
+        )
         .run();
-    } catch {
-      // In-memory already updated
+    } catch (error) {
+      console.error("updateUserPassword: failed to persist to D1:", error);
+      return {
+        success: false,
+        error: "Could not save your new password. Please try again.",
+      };
     }
   }
+
+  inMemoryUsers.set(userId, updatedUser);
 
   return { success: true, user: updatedUser };
 }
