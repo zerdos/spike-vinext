@@ -63,13 +63,14 @@ export function CategoriesCta() {
                   <Layers className="h-5 w-5" />
                 </span>
                 <CardTitle className="font-display text-2xl sm:text-4xl font-black tracking-tight text-foreground">
-                  Deterministic Capability Packs &amp; Virtual Gateways
+                  Ready-made tool packs, plus a link for each team
                 </CardTitle>
               </div>
               <CardDescription className="text-sm sm:text-base text-muted-foreground max-w-[65ch] leading-relaxed">
-                Instead of guessing which tools you might need with fuzzy search, Spike Land organizes 455 tools into{" "}
-                <strong className="text-foreground font-semibold">88 focused Capability Packs</strong>{" "}
-                grouped by topic. Your AI can turn on whole packs on the fly, or you can connect your client directly to a single-purpose link tailored to one team.
+                We don&apos;t guess which tools you need with fuzzy search. Our 455 tools are sorted into{" "}
+                <strong className="text-foreground font-semibold">88 packs</strong>{" "}
+                by topic, and your AI switches on whole packs when it needs them. If a team only ever needs one pack,
+                give them its own link instead. Anything we don&apos;t have, your agent can mount from your own servers.
               </CardDescription>
               <div className="flex flex-wrap gap-2 pt-1">
                 <Badge variant="outline" className="font-mono">

@@ -26,6 +26,7 @@ const INITIAL_GATEWAY_SUITE = [
   { idx: "03", name: "inspect_tool_schema", role: "Explains how to use one specific tool", footprint: "92 tokens" },
   { idx: "04", name: "execute_tool", role: "Runs a tool safely, with its own login", footprint: "104 tokens" },
   { idx: "05", name: "inspect_result_slice", role: "Reads big results a piece at a time", footprint: "88 tokens" },
+  { idx: "06", name: "mount_mcp_server", role: "Connects another MCP server mid-chat", footprint: "96 tokens", preview: true },
 ];
 
 export function HeroSection() {
@@ -75,10 +76,9 @@ export function HeroSection() {
           <div className="lg:col-span-7 min-w-0 p-4 py-10 sm:p-8 lg:p-10 flex flex-col justify-between space-y-8 border-b-2 lg:border-b-0 border-[#111315]">
             <div className="space-y-6">
               <h1 className="font-display text-4xl sm:text-7xl lg:text-[5.25rem] font-black text-foreground leading-[0.94] tracking-[-0.03em] balance">
-                455 AI Tools.
-                <br />
+                Add a new MCP server{" "}
                 <span className="text-primary underline decoration-[#111315] decoration-4 underline-offset-8">
-                  One Protocol.
+                  mid-chat.
                 </span>
               </h1>
 
@@ -88,26 +88,28 @@ export function HeroSection() {
                   <span
                     className="inline-flex items-center mr-1.5"
                     role="img"
-                    aria-label="Progressive Disclosure MCP logo"
+                    aria-label="Live status"
                   >
                     <span className="h-2.5 w-2.5 rounded-full bg-primary animate-dispatch-pulse" />
                   </span>
-                  <span>Progressive Disclosure MCP — Tools on Demand</span>
+                  <span>Mid-chat mounting — now in preview</span>
                 </Badge>
                 <Badge variant="cobalt" className="font-mono">
-                  MCP 2026-07-28 STATELESS
+                  NO RESTART · NO CONFIG EDITS
                 </Badge>
                 <Badge variant="emerald" className="font-mono">
-                  0% PREFIX CACHE INVALIDATION
+                  ~80 TOKENS PER MOUNT
                 </Badge>
               </div>
 
               <p className="text-base sm:text-lg text-muted-foreground max-w-[65ch] leading-relaxed">
-                Give your AI assistant 455 tools without cramming all of them into every prompt.{" "}
+                Ask your agent to connect to your staging database, your Linear workspace, or anything else
+                with an MCP URL, and it does it right there in the conversation.{" "}
                 <strong className="text-foreground font-semibold underline decoration-primary decoration-2 underline-offset-4">
-                  Spike Land loads tools progressively on demand
+                  You don&apos;t edit .mcp.json or restart Cursor, and your prompt doesn&apos;t fill up with 35 new tool descriptions.
                 </strong>{" "}
-                — your AI starts with 5 lightweight starter tools at Token Position Zero. When a task requires more capabilities, it switches on a category (like &ldquo;Development&rdquo;) in-band. The result: shorter prompts, lower bills, and better tool choices.
+                Spike Land talks to the new server for you, keeps its tool list on our side, and hands your
+                agent a two-line summary. The agent looks up the full details of a tool only when it actually needs it.
               </p>
             </div>
 
@@ -115,41 +117,41 @@ export function HeroSection() {
             <Card className="overflow-hidden rounded-xl border-2 border-[#111315]">
               <div className="grid grid-cols-1 sm:grid-cols-3 divide-y-2 sm:divide-y-0 sm:divide-x-2 divide-[#111315]">
                 <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
-                  <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-foreground tabular-nums leading-none">
-                    455
-                  </div>
-                  <div className="mt-2 text-sm font-bold text-foreground">
-                    Tools
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>ALL TOOLS</span>
-                    <span className="text-primary">LOADED ON DEMAND</span>
-                  </div>
-                </div>
-
-                <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
-                  <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-foreground tabular-nums leading-none">
-                    88
-                  </div>
-                  <div className="mt-2 text-sm font-bold text-foreground">
-                    Categories
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>GROUPED BY TOPIC</span>
-                    <span className="text-[#0047BB]">ON / OFF</span>
-                  </div>
-                </div>
-
-                <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
                   <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-primary tabular-nums leading-none">
-                    5
+                    0
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-foreground">
+                    Restarts
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
+                    <span>TO ADD A SERVER</span>
+                    <span className="text-primary">SAME CHAT</span>
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
+                  <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-foreground tabular-nums leading-none">
+                    6
                   </div>
                   <div className="mt-2 text-sm font-bold text-foreground">
                     Gateway Tools
                   </div>
                   <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
-                    <span>STARTER TOOLS</span>
-                    <span className="text-[#0D7A5F]">~516 TOK</span>
+                    <span>ALL YOUR AI SEES</span>
+                    <span className="text-[#0D7A5F]">~612 TOK</span>
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 bg-card flex flex-col justify-between">
+                  <div className="font-display text-4xl sm:text-5xl font-black tracking-tight text-foreground tabular-nums leading-none">
+                    455
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-foreground">
+                    Built-in tools
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-[#C8C5BC] flex items-center justify-between font-mono text-[10px] font-semibold text-muted-foreground">
+                    <span>IN 88 CATEGORIES</span>
+                    <span className="text-[#0047BB]">+ YOURS</span>
                   </div>
                 </div>
               </div>
@@ -158,19 +160,19 @@ export function HeroSection() {
             {/* Primary Viewport Actions */}
             <div className="flex flex-wrap items-center gap-3">
               <Button size="lg" variant="default" asChild>
-                <a href="#playground">
-                  Explore Tools
+                <a href="#mount">
+                  Watch it happen
                   <ArrowDown className="h-4 w-4" />
                 </a>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <a href="/waitlist">
-                  Get Early Access
+                  Join the preview
                   <ArrowRight className="h-4 w-4" />
                 </a>
               </Button>
               <Button size="lg" variant="secondary" asChild>
-                <a href="#simulator">See How Much You&apos;d Save</a>
+                <a href="#simulator">Work out what you&apos;d save</a>
               </Button>
             </div>
           </div>
@@ -181,10 +183,10 @@ export function HeroSection() {
               <CardHeader className="bg-[#111315] text-[#F5F4F0] py-4 px-5 border-b border-[#111315]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-base font-bold text-[#F5F4F0]">
-                    Position-Zero Broker Meta-Tools
+                    The only tools your AI ever sees
                   </CardTitle>
                   <Badge variant="default" className="font-mono text-[10px]">
-                    ~516 TOKENS • CACHE-SCOPE: PUBLIC
+                    ~612 TOKENS · NEVER CHANGES
                   </Badge>
                 </div>
               </CardHeader>
@@ -203,6 +205,11 @@ export function HeroSection() {
                         <TableCell className="px-3 sm:px-4 font-mono text-xs font-bold text-[#0047BB] whitespace-nowrap">
                           <span className="text-muted-foreground mr-1.5 font-normal">{item.idx}.</span>
                           {item.name}
+                          {item.preview && (
+                            <Badge variant="default" className="ml-2 px-1.5 py-0 font-mono text-[10px] align-middle">
+                              PREVIEW
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="px-3 sm:px-4 text-right font-mono text-xs font-semibold text-[#0D7A5F] whitespace-nowrap">
                           {item.footprint}
@@ -274,7 +281,7 @@ export function HeroSection() {
 
               <CardFooter className="bg-secondary px-5 py-3 border-t border-[#111315] flex items-center justify-between text-xs">
                 <span className="font-medium text-foreground">
-                  Paste into your AI app — no extra setup
+                  Paste it once. You won&apos;t need to touch it again.
                 </span>
                 <span className="font-mono font-semibold text-[#0D7A5F]">
                   Runs in 300+ cities

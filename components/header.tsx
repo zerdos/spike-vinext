@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Sparkles,
   Plug,
+  PlugZap,
   Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,7 @@ export function Header() {
                 </span>
               </div>
             </a>
-            <Badge variant="cobalt" className="hidden sm:inline-flex font-mono text-[11px]">
+            <Badge variant="cobalt" className="hidden lg:inline-flex font-mono text-[11px] whitespace-nowrap">
               MCP 2026-07-28
             </Badge>
           </div>
@@ -95,6 +96,12 @@ export function Header() {
           {/* Desktop Navigation Cell */}
           <nav className="hidden md:flex flex-1 items-center justify-between pl-4 lg:pl-6">
             <div className="flex items-center gap-1 lg:gap-1.5">
+              <Button variant="ghost" size="sm" asChild className="hidden lg:inline-flex">
+                <a href="/#mount">
+                  <PlugZap className="h-4 w-4 text-primary" />
+                  Add a server
+                </a>
+              </Button>
               <Button variant="ghost" size="sm" asChild>
                 <a href="/#how-it-works">
                   <BookOpen className="h-4 w-4" />
@@ -120,9 +127,9 @@ export function Header() {
                 </a>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <a href="/settings">
+                <a href="/settings" aria-label="Settings">
                   <Settings className="h-4 w-4" />
-                  Settings
+                  <span className="hidden xl:inline">Settings</span>
                 </a>
               </Button>
             </div>
@@ -189,6 +196,17 @@ export function Header() {
         {/* Mobile Dropdown */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-[#111315] flex flex-col gap-2 bg-background">
+            <Button
+              variant="ghost"
+              className="justify-start"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/#mount">
+                <PlugZap className="h-4 w-4 text-primary" />
+                Add a server
+              </a>
+            </Button>
             <Button
               variant="ghost"
               className="justify-start"

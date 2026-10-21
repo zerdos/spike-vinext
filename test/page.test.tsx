@@ -7,15 +7,15 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
     render(<Home />);
 
     // Headline and brand
-    expect(screen.getByText(/455 AI Tools\./i)).toBeInTheDocument();
-    expect(screen.getByText(/One Protocol\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Progressive Disclosure MCP/i)).toBeInTheDocument();
-    expect(screen.getByText(/Position-Zero Broker Meta-Tools/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /Add a new MCP server mid-chat\./i })).toBeInTheDocument();
+    expect(screen.getByText(/Mid-chat mounting — now in preview/i)).toBeInTheDocument();
+    expect(screen.getByText(/The only tools your AI ever sees/i)).toBeInTheDocument();
+    expect(screen.getAllByText("mount_mcp_server").length).toBeGreaterThan(0);
 
     // Metrics
     expect(screen.getByText("455")).toBeInTheDocument();
-    expect(screen.getByText("88")).toBeInTheDocument();
-    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getByText("6")).toBeInTheDocument();
     expect(screen.getByText("Gateway Tools")).toBeInTheDocument();
   });
 
@@ -27,10 +27,10 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
     expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getByText("Activate")).toBeInTheDocument();
     expect(
-      screen.getByText(/Why Stateful tools\/list Mutation Fails Under MCP 2026-07-28/i)
+      screen.getByText(/Why we never change the tool list your AI sees/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Deterministic Capability Packs & Virtual Gateways/i)
+      screen.getByText(/Ready-made tool packs, plus a link for each team/i)
     ).toBeInTheDocument();
   });
 
@@ -104,8 +104,34 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
   it("renders McpPage at /mcp route correctly", async () => {
     const { default: McpPage } = await import("@/app/mcp/page");
     render(<McpPage />);
-    expect(screen.getByText(/455 AI Tools\./i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /mid-chat/i })).toBeInTheDocument();
     expect(screen.getByText("Interactive Playground")).toBeInTheDocument();
+  });
+
+  it("walks through mounting a server mid-chat", () => {
+    render(<Home />);
+
+    expect(
+      screen.getByRole("heading", { name: /Your agent plugs in the server and keeps working/i })
+    ).toBeInTheDocument();
+
+    // Defaults to the mount step
+    const mountStep = screen.getByRole("button", { name: /It plugs the server in/i });
+    expect(mountStep).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/Mounted "postgres-mcp" as pg \(14 tools\)/)).toBeInTheDocument();
+
+    // Advance to the schema lookup
+    fireEvent.click(screen.getByRole("button", { name: /Next step/i }));
+    expect(screen.getByRole("button", { name: /It looks up one tool/i })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText(/Columns, types and indexes for a table/)).toBeInTheDocument();
+
+    // Jump straight to running it
+    fireEvent.click(screen.getByRole("button", { name: /It runs it/i }));
+    expect(screen.getByRole("button", { name: /Start again/i })).toBeInTheDocument();
+
+    // Honest limits are spelled out
+    expect(screen.getByText(/Servers that only run on your laptop stay there/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your keys never go into the chat/i)).toBeInTheDocument();
   });
 });
 

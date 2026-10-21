@@ -1,5 +1,6 @@
 import { Header } from "@/components/header";
 import { HeroSection } from "@/components/hero-section";
+import { MountMidChat } from "@/components/mount-mid-chat";
 import { TokenSavingsSimulator } from "@/components/token-savings-simulator";
 import { McpPlayground } from "@/components/mcp-playground";
 import { HowItWorks } from "@/components/how-it-works";
@@ -15,6 +16,7 @@ export default function McpPage() {
       <Header />
       <main className="flex-1">
         <HeroSection />
+        <MountMidChat />
         <TokenSavingsSimulator />
         <McpPlayground />
         <HowItWorks />

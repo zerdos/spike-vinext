@@ -58,11 +58,11 @@ const ARCHITECTURE_COMPARISON = [
     highlight: false,
   },
   {
-    pattern: "Spike Land (5 Starter Tools + Categories on Demand)",
-    sep2567: "Yes (SEP-2567 & SEP-2549)",
-    positionZeroCache: "Always kept (only ~516 tokens at Position Zero)",
+    pattern: "Spike Land (6 fixed tools, everything else on demand)",
+    sep2567: "Yes",
+    positionZeroCache: "Always kept (the fixed part is only ~612 tokens)",
     clientSupport: "Works with every major AI app",
-    verdict: "~99% fewer prompt tokens, smaller results, and built-in safety checks",
+    verdict: "~99% fewer prompt tokens, smaller results, and you can add your own servers mid-chat",
     highlight: true,
   },
 ];
@@ -72,32 +72,33 @@ export function HowItWorks() {
     {
       step: "1",
       title: "Connect",
-      badge: "5 tools",
+      badge: "6 tools",
       icon: Plug,
       description:
-        "Add Spike Land to your AI app. Your AI sees just 5 small helper tools. This list never changes, so your AI provider can cache it and you pay less on every message.",
+        "Add Spike Land to your AI app once. Your AI sees six small helper tools, and that list never changes, so your AI provider can cache it and you pay less on every message.",
       tools: [
         { name: "list_capability_categories", checked: false },
         { name: "configure_active_categories", checked: false },
         { name: "inspect_tool_schema", checked: false },
         { name: "execute_tool", checked: false },
         { name: "inspect_result_slice", checked: false },
+        { name: "mount_mcp_server (preview)", checked: false },
       ],
       more: null,
     },
     {
       step: "2",
       title: "Discover",
-      badge: "Pick a category",
+      badge: "Built-in or yours",
       icon: Search,
       description:
-        "When your AI needs something specific, it switches on a category — for example \"Development\". The instructions for those tools are added to the end of the chat, so nothing earlier has to be re-read.",
+        "When your AI needs something, it switches on one of our categories, like \"Development\", or plugs in an MCP server of your own. Either way, the tool instructions go at the end of the chat, so nothing earlier has to be re-read.",
       tools: [
         { name: "list_capability_categories", checked: true },
         { name: "configure_active_categories", checked: true },
         { name: "code_runner (now available)", checked: false, highlight: true },
         { name: "git_diff_viewer (now available)", checked: false, highlight: true },
-        { name: "ast_inspect (now available)", checked: false, highlight: true },
+        { name: "pg.describe_table (your server)", checked: false, highlight: true },
       ],
       more: "Your choices are remembered for this chat",
     },
@@ -107,7 +108,7 @@ export function HowItWorks() {
       badge: "Safe by default",
       icon: Zap,
       description:
-        "Your AI runs the tool. Spike Land checks it's allowed, uses a separate login for each service (your own key is never passed on), asks you before anything risky, and trims huge results down to size.",
+        "Your AI runs the tool, ours or yours. Spike Land checks it's allowed, fills in saved keys at the edge so they never show up in the chat, asks you before anything risky, and trims huge results down to size.",
       tools: [
         { name: "execute_tool (secure login)", checked: true },
         { name: "inspect_result_slice (up to 98% smaller results)", checked: true },
@@ -132,7 +133,7 @@ export function HowItWorks() {
             </h2>
             <p className="text-base text-muted-foreground leading-relaxed max-w-[65ch]">
               Your AI doesn&apos;t need every tool at once. Spike Land keeps a short, fixed list of helper tools
-              in view, and adds the rest only when a task calls for them.
+              in view and brings in the rest, including servers you add mid-chat, only when a task needs them.
             </p>
           </div>
           <Badge variant="secondary" className="self-start sm:self-end">
@@ -213,7 +214,7 @@ export function HowItWorks() {
           <CardHeader className="bg-[#111315] text-[#F5F4F0] py-4 px-5 border-b border-[#111315] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <CardTitle className="text-base font-bold text-[#F5F4F0]">
-                Why Stateful tools/list Mutation Fails Under MCP 2026-07-28
+                Why we never change the tool list your AI sees
               </CardTitle>
               <CardDescription className="text-xs text-[#B8BDC7] mt-0.5">
                 Comparing 4 ways to give an AI lots of tools — and what each one actually costs you

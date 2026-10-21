@@ -15,7 +15,7 @@ describe("TokenSavingsSimulator Component", () => {
   it("renders simulator title, presets, and main result metrics", () => {
     render(<TokenSavingsSimulator />);
 
-    expect(screen.getByText("Interactive Unit Economics Simulator")).toBeInTheDocument();
+    expect(screen.getByText("Savings calculator")).toBeInTheDocument();
     expect(screen.getByText(/AI Agent Token Bills/i)).toBeInTheDocument();
     expect(screen.getByText("Seed Stage")).toBeInTheDocument();
     expect(screen.getByText("Series A Scale")).toBeInTheDocument();

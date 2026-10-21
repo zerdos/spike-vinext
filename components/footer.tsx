@@ -35,7 +35,7 @@ export function Footer() {
               </h3>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
-              455 tools for your AI on demand. Keeps prompts small, saves token costs, and runs fast on Cloudflare&apos;s global network.
+              455 built-in tools, plus any MCP server your agent plugs in mid-chat. Small prompts, smaller bills, running on Cloudflare&apos;s global network.
             </p>
 
             <div className="pt-2">

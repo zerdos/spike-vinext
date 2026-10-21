@@ -201,7 +201,7 @@ Try it yourself at https://spike.land/mcp
             <div className="pt-1">
               <Badge variant="cobalt">
                 <TrendingUp className="w-3.5 h-3.5" />
-                <span>Interactive Unit Economics Simulator</span>
+                <span>Savings calculator</span>
               </Badge>
             </div>
           </div>
@@ -511,7 +511,7 @@ Try it yourself at https://spike.land/mcp
 
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                    <span>Spike Land (5 starter tools + only the ones you switch on)</span>
+                    <span>Spike Land (6 fixed tools + only the ones your AI switches on)</span>
                     <span className="font-mono text-[#0D7A5F] font-bold">
                       {spikeLandTokensPerTurn.toLocaleString()} tokens per message (no re-reading)
                     </span>
