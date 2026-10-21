@@ -15,8 +15,23 @@ import {
 import { MCP_CATEGORIES } from "./mcp-data";
 import { MCP_REGISTRY_SERVERS } from "./mcp-registry-data";
 import { BROWSER_RUN_TOOLS, BROWSER_RUN_TOOL_NAMES } from "./browser-run";
+import {
+  RUNTIME_MOUNT_TOOLS,
+  MOUNT_MCP_SERVER_TOOL,
+  UNMOUNT_MCP_SERVER_TOOL,
+  LIST_MOUNTED_SERVERS_TOOL,
+  searchMountedToolsInSession,
+  executeProxiedMountedTool,
+} from "./mcp-runtime-mounting";
 
-export { BROWSER_RUN_TOOLS, BROWSER_RUN_TOOL_NAMES };
+export {
+  BROWSER_RUN_TOOLS,
+  BROWSER_RUN_TOOL_NAMES,
+  RUNTIME_MOUNT_TOOLS,
+  MOUNT_MCP_SERVER_TOOL,
+  UNMOUNT_MCP_SERVER_TOOL,
+  LIST_MOUNTED_SERVERS_TOOL,
+};
 
 // Supported MCP Protocol Revisions (Dual-Era Stateless Operating Model: 2026-07-28 + 2025-11-25 / 2024-11-05)
 export const SUPPORTED_PROTOCOL_VERSIONS = [
@@ -631,6 +646,12 @@ export function getOrCreateSession(sessionId: string, clientInfo?: { name: strin
       lastActiveAt: now,
       activatedCategories: ["Platform Core"],
       activatedTools: [],
+      mountedServers: {},
+      metrics: {
+        turns: 0,
+        upstreamSchemasIntercepted: 0,
+        estimatedTokensSaved: 0,
+      },
       clientInfo,
       turns: 0,
       profile: "standard",
@@ -638,6 +659,16 @@ export function getOrCreateSession(sessionId: string, clientInfo?: { name: strin
     sessions.set(sessionId, session);
   } else {
     session.lastActiveAt = now;
+    if (!session.mountedServers) {
+      session.mountedServers = {};
+    }
+    if (!session.metrics) {
+      session.metrics = {
+        turns: session.turns || 0,
+        upstreamSchemasIntercepted: 0,
+        estimatedTokensSaved: 0,
+      };
+    }
     if (clientInfo && !session.clientInfo) {
       session.clientInfo = clientInfo;
     }
@@ -714,6 +745,16 @@ export const GATEWAY_TOOLS: ToolDefinition[] = [
             inputSchema: tool.inputSchema,
             score: Number(score.toFixed(2)),
           });
+        }
+      }
+
+      // Also search session-mounted tools
+      const sessId = ctx.sessionId || ctx.callerSubject || "default-session";
+      const activeSess = getOrCreateSession(sessId);
+      const mountedMatches = searchMountedToolsInSession(query, activeSess);
+      for (const m of mountedMatches) {
+        if (!catFilter || m.category.toLowerCase().includes(catFilter)) {
+          results.push(m);
         }
       }
 
@@ -1104,13 +1145,16 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
         tier: string;
         inputSchema: unknown;
         score: number;
-        source: "first-party" | "registry";
+        source: "first-party" | "registry" | "mounted";
       }> = [];
+
+      const sessionId = ctx.sessionId || ctx.callerSubject || "default-session";
+      const session = getOrCreateSession(sessionId);
 
       // 1. Search internal catalog
       const tokens = q.split(/\s+/).filter(Boolean);
 
-      // 1. Search internal catalog
+      // 1a. Search internal catalog
       for (const [name, tool] of Object.entries(ALL_TOOLS)) {
         if (UNIVERSAL_GATEWAY_TOOL_NAMES.includes(name as (typeof UNIVERSAL_GATEWAY_TOOL_NAMES)[number])) continue;
         const nameLower = name.toLowerCase();
@@ -1140,6 +1184,12 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
             source: "first-party",
           });
         }
+      }
+
+      // 1b. Search session-mounted tools (with 1.25x recency boost & prefix filtering per PRD 5.3)
+      const mountedMatches = searchMountedToolsInSession(q, session);
+      for (const m of mountedMatches) {
+        matches.push(m);
       }
 
       // 2. Search external registry
@@ -1184,15 +1234,12 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
       const topMatches = matches.slice(0, limit);
 
       // Dynamically mount tools into session
-      if (ctx.sessionId) {
-        const session = getOrCreateSession(ctx.sessionId);
-        for (const m of topMatches) {
-          if (!session.activatedTools.includes(m.name)) {
-            session.activatedTools.push(m.name);
-          }
+      for (const m of topMatches) {
+        if (!session.activatedTools.includes(m.name)) {
+          session.activatedTools.push(m.name);
         }
-        notifyToolsListChanged(ctx.sessionId);
       }
+      notifyToolsListChanged(session.sessionId);
 
       return {
         status: "Tools dynamically mounted to session",
@@ -1237,7 +1284,33 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
       }
 
       const tool = ALL_TOOLS[targetName];
+      const sessionId = ctx.sessionId || ctx.callerSubject || "default-session";
+      const session = getOrCreateSession(sessionId);
+
       if (!tool) {
+        // Check if this is a namespaced tool from a mounted server (PRD Section 5.4)
+        if (targetName.includes(".")) {
+          const [ns] = targetName.split(".");
+          if (session.mountedServers?.[ns]) {
+            const proxied = await executeProxiedMountedTool(targetName, targetArgs, ctx);
+            if (!proxied.success) {
+              return {
+                error: proxied.error || "Proxied tool execution failed",
+                status:
+                  (proxied.output as Record<string, unknown>)?.status || "failed",
+                ...(typeof proxied.output === "object" && proxied.output !== null
+                  ? (proxied.output as Record<string, unknown>)
+                  : {}),
+              };
+            }
+            return {
+              executedTool: targetName,
+              status: "success",
+              output: proxied.output,
+            };
+          }
+        }
+
         return {
           error: `Tool '${targetName}' not found in catalog. Run discover_tools first.`,
           status: "not_found",
@@ -1245,12 +1318,9 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
       }
 
       // Auto-hydrate into session
-      if (ctx.sessionId) {
-        const session = getOrCreateSession(ctx.sessionId);
-        if (!session.activatedTools.includes(targetName)) {
-          session.activatedTools.push(targetName);
-          notifyToolsListChanged(ctx.sessionId);
-        }
+      if (!session.activatedTools.includes(targetName)) {
+        session.activatedTools.push(targetName);
+        notifyToolsListChanged(session.sessionId);
       }
 
       const output = tool.handler ? await tool.handler(targetArgs, ctx) : { status: "success" };
@@ -1897,6 +1967,10 @@ function initializeCatalog() {
   for (const t of BROWSER_RUN_TOOLS) {
     ALL_TOOLS[t.name] = t;
   }
+  // 4c. Runtime MCP Server Mounting tools (PRD Section 5.1)
+  for (const t of RUNTIME_MOUNT_TOOLS) {
+    ALL_TOOLS[t.name] = t;
+  }
 
   // 5. Platform catalogue tools from MCP_CATEGORIES
   for (const cat of MCP_CATEGORIES) {
@@ -2349,19 +2423,45 @@ export async function dispatchJsonRpc(
         }
 
         const tool = ALL_TOOLS[toolName];
-        if (!tool) {
-          return {
-            jsonrpc: "2.0",
-            id,
-            error: {
-              code: -32601,
-              message: `Tool not found. Use configure_active_categories or list_capability_categories to discover available capabilities. Unknown tool: '${toolName}'`,
-            },
-          };
-        }
+        let executionOutput: unknown;
 
-        // Execute tool handler
-        const executionOutput = tool.handler ? await tool.handler(toolArgs, ctx) : { status: "success" };
+        if (!tool) {
+          const sessionId = ctx.sessionId || ctx.callerSubject || "default-session";
+          const session = getOrCreateSession(sessionId);
+
+          if (toolName.includes(".")) {
+            const [ns] = toolName.split(".");
+            if (session.mountedServers?.[ns]) {
+              const proxied = await executeProxiedMountedTool(toolName, toolArgs, ctx);
+              if (!proxied.success) {
+                return {
+                  jsonrpc: "2.0",
+                  id,
+                  error: {
+                    code: -32602,
+                    message: proxied.error || "Proxied tool execution failed",
+                    data: proxied.output,
+                  },
+                };
+              }
+              executionOutput = proxied.output;
+            }
+          }
+
+          if (executionOutput === undefined) {
+            return {
+              jsonrpc: "2.0",
+              id,
+              error: {
+                code: -32601,
+                message: `Tool not found. Use configure_active_categories or list_capability_categories to discover available capabilities. Unknown tool: '${toolName}'`,
+              },
+            };
+          }
+        } else {
+          // Execute tool handler
+          executionOutput = tool.handler ? await tool.handler(toolArgs, ctx) : { status: "success" };
+        }
 
         // SEP-2322: Check if tool returned an MRTR InputRequiredResult
         if (

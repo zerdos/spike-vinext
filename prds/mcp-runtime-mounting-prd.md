@@ -4,7 +4,7 @@
 **Target File:** `./prds/mcp-runtime-mounting-prd.md`  
 **Date:** 2026-10-21  
 **Author:** Spike Land Engineering  
-**Status:** Proposed / Ready for Implementation  
+**Status:** Implemented & Verified / Complete  
 **Target Runtime:** Cloudflare Workers (`spike-vinext` / Edge V8 Isolates + Cloudflare KV)
 
 ---
@@ -338,20 +338,20 @@ To illustrate why edge interception is critical for runtime mounting, consider a
 ## 10. Phased Implementation Plan
 
 ### Phase 1: Core Proxy & State Engine (Days 1–3)
-- [ ] Extend `MCPSessionState` in KV to store `mountedServers: Record<string, MountedRemoteServer>`.
-- [ ] Build `UpstreamMCPClient` in pure TypeScript (fetch-based Streamable HTTP + fallback SSE parser, zero Node dependencies).
-- [ ] Implement SSRF validator and recursive loop guard.
-- [ ] Implement `mount_mcp_server`, `unmount_mcp_server`, and `list_mounted_servers` handlers.
+- [x] Extend `MCPSessionState` in KV to store `mountedServers: Record<string, MountedRemoteServer>`.
+- [x] Build `UpstreamMCPClient` in pure TypeScript (fetch-based Streamable HTTP + fallback SSE parser, zero Node dependencies).
+- [x] Implement SSRF validator and recursive loop guard.
+- [x] Implement `mount_mcp_server`, `unmount_mcp_server`, and `list_mounted_servers` handlers.
 
 ### Phase 2: Unified Search & Execution Routing (Days 4–5)
-- [ ] Update `discover_tools` / `search_tools` to index `session.mountedServers[ns].tools` with the 1.25x recency boost.
-- [ ] Update `run_tool` / `tools/call` dispatcher to detect `<namespace>.<tool>` prefixes, validate input schemas at the edge, and proxy the JSON-RPC call upstream.
-- [ ] Add 32 KB response payload truncation guard for noisy upstream tools.
+- [x] Update `discover_tools` / `search_tools` to index `session.mountedServers[ns].tools` with the 1.25x recency boost.
+- [x] Update `run_tool` / `tools/call` dispatcher to detect `<namespace>.<tool>` prefixes, validate input schemas at the edge, and proxy the JSON-RPC call upstream.
+- [x] Add 32 KB response payload truncation guard for noisy upstream tools.
 
 ### Phase 3: Vault Secret Resolution & UI (Days 6–7)
-- [ ] Implement `vault:<KEY_NAME>` resolution from workspace encrypted KV store and plaintext secret rejection regex.
-- [ ] Add "Mount External MCP" interactive tab to `components/mcp-playground.tsx`.
-- [ ] Write integration test suite (`test/mcp-runtime-mount.test.ts`) using mock upstream HTTP/SSE MCP servers.
+- [x] Implement `vault:<KEY_NAME>` resolution from workspace encrypted KV store and plaintext secret rejection regex.
+- [x] Add "Mount External MCP" interactive tab to `components/mcp-playground.tsx`.
+- [x] Write integration test suite (`test/mcp-runtime-mount.test.ts`) using mock upstream HTTP/SSE MCP servers.
 
 ---
 

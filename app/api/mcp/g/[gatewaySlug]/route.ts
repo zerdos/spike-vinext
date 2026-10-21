@@ -110,7 +110,15 @@ export async function POST(
   };
 
   const userEnv = userAccount?.providerTokens ? { ...userAccount.providerTokens } : {};
+  const url = new URL(request.url);
+  const sessionId =
+    url.searchParams.get("sessionId") ||
+    request.headers.get("mcp-session-id") ||
+    callerSubject ||
+    "default-session";
+
   const ctx: RequestContext = {
+    sessionId,
     apiKey,
     callerSubject,
     colo,

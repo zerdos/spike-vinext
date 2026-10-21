@@ -140,12 +140,21 @@ export interface RegistryServerRecord {
   configTemplate: Record<string, unknown>;
 }
 
+export * from "./types/mcp-mounting";
+import type {
+  MountedRemoteServer,
+  MCPSessionMetrics,
+} from "./types/mcp-mounting";
+
 export interface MCPSessionState {
   sessionId: string;
+  workspaceId?: string;
   createdAt: number;
   lastActiveAt: number;
   activatedCategories: string[];
   activatedTools: string[]; // Dynamically hydrated tools
+  mountedServers?: Record<string, MountedRemoteServer>;
+  metrics?: MCPSessionMetrics;
   clientInfo?: { name: string; version: string };
   turns?: number;
   profile?: "standard" | "universal" | "broker-2026";

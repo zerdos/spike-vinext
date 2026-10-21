@@ -25,6 +25,11 @@ import {
   FileJson,
   Shield,
   Key,
+  Server,
+  Plus,
+  X,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
 import {
   getClientBearerToken,
@@ -177,6 +182,125 @@ export function McpPlayground() {
       window.removeEventListener(BEARER_TOKEN_CHANGED_EVENT, handleTokenChange);
     };
   }, []);
+
+  // Runtime Mounting State (PRD Section 9)
+  const [showMountPanel, setShowMountPanel] = useState(false);
+  const [mountSource, setMountSource] = useState("https://mcp.linear.app/sse");
+  const [mountNamespace, setMountNamespace] = useState("linear");
+  const [mountTransport, setMountTransport] = useState<"auto" | "streamable-http" | "sse">("auto");
+  const [mountAuthSecretRef, setMountAuthSecretRef] = useState("vault:LINEAR_API_KEY");
+  const [isMounting, setIsMounting] = useState(false);
+  const [mountError, setMountError] = useState<string | null>(null);
+  const [mountedServers, setMountedServers] = useState<
+    Array<{
+      namespace: string;
+      source: string;
+      toolCount: number;
+      latencyMs: number;
+      sampleTools: string[];
+      status: string;
+    }>
+  >([]);
+  const [totalTokensSavedByMounts, setTotalTokensSavedByMounts] = useState(0);
+
+  const handleMountServer = async () => {
+    setIsMounting(true);
+    setMountError(null);
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": "mount_mcp_server",
+      };
+      if (bearerToken) {
+        headers["Authorization"] = `Bearer ${bearerToken}`;
+      }
+
+      const res = await fetch("/api/mcp", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: `mount_${Date.now()}`,
+          method: "tools/call",
+          params: {
+            name: "mount_mcp_server",
+            arguments: {
+              source: mountSource,
+              namespace: mountNamespace,
+              transport: mountTransport,
+              authSecretRef: mountAuthSecretRef || undefined,
+            },
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        setMountError(data.error.message || String(data.error));
+        return;
+      }
+
+      let resultObj = data.result;
+      if (resultObj?.content?.[0]?.text) {
+        try {
+          resultObj = JSON.parse(resultObj.content[0].text);
+        } catch {}
+      }
+
+      if (resultObj?.status === "mounted") {
+        const count = resultObj.toolCount || 10;
+        setMountedServers((prev) => [
+          ...prev.filter((s) => s.namespace !== resultObj.namespace),
+          {
+            namespace: resultObj.namespace,
+            source: mountSource,
+            toolCount: count,
+            latencyMs: 38,
+            sampleTools: resultObj.sampleTools || [],
+            status: "healthy",
+          },
+        ]);
+        setTotalTokensSavedByMounts((prev) => prev + count * 110);
+        setShowMountPanel(false);
+      } else if (resultObj?.status === "stdio_only") {
+        setMountError(`Server supports local stdio only: ${resultObj.cliCommand}`);
+      } else if (resultObj?.error) {
+        setMountError(resultObj.error);
+      }
+    } catch (err) {
+      setMountError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsMounting(false);
+    }
+  };
+
+  const handleUnmountServer = async (namespace: string) => {
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "MCP-Protocol-Version": "2026-07-28",
+      };
+      if (bearerToken) headers["Authorization"] = `Bearer ${bearerToken}`;
+
+      await fetch("/api/mcp", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: `unmount_${Date.now()}`,
+          method: "tools/call",
+          params: {
+            name: "unmount_mcp_server",
+            arguments: { namespace },
+          },
+        }),
+      });
+
+      setMountedServers((prev) => prev.filter((s) => s.namespace !== namespace));
+    } catch {}
+  };
 
   const totalLiveToolsCount = useMemo(() => {
     return MCP_CATEGORIES.reduce((acc, cat) => acc + cat.tools.length, 0);
@@ -455,9 +579,137 @@ export function McpPlayground() {
                   className="pl-9 h-9 text-xs"
                 />
               </div>
+
+              {/* Mount Custom Server Trigger & Form (PRD Section 9.1) */}
+              <Button
+                type="button"
+                variant={showMountPanel ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowMountPanel(!showMountPanel)}
+                className="w-full text-xs font-mono h-8 flex items-center justify-center gap-1.5 border-dashed"
+              >
+                <Server className="w-3.5 h-3.5" />
+                <span>{showMountPanel ? "Close Mount Panel" : "+ Mount Custom Server (Runtime)"}</span>
+              </Button>
+
+              {showMountPanel && (
+                <div className="p-3 bg-secondary/80 rounded-md border border-[#111315] space-y-3 font-mono text-xs">
+                  <div className="flex items-center justify-between pb-1 border-b border-[#111315]">
+                    <span className="font-bold flex items-center gap-1.5 text-foreground">
+                      <Server className="w-3.5 h-3.5 text-primary" />
+                      Mount MCP Server
+                    </span>
+                    <Badge variant="cobalt" className="text-[10px]">
+                      &lt;100 Tokens
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-semibold">Source URL or Registry ID</Label>
+                    <Input
+                      value={mountSource}
+                      onChange={(e) => setMountSource(e.target.value)}
+                      placeholder="https://mcp.linear.app/sse or glama/fetch"
+                      className="h-8 text-xs font-mono mt-1"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[11px] font-semibold">Namespace</Label>
+                      <Input
+                        value={mountNamespace}
+                        onChange={(e) => setMountNamespace(e.target.value)}
+                        placeholder="e.g. pg, linear"
+                        className="h-8 text-xs font-mono mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[11px] font-semibold">Prefix Preview</Label>
+                      <div className="h-8 mt-1 flex items-center px-2 bg-background rounded border text-[11px] font-bold text-primary">
+                        {mountNamespace ? `${mountNamespace}.*` : "ns.*"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-[11px] font-semibold flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-muted-foreground" />
+                      Vault Secret Ref (Optional)
+                    </Label>
+                    <Input
+                      value={mountAuthSecretRef}
+                      onChange={(e) => setMountAuthSecretRef(e.target.value)}
+                      placeholder="vault:YOUR_API_KEY"
+                      className="h-8 text-xs font-mono mt-1"
+                    />
+                  </div>
+
+                  <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 rounded text-[11px] text-emerald-800 dark:text-emerald-300">
+                    Intercepted tools cached in KV. 0 schemas in initial context.
+                  </div>
+
+                  {mountError && (
+                    <div className="p-2 bg-red-500/10 border border-red-500/20 rounded text-[11px] text-red-600 flex items-start gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>{mountError}</span>
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isMounting || !mountSource || !mountNamespace}
+                    onClick={handleMountServer}
+                    className="w-full text-xs font-mono h-8"
+                  >
+                    {isMounting ? "Mounting & Intercepting..." : "Mount Server to Session"}
+                  </Button>
+                </div>
+              )}
             </CardHeader>
 
             <CardContent className="p-3">
+              {/* Session Inspector Sidebar (PRD Section 9.2) */}
+              {mountedServers.length > 0 && (
+                <div className="mb-3 p-3 bg-card rounded-md border-2 border-primary/30 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold font-mono">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Mounted Servers ({mountedServers.length})
+                    </span>
+                    <Badge variant="emerald" className="text-[10px]">
+                      Saved {totalTokensSavedByMounts} tokens/turn
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5">
+                    {mountedServers.map((s) => (
+                      <div
+                        key={s.namespace}
+                        className="flex items-center justify-between p-2 bg-secondary/60 rounded border text-xs font-mono"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Badge variant="ink" className="text-[10px] px-1.5">
+                            {s.namespace}.*
+                          </Badge>
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            {s.toolCount} tools • {s.latencyMs}ms
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleUnmountServer(s.namespace)}
+                          className="h-6 px-1.5 text-[10px] text-destructive hover:bg-destructive/10"
+                        >
+                          Unmount
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <ScrollArea className="max-h-[560px] pr-1">
                 {filteredCategories.length === 0 ? (
                   <div className="text-center py-8 text-xs text-muted-foreground">

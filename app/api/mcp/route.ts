@@ -149,7 +149,14 @@ export async function POST(request: Request) {
   };
 
   const userEnv = userAccount?.providerTokens ? { ...userAccount.providerTokens } : {};
+  const sessionId =
+    url.searchParams.get("sessionId") ||
+    request.headers.get("mcp-session-id") ||
+    callerSubject ||
+    "default-session";
+
   const ctx: RequestContext = {
+    sessionId,
     apiKey,
     callerSubject,
     ip,
