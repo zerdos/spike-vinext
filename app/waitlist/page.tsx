@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/select";
+import { authenticatedFetch } from "@/lib/auth/client-token";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
@@ -79,7 +80,7 @@ export default function WaitlistPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/waitlist", {
+      const res = await authenticatedFetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

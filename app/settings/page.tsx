@@ -410,9 +410,6 @@ export default function SettingsPage() {
       });
     }
   };
-      });
-    }
-  };
 
   const copyToClipboard = async (id: string, value: string) => {
     try {

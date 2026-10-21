@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { MCP_CATEGORIES, ToolCategory, ToolItem } from "@/lib/mcp-data";
 import {
   Layers,
@@ -144,6 +144,39 @@ export function McpPlayground() {
   const [copiedResponse, setCopiedResponse] = useState(false);
   const [executionTime, setExecutionTime] = useState<number>(4.2);
   const [executionStatus, setExecutionStatus] = useState<string>("200 OK");
+  const [bearerToken, setBearerToken] = useState<string>(() => getClientBearerToken() || "");
+
+  useEffect(() => {
+    const initial = getClientBearerToken();
+    if (initial) {
+      setBearerToken(initial);
+    } else {
+      // Try to load user's configured token from settings if authenticated
+      fetch("/api/settings/tokens", { headers: { Accept: "application/json" } })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: { tokens?: Array<{ tokenValue: string }>; providerTokens?: Record<string, string> } | null) => {
+          if (!data) return;
+          const candidate =
+            data.providerTokens?.SPIKE_API_KEY ||
+            (data.tokens && data.tokens.length > 0 ? data.tokens[0].tokenValue : "");
+          if (candidate) {
+            setClientBearerToken(candidate);
+            setBearerToken(candidate);
+          }
+        })
+        .catch(() => {});
+    }
+
+    const handleTokenChange = (e: Event) => {
+      const customEvent = e as CustomEvent<string | null>;
+      setBearerToken(customEvent.detail || "");
+    };
+
+    window.addEventListener(BEARER_TOKEN_CHANGED_EVENT, handleTokenChange);
+    return () => {
+      window.removeEventListener(BEARER_TOKEN_CHANGED_EVENT, handleTokenChange);
+    };
+  }, []);
 
   const totalLiveToolsCount = useMemo(() => {
     return MCP_CATEGORIES.reduce((acc, cat) => acc + cat.tools.length, 0);
@@ -208,22 +241,30 @@ export function McpPlayground() {
 
   const curlCommand = useMemo(() => {
     const payloadStr = JSON.stringify(jsonRpcPayload).replace(/'/g, "'\\''");
-    return `curl -X POST https://spike.land/api/mcp \\\n  -H "Content-Type: application/json" \\\n  -H "MCP-Protocol-Version: 2026-07-28" \\\n  -H "Mcp-Method: tools/call" \\\n  -H "Mcp-Name: ${activeTool.name}" \\\n  -d '${payloadStr}'`;
-  }, [jsonRpcPayload, activeTool.name]);
+    const authHeaderLine = bearerToken
+      ? ` \\\n  -H "Authorization: Bearer ${bearerToken}"`
+      : ' \\\n  -H "Authorization: Bearer YOUR_API_KEY"';
+    return `curl -X POST https://spike.land/api/mcp${authHeaderLine} \\\n  -H "Content-Type: application/json" \\\n  -H "MCP-Protocol-Version: 2026-07-28" \\\n  -H "Mcp-Method: tools/call" \\\n  -H "Mcp-Name: ${activeTool.name}" \\\n  -d '${payloadStr}'`;
+  }, [jsonRpcPayload, activeTool.name, bearerToken]);
 
   const handleRunTool = async () => {
     setIsRunning(true);
     setViewTab("response");
     const startTime = performance.now();
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "MCP-Protocol-Version": "2026-07-28",
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": activeTool.name,
+      };
+      if (bearerToken) {
+        headers["Authorization"] = `Bearer ${bearerToken}`;
+      }
+
       const response = await fetch("/api/mcp", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "MCP-Protocol-Version": "2026-07-28",
-          "Mcp-Method": "tools/call",
-          "Mcp-Name": activeTool.name,
-        },
+        headers,
         body: JSON.stringify(jsonRpcPayload),
       });
 
@@ -336,7 +377,7 @@ export function McpPlayground() {
             <p className="text-muted-foreground text-base leading-relaxed max-w-[65ch]">
               Try any tool right here in your browser. Pick a tool from the catalog, tweak its inputs, and run it live to see how it responds.
             </p>
-            <div className="pt-1 flex items-center gap-2">
+            <div className="pt-1 flex flex-wrap items-center gap-2">
               <Badge variant="ink">
                 <Terminal className="w-3.5 h-3.5" />
                 Live MCP Console
@@ -344,6 +385,19 @@ export function McpPlayground() {
               <Badge variant="outline" className="font-mono">
                 {totalLiveToolsCount} Tools Ready to Try
               </Badge>
+              {bearerToken ? (
+                <Badge variant="emerald" className="font-mono text-xs flex items-center gap-1">
+                  <Shield className="w-3 h-3 text-[#0D7A5F]" />
+                  Bearer Protected
+                </Badge>
+              ) : (
+                <a href="/settings" className="hover:underline">
+                  <Badge variant="secondary" className="font-mono text-xs flex items-center gap-1 cursor-pointer">
+                    <Key className="w-3 h-3 text-muted-foreground" />
+                    Configure Bearer in Settings
+                  </Badge>
+                </a>
+              )}
             </div>
           </div>
 
