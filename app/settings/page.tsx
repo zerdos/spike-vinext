@@ -35,6 +35,11 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { AuthUser } from "@/lib/auth/types";
+import {
+  getClientBearerToken,
+  setClientBearerToken,
+  authenticatedFetch,
+} from "@/lib/auth/client-token";
 
 interface ApiTokenItem {
   id: string;
@@ -124,11 +129,18 @@ export default function SettingsPage() {
   } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [revealedTokenIds, setRevealedTokenIds] = useState<Record<string, boolean>>({});
+  const [activeBearerToken, setActiveBearerTokenState] = useState<string>("");
+
+  const handleSetActiveBearerToken = useCallback((tokenValue: string) => {
+    const clean = (tokenValue || "").trim();
+    setClientBearerToken(clean);
+    setActiveBearerTokenState(clean);
+  }, []);
 
   const loadSessionAndTokens = useCallback(async () => {
     setAuthLoading(true);
     try {
-      const sessionRes = await fetch("/api/auth/session", {
+      const sessionRes = await authenticatedFetch("/api/auth/session", {
         headers: { Accept: "application/json" },
       });
       if (sessionRes.ok) {
@@ -139,7 +151,7 @@ export default function SettingsPage() {
         if (sessionData.authenticated && sessionData.user) {
           setUser(sessionData.user);
 
-          const tokensRes = await fetch("/api/settings/tokens", {
+          const tokensRes = await authenticatedFetch("/api/settings/tokens", {
             headers: { Accept: "application/json" },
           });
           if (tokensRes.ok) {
@@ -156,6 +168,16 @@ export default function SettingsPage() {
                 ...tokensData.providerTokens,
               }));
             }
+
+            // Sync active client bearer token
+            const existingClientToken = getClientBearerToken();
+            if (existingClientToken) {
+              setActiveBearerTokenState(existingClientToken);
+            } else if (tokensData.providerTokens?.SPIKE_API_KEY) {
+              handleSetActiveBearerToken(tokensData.providerTokens.SPIKE_API_KEY);
+            } else if (tokensData.tokens && tokensData.tokens.length > 0) {
+              handleSetActiveBearerToken(tokensData.tokens[0].tokenValue);
+            }
           }
         } else {
           setUser(null);
@@ -166,7 +188,7 @@ export default function SettingsPage() {
     } finally {
       setAuthLoading(false);
     }
-  }, []);
+  }, [handleSetActiveBearerToken]);
 
   useEffect(() => {
     loadSessionAndTokens();
@@ -202,7 +224,7 @@ export default function SettingsPage() {
 
     setPasswordSaving(true);
     try {
-      const res = await fetch("/api/settings/password", {
+      const res = await authenticatedFetch("/api/settings/password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -253,7 +275,7 @@ export default function SettingsPage() {
     }
 
     try {
-      const res = await fetch("/api/settings/tokens", {
+      const res = await authenticatedFetch("/api/settings/tokens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -278,9 +300,15 @@ export default function SettingsPage() {
           setCustomTokenKey("");
           setCustomTokenVal("");
         }
+
+        // If SPIKE_API_KEY was provided, set as active bearer token for API calls
+        if (updatedMap.SPIKE_API_KEY) {
+          handleSetActiveBearerToken(updatedMap.SPIKE_API_KEY);
+        }
+
         setProviderStatus({
           type: "success",
-          message: data.message || "API tokens saved to your workspace.",
+          message: data.message || "API tokens saved to your workspace and active bearer token updated.",
         });
       } else {
         setProviderStatus({
@@ -313,7 +341,7 @@ export default function SettingsPage() {
 
     setTokenCreating(true);
     try {
-      const res = await fetch("/api/settings/tokens", {
+      const res = await authenticatedFetch("/api/settings/tokens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -334,9 +362,10 @@ export default function SettingsPage() {
         setNewTokenName("");
         setNewTokenCustomValue("");
         setRevealedTokenIds((prev) => ({ ...prev, [data.token!.id]: true }));
+        handleSetActiveBearerToken(data.token.tokenValue);
         setTokenStatus({
           type: "success",
-          message: `Created token "${data.token.name}". Copy or inspect it below.`,
+          message: `Created token "${data.token.name}" and set it as active Bearer token for client API calls.`,
         });
       } else {
         setTokenStatus({
@@ -356,14 +385,19 @@ export default function SettingsPage() {
 
   const handleRevokeToken = async (tokenId: string) => {
     try {
-      const res = await fetch(
+      const res = await authenticatedFetch(
         `/api/settings/tokens?id=${encodeURIComponent(tokenId)}`,
         {
           method: "DELETE",
         }
       );
       if (res.ok) {
+        const revokedToken = apiTokens.find((t) => t.id === tokenId);
         setApiTokens((prev) => prev.filter((t) => t.id !== tokenId));
+        if (revokedToken && activeBearerToken === revokedToken.tokenValue) {
+          const fallback = providerTokens.SPIKE_API_KEY || "";
+          handleSetActiveBearerToken(fallback);
+        }
         setTokenStatus({
           type: "success",
           message: "API token revoked.",
@@ -373,6 +407,9 @@ export default function SettingsPage() {
       setTokenStatus({
         type: "error",
         message: "Failed to revoke API token.",
+      });
+    }
+  };
       });
     }
   };
@@ -510,6 +547,60 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
+              </Card>
+
+              {/* Active Client Bearer Token Card */}
+              <Card className="border-2 border-[#111315] bg-[#111315] text-[#F5F4F0] overflow-hidden">
+                <CardHeader className="p-6 border-b border-[#2A2E33] flex flex-row items-center justify-between space-y-0">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-[#0D7A5F]" />
+                    <div>
+                      <CardTitle className="text-lg text-[#F5F4F0]">
+                        Active Client Bearer Token
+                      </CardTitle>
+                      <CardDescription className="text-[#B8BDC7] text-xs">
+                        All client API requests and MCP tool calls from this workspace will be protected with this Bearer token.
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="emerald" className="font-mono text-[10px] uppercase">
+                    API CALLS PROTECTED
+                  </Badge>
+                </CardHeader>
+                <CardContent className="p-6 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1C1F24] p-3 rounded-md border border-[#2A2E33]">
+                    <div className="font-mono text-xs text-[#0D7A5F] break-all">
+                      {activeBearerToken ? (
+                        <span>
+                          Authorization: Bearer{" "}
+                          {activeBearerToken.length > 20
+                            ? `${activeBearerToken.slice(0, 14)}...${activeBearerToken.slice(-6)}`
+                            : activeBearerToken}
+                        </span>
+                      ) : (
+                        <span className="text-[#B8BDC7]">
+                          No active bearer token selected. Set one below or generate a Personal MCP Token.
+                        </span>
+                      )}
+                    </div>
+                    {activeBearerToken && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard("active_bearer", activeBearerToken)}
+                        className="border-[#2A2E33] text-xs h-7 text-[#F5F4F0] hover:text-[#F5F4F0] hover:bg-[#2A2E33]"
+                      >
+                        {copiedId === "active_bearer" ? (
+                          <Check className="w-3.5 h-3.5 text-[#0D7A5F] mr-1" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5 mr-1" />
+                        )}
+                        Copy Header
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
               </Card>
 
               {/* Section 1: API Tokens Configuration (Provider Keys + Personal MCP Keys) */}
@@ -1026,6 +1117,23 @@ export default function SettingsPage() {
                               </div>
                               <div className="font-mono text-xs text-[#0D7A5F] bg-card px-2.5 py-1.5 rounded-sm border border-[#C8C5BC] overflow-x-auto">
                                 {isShown ? tok.tokenValue : tok.tokenPrefix}
+                              </div>
+                              <div className="flex items-center justify-between pt-1 text-xs">
+                                {activeBearerToken === tok.tokenValue ? (
+                                  <Badge variant="emerald" className="font-mono text-[10px]">
+                                    ACTIVE BEARER TOKEN
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSetActiveBearerToken(tok.tokenValue)}
+                                    className="h-6 text-[11px] px-2"
+                                  >
+                                    Use as Active Token
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           );

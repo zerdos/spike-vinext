@@ -23,7 +23,14 @@ import {
   Trash2,
   Code,
   FileJson,
+  Shield,
+  Key,
 } from "lucide-react";
+import {
+  getClientBearerToken,
+  setClientBearerToken,
+  BEARER_TOKEN_CHANGED_EVENT,
+} from "@/lib/auth/client-token";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {

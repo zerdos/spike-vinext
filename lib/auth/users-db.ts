@@ -629,3 +629,129 @@ export async function revokeUserApiToken(
 
   return deleted;
 }
+
+export async function findApiTokenByValue(
+  tokenValue: string,
+  customDb?: D1Database | null
+): Promise<ApiTokenRecord | null> {
+  const clean = (tokenValue || "").trim();
+  if (!clean) return null;
+
+  await ensureUsersTables(customDb);
+  const db = customDb !== undefined ? customDb : getAuthDatabase();
+
+  if (db) {
+    try {
+      const row = await db
+        .prepare("SELECT * FROM api_tokens WHERE token_value = ? LIMIT 1")
+        .bind(clean)
+        .first<ApiTokenDbRow>();
+      if (row) {
+        const record = mapRowToApiToken(row);
+        inMemoryApiTokens.set(record.id, record);
+        return record;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  for (const tok of inMemoryApiTokens.values()) {
+    if (tok.tokenValue === clean) {
+      return tok;
+    }
+  }
+
+  return null;
+}
+
+export async function verifyApiToken(
+  tokenValue: string,
+  customDb?: D1Database | null
+): Promise<{ user: UserAccount; tokenRecord?: ApiTokenRecord } | null> {
+  const clean = (tokenValue || "").trim();
+  if (!clean) return null;
+
+  await ensureUsersTables(customDb);
+  const db = customDb !== undefined ? customDb : getAuthDatabase();
+
+  // 1. Direct match with default seeded admin master token
+  if (clean === ADMIN_DEFAULT_API_TOKEN) {
+    const admin = await findUserById(ADMIN_USER_ID, customDb);
+    const tokenRecord = inMemoryApiTokens.get(ADMIN_DEFAULT_API_TOKEN_ID);
+    if (admin) {
+      return { user: admin, tokenRecord: tokenRecord || undefined };
+    }
+  }
+
+  // 2. Lookup in api_tokens (Personal MCP tokens created by users in settings)
+  const tokenRecord = await findApiTokenByValue(clean, customDb);
+  if (tokenRecord) {
+    const user = await findUserById(tokenRecord.userId, customDb);
+    if (user) {
+      const now = new Date().toISOString();
+      tokenRecord.lastUsedAt = now;
+      if (db) {
+        try {
+          await db
+            .prepare("UPDATE api_tokens SET last_used_at = ? WHERE id = ?")
+            .bind(now, tokenRecord.id)
+            .run();
+        } catch {
+          // Non-fatal
+        }
+      }
+      return { user, tokenRecord };
+    }
+  }
+
+  // 3. Lookup in users.api_tokens_json (providerTokens configured in settings, e.g. SPIKE_API_KEY)
+  if (db) {
+    try {
+      const rows = await db.prepare("SELECT * FROM users").all<UserDbRow>();
+      if (rows.results && rows.results.length > 0) {
+        for (const row of rows.results) {
+          const user = mapRowToUserAccount(row);
+          if (
+            user.providerTokens?.SPIKE_API_KEY === clean ||
+            Object.values(user.providerTokens || {}).includes(clean)
+          ) {
+            inMemoryUsers.set(user.id, user);
+            return { user };
+          }
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // 4. In-memory check for providerTokens
+  for (const user of inMemoryUsers.values()) {
+    if (
+      user.providerTokens?.SPIKE_API_KEY === clean ||
+      Object.values(user.providerTokens || {}).includes(clean)
+    ) {
+      return { user };
+    }
+  }
+
+  return null;
+}
+
+export async function getActiveUserBearerToken(
+  userId: string,
+  customDb?: D1Database | null
+): Promise<string | null> {
+  const user = await findUserById(userId, customDb);
+  if (user?.providerTokens?.SPIKE_API_KEY) {
+    return user.providerTokens.SPIKE_API_KEY;
+  }
+
+  const tokens = await listUserApiTokens(userId, customDb);
+  if (tokens.length > 0) {
+    return tokens[0].tokenValue;
+  }
+
+  return null;
+}

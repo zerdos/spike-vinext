@@ -1,4 +1,5 @@
 import { AuthSession, AuthUser } from "./types";
+import { verifyApiToken, toAuthUser, ApiTokenRecord } from "./users-db";
 
 export const SESSION_COOKIE_NAME = "spike_session";
 export const DEFAULT_SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
@@ -170,6 +171,71 @@ export function parseCookies(cookieHeader: string | null): Record<string, string
   return cookies;
 }
 
+export function getBearerTokenFromRequest(request: Request): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice(7).trim();
+    return token || null;
+  }
+  return null;
+}
+
+export async function verifyBearerAuth(request: Request): Promise<{
+  authenticated: boolean;
+  user: AuthUser | null;
+  tokenRecord?: ApiTokenRecord;
+  error?: string;
+}> {
+  const bearerToken = getBearerTokenFromRequest(request);
+
+  if (bearerToken) {
+    // 1. Check API tokens configured in settings
+    const apiTokenResult = await verifyApiToken(bearerToken);
+    if (apiTokenResult) {
+      return {
+        authenticated: true,
+        user: toAuthUser(apiTokenResult.user),
+        tokenRecord: apiTokenResult.tokenRecord,
+      };
+    }
+
+    // 2. Check session token JWT
+    const session = await verifySessionToken(bearerToken);
+    if (session) {
+      return {
+        authenticated: true,
+        user: session.user,
+      };
+    }
+
+    return {
+      authenticated: false,
+      user: null,
+      error: "invalid_bearer_token",
+    };
+  }
+
+  // Fallback to cookie-based session
+  const cookieHeader = request.headers.get("cookie");
+  const cookies = parseCookies(cookieHeader);
+  const cookieToken = cookies[SESSION_COOKIE_NAME];
+  if (cookieToken) {
+    const session = await verifySessionToken(cookieToken);
+    if (session) {
+      return {
+        authenticated: true,
+        user: session.user,
+      };
+    }
+  }
+
+  return {
+    authenticated: false,
+    user: null,
+    error: "missing_bearer_token",
+  };
+}
+
 export async function getSessionFromRequest(
   request: Request,
   secret?: string
@@ -178,8 +244,20 @@ export async function getSessionFromRequest(
   const authHeader = request.headers.get("authorization");
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.slice(7).trim();
+    // 1a. Verify as HMAC-SHA256 session JWT
     const session = await verifySessionToken(token, secret);
     if (session) return session;
+
+    // 1b. Verify as Bearer API token configured in settings
+    const apiTokenResult = await verifyApiToken(token);
+    if (apiTokenResult) {
+      const authUser = toAuthUser(apiTokenResult.user);
+      return {
+        user: authUser,
+        expiresAt: Math.floor(Date.now() / 1000) + 3600 * 24 * 30, // 30 days
+        createdAt: Math.floor(Date.now() / 1000),
+      };
+    }
   }
 
   // 2. Check Cookie header

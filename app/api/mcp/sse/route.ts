@@ -4,6 +4,8 @@ import {
   registerSSEListener,
 } from "@/lib/mcp-gateway";
 import { JSONRPCRequest, RequestContext } from "@/lib/mcp-types";
+import { verifyApiToken } from "@/lib/auth/users-db";
+import { verifySessionToken } from "@/lib/auth/session";
 
 function getCorsHeaders() {
   return {
@@ -85,6 +87,33 @@ export async function POST(request: Request) {
 
   const authHeader = request.headers.get("authorization") || "";
   const apiKey = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
+
+  let authenticated = false;
+  if (apiKey) {
+    const verified = await verifyApiToken(apiKey);
+    if (verified) {
+      authenticated = true;
+    } else {
+      const session = await verifySessionToken(apiKey);
+      if (session?.user) {
+        authenticated = true;
+      }
+    }
+
+    if (!authenticated) {
+      return Response.json(
+        {
+          jsonrpc: "2.0",
+          id: null,
+          error: {
+            code: -32001,
+            message: "Unauthorized: Invalid or revoked Bearer token. Please configure a valid API token in Settings.",
+          },
+        },
+        { status: 401, headers: getCorsHeaders() }
+      );
+    }
+  }
 
   const ctx: RequestContext = {
     sessionId,

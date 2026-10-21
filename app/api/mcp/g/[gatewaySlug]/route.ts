@@ -5,6 +5,8 @@ import {
 } from "@/lib/mcp-gateway";
 import { JSONRPCRequest, RequestContext, TransportHeaders } from "@/lib/mcp-types";
 import { getEnvFromContext } from "@/lib/browser-run";
+import { verifyApiToken, UserAccount } from "@/lib/auth/users-db";
+import { verifySessionToken, getSessionFromRequest } from "@/lib/auth/session";
 
 
 function getCorsHeaders() {
@@ -58,7 +60,47 @@ export async function POST(
   const { gatewaySlug } = await context.params;
   const authHeader = request.headers.get("authorization") || "";
   const apiKey = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
-  const callerSubject = apiKey ? `sub_${apiKey.slice(-8)}` : "anonymous";
+
+  let authenticatedUser: { id: string; email: string } | null = null;
+  let userAccount: UserAccount | null = null;
+
+  if (apiKey) {
+    const verified = await verifyApiToken(apiKey);
+    if (verified) {
+      userAccount = verified.user;
+      authenticatedUser = { id: verified.user.id, email: verified.user.email };
+    } else {
+      const session = await verifySessionToken(apiKey);
+      if (session?.user) {
+        authenticatedUser = { id: session.user.id, email: session.user.email };
+      }
+    }
+
+    if (!authenticatedUser) {
+      return Response.json(
+        {
+          jsonrpc: "2.0",
+          id: null,
+          error: {
+            code: -32001,
+            message: "Unauthorized: Invalid or revoked Bearer token. Please configure a valid API token in Settings.",
+          },
+        },
+        { status: 401, headers: getCorsHeaders() }
+      );
+    }
+  } else {
+    const session = await getSessionFromRequest(request);
+    if (session?.user) {
+      authenticatedUser = { id: session.user.id, email: session.user.email };
+    }
+  }
+
+  const callerSubject = authenticatedUser
+    ? authenticatedUser.id
+    : apiKey
+    ? `sub_${apiKey.slice(-8)}`
+    : "anonymous";
   const colo = (request as unknown as { cf?: { colo?: string } }).cf?.colo || "LHR";
 
   const transportHeaders: TransportHeaders = {
@@ -67,13 +109,17 @@ export async function POST(
     mcpName: request.headers.get("mcp-name") || undefined,
   };
 
+  const userEnv = userAccount?.providerTokens ? { ...userAccount.providerTokens } : {};
   const ctx: RequestContext = {
     apiKey,
     callerSubject,
     colo,
     gatewaySlug,
     transportHeaders,
-    browserEnv: getEnvFromContext(),
+    browserEnv: {
+      ...getEnvFromContext(),
+      ...userEnv,
+    },
   };
 
 
