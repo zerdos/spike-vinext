@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST as chatApiPost, OPTIONS as chatApiOptions } from "@/app/api/chat/route";
-import { POST as chatPost, GET as chatGet, OPTIONS as chatOptions } from "@/app/chat/route";
 import { GET as healthGet } from "@/app/health/route";
 import { GET as apiHealthGet } from "@/app/api/health/route";
 
-describe("Chat Routes & Health End-to-End (/api/chat, /chat, /health)", () => {
+describe("Chat API Routes & Health End-to-End (/api/chat, /health, /api/health)", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -32,15 +31,11 @@ describe("Chat Routes & Health End-to-End (/api/chat, /chat, /health)", () => {
     expect(data.status).toBe("healthy");
   });
 
-  it("handles OPTIONS preflight on /api/chat and /chat", async () => {
+  it("handles OPTIONS preflight on /api/chat", async () => {
     const reqApi = new Request("https://spike.land/api/chat", { method: "OPTIONS" });
     const resApi = await chatApiOptions(reqApi);
     expect(resApi.status).toBe(204);
     expect(resApi.headers.get("Access-Control-Allow-Origin")).toBe("*");
-
-    const reqChat = new Request("https://spike.land/chat", { method: "OPTIONS" });
-    const resChat = await chatOptions(reqChat);
-    expect(resChat.status).toBe(204);
   });
 
   it("handles POST /api/chat with valid payload", async () => {
@@ -84,39 +79,15 @@ describe("Chat Routes & Health End-to-End (/api/chat, /chat, /health)", () => {
     }
   });
 
-  it("handles POST /chat identically to /api/chat", async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn().mockImplementation((url) => {
-      return Promise.resolve(
-        new Response(
-          JSON.stringify({
-            choices: [
-              {
-                message: {
-                  content: "Direct /chat response",
-                  role: "assistant",
-                },
-                finish_reason: "stop",
-              },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        )
-      );
+  it("handles POST /api/chat error when body is invalid", async () => {
+    const req = new Request("https://spike.land/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
     });
-
-    try {
-      const req = new Request("https://spike.land/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: "Direct message" }),
-      });
-      const res = await chatPost(req);
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.response).toBe("Direct /chat response");
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
+    const res = await chatApiPost(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Missing required 'messages' array or 'message' string.");
   });
 });

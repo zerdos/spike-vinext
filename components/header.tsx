@@ -13,6 +13,7 @@ import {
   Plug,
   PlugZap,
   Settings,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -191,6 +192,17 @@ export function Header() {
               asChild
               className="shrink-0 font-medium text-xs xl:text-sm"
             >
+              <a href="/chat" aria-label="Agent Chat">
+                <MessageSquare className="h-4 w-4 text-primary shrink-0" />
+                <span>Chat</span>
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="shrink-0 font-medium text-xs xl:text-sm"
+            >
               <a href="/settings" aria-label="Settings">
                 <Settings className="h-4 w-4 shrink-0" />
                 <span className="hidden 2xl:inline">Settings</span>
@@ -356,6 +368,17 @@ export function Header() {
               <a href="/#get-connected">
                 <Plug className="h-4 w-4 text-[#0047BB] shrink-0" />
                 <span>Setup Guide</span>
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start gap-2.5 h-10 text-sm font-medium"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/chat">
+                <MessageSquare className="h-4 w-4 text-primary shrink-0" />
+                <span>Chat</span>
               </a>
             </Button>
             <Button
