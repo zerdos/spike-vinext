@@ -273,19 +273,23 @@ export async function mountMcpServer(
     clearTimeout(timeoutId);
   }
 
-  if (!res.ok) {
-    return {
-      error: {
-        code: -32000,
-        message: `Upstream MCP server returned HTTP ${res.status}: ${res.statusText}`,
-      },
-    };
-  }
-
   let body: any;
+  let parseFailed = false;
   try {
     body = await res.json();
   } catch {
+    parseFailed = true;
+  }
+
+  if (parseFailed) {
+    if (!res.ok) {
+      return {
+        error: {
+          code: -32000,
+          message: `Upstream MCP server returned HTTP ${res.status}: ${res.statusText}`,
+        },
+      };
+    }
     return {
       error: {
         code: -32700,
@@ -294,6 +298,7 @@ export async function mountMcpServer(
     };
   }
 
+  // If upstream returns an error or status 400 with "not initialized", attempt initialize handshake
   if (body?.error) {
     const errMsg = String(body.error.message || "").toLowerCase();
     // If upstream requires initialize handshake first, perform initialize then retry tools/list
@@ -336,6 +341,17 @@ export async function mountMcpServer(
         // Fall through to error reporting below if retry fails
       }
     }
+  }
+
+  if (!res.ok && !body?.result?.tools) {
+    return {
+      error: {
+        code: body?.error?.code || -32000,
+        message:
+          body?.error?.message ||
+          `Upstream MCP server returned HTTP ${res.status}: ${res.statusText}`,
+      },
+    };
   }
 
   if (body?.error) {
@@ -468,7 +484,28 @@ export async function runTool(
     };
   }
 
-  // 2. Split tool_name on the first '.' into [namespace, upstreamName]
+  // 2. Check native tools handler if registered (supports exact name e.g. "browser.markdown" or bare "markdown" / "browser_run_markdown")
+  if (options?.nativeHandlers) {
+    const handler =
+      options.nativeHandlers[input.tool_name] ||
+      options.nativeHandlers[`browser.${input.tool_name}`] ||
+      options.nativeHandlers[`browser_run.${input.tool_name}`];
+    if (handler) {
+      try {
+        const res = await handler(input.arguments);
+        return { result: res };
+      } catch (e: any) {
+        return {
+          error: {
+            code: -32000,
+            message: `Native tool execution error: ${e?.message || String(e)}`,
+          },
+        };
+      }
+    }
+  }
+
+  // 3. Split tool_name on the first '.' into [namespace, upstreamName]
   const dotIndex = input.tool_name.indexOf(".");
   if (dotIndex === -1) {
     return {
@@ -482,22 +519,7 @@ export async function runTool(
   const namespace = input.tool_name.slice(0, dotIndex);
   const upstreamName = input.tool_name.slice(dotIndex + 1);
 
-  // Check native tools handler if registered
-  if (options?.nativeHandlers && options.nativeHandlers[input.tool_name]) {
-    try {
-      const res = await options.nativeHandlers[input.tool_name](input.arguments);
-      return { result: res };
-    } catch (e: any) {
-      return {
-        error: {
-          code: -32000,
-          message: `Native tool execution error: ${e?.message || String(e)}`,
-        },
-      };
-    }
-  }
-
-  // 3. Look up mounted server in session
+  // 4. Look up mounted server in session
   const server = sessionState.mountedServers?.[namespace];
   if (!server) {
     return {

@@ -75,5 +75,5 @@ describe("Live Gemini API End-to-End Integration", () => {
     expect(res.toolsUsed).toContain("mount_mcp_server");
     expect(res.turns).toBeGreaterThanOrEqual(2);
     expect(res.response).toBeDefined();
-  }, 30000);
+  }, 60000);
 });

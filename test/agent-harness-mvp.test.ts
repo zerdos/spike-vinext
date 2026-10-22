@@ -650,7 +650,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
 
         expect(capturedUrl).toContain("generativelanguage.googleapis.com/v1beta/openai/chat/completions");
         expect((capturedHeaders as Record<string, string>)["Authorization"]).toBe("Bearer mock-gemini-key-12345");
-        expect(capturedBody.model).toBe("gemini-3.5-flash-lite");
+        expect(capturedBody.model).toBe("gemini-flash-latest");
       } finally {
         globalThis.fetch = originalFetch;
       }

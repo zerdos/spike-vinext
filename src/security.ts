@@ -163,10 +163,11 @@ export function validateUpstreamUrl(
     };
   }
 
-  // Recursive self-mounting prevention: *.spike.land/api/mcp*
+  // Recursive self-mounting prevention: general /api/mcp endpoint recursion
+  // (Virtual scoped gateways like /api/mcp/g/:gatewaySlug are permitted)
   if (
     (hostname === "spike.land" || hostname.endsWith(".spike.land")) &&
-    parsed.pathname.startsWith("/api/mcp")
+    (parsed.pathname === "/api/mcp" || parsed.pathname === "/api/mcp/")
   ) {
     return {
       valid: false,

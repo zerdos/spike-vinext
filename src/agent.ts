@@ -21,25 +21,30 @@ import {
   discoverTools,
   runTool,
 } from "./meta-mcp.js";
+import {
+  getInternalNativeTools,
+  getDefaultNativeHandlers,
+} from "./native-tools.js";
 
 export const MAX_LOOP_STEPS = 5;
 
-const SYSTEM_PROMPT = `You are a helpful AI assistant operating in a Cloudflare Worker environment.
-You have access to 3 Meta-MCP gateway tools to dynamically connect to tools on demand:
-1. mount_mcp_server: Mount remote HTTP MCP servers into your session.
-2. discover_tools: Search for tools and get their full input parameter schemas.
-3. run_tool: Execute tools using namespaced names (e.g., 'pg.describe_table').
+export const SYSTEM_PROMPT = `You are a helpful AI assistant operating in a Cloudflare Worker environment with Spike Land Meta-MCP capabilities.
+You have access to 3 Meta-MCP gateway tools to dynamically connect to and execute tools on demand:
+1. discover_tools: Search for tools and get their full input parameter schemas. Built-in tools for web browsing, scraping, content extraction, and markdown conversion (under the 'browser' namespace) are already available immediately!
+2. run_tool: Execute tools using namespaced names (e.g. 'browser.markdown', 'browser.content', 'browser.scrape', or 'pg.describe_table').
+3. mount_mcp_server: Mount remote HTTP MCP servers into your session when connecting to an external service or when the user provides an MCP server URL. (Canonical Browser MCP: 'https://spike-browser-run-mcp.spikeland.workers.dev/mcp').
 
-When the user asks you to interact with an external service or MCP server:
-- Mount the server first if not yet mounted.
-- Discover relevant tools by query keyword to inspect their parameters.
-- Call run_tool with the appropriate arguments.
+When asked to browse the web, read a webpage, or fetch live news from a URL:
+- Always call discover_tools first (e.g. { query: "browser" } or { query: "markdown" }) to inspect available tools and parameter schemas.
+- Then call run_tool with the appropriate namespaced tool name (e.g. 'browser.markdown' with arguments: { url: "https://..." }).
+- Only call mount_mcp_server if you need an external remote MCP server not already provided.
 Never ask the user for raw API keys; reference them using environment secret names if required.`;
 
 const GEMINI_DEFAULT_MODELS = [
-  "gemini-3.5-flash-lite",
-  "gemini-3.8-flash",
+  "gemini-flash-latest",
   "gemini-2.5-flash",
+  "gemini-3.8-flash",
+  "gemini-3.5-flash-lite",
 ];
 
 /**
@@ -156,6 +161,14 @@ export async function executeAgentLoop(
   // 1. Load session state from Cloudflare KV
   const sessionState: SessionState = await getSessionState(sessionId, env);
 
+  // 1b. Load built-in native tools and handlers
+  const nativeTools = getInternalNativeTools();
+  const defaultHandlers = getDefaultNativeHandlers(env);
+  const combinedHandlers = {
+    ...defaultHandlers,
+    ...options?.nativeHandlers,
+  };
+
   // 2. Prepare conversation messages
   const messages: ChatMessage[] = [];
 
@@ -205,8 +218,8 @@ export async function executeAgentLoop(
     for (const toolCall of toolCalls) {
       const toolName = toolCall.function.name;
       let parsedArgs: any = {};
-      try {
-        parsedArgs = JSON.parse(toolCall.function.arguments || "{}");
+    try {
+      parsedArgs = JSON.parse(toolCall.function.arguments || "{}");
       } catch {
         parsedArgs = {};
       }
@@ -225,7 +238,7 @@ export async function executeAgentLoop(
           }
         );
       } else if (toolName === "discover_tools") {
-        toolResult = discoverTools(parsedArgs, sessionState);
+        toolResult = discoverTools(parsedArgs, sessionState, nativeTools);
       } else if (toolName === "run_tool") {
         toolResult = await runTool(
           parsedArgs,
@@ -234,7 +247,7 @@ export async function executeAgentLoop(
           {
             allowLocalhost: options?.allowLocalhost,
             fetchFn: options?.fetchFn,
-            nativeHandlers: options?.nativeHandlers,
+            nativeHandlers: combinedHandlers,
           }
         );
       } else {
