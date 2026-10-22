@@ -56,7 +56,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
     });
 
     it("rejects unknown protocol versions with -32022 UnsupportedProtocolVersionError and HTTP 400", async () => {
-      const req = new Request("https://next.spike.land/api/mcp", {
+      const req = new Request("https://spike.land/api/mcp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,7 +106,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
       expect(result.serverInfo.name).toBe("spike-land-gateway");
       expect(result.capabilities.tools.listChanged).toBe(true);
 
-      const notifReq = new Request("https://next.spike.land/api/mcp", {
+      const notifReq = new Request("https://spike.land/api/mcp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -401,7 +401,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
     });
 
     it("neutralizes protocol desynchronization attacks with -32020 HeaderMismatchError", async () => {
-      const req = new Request("https://next.spike.land/api/mcp", {
+      const req = new Request("https://spike.land/api/mcp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -445,7 +445,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
 
       // Pattern C Virtual Gateway endpoint (/api/mcp/g/development)
       const vgGetRes = await virtualGatewayGet(
-        new Request("https://next.spike.land/api/mcp/g/development"),
+        new Request("https://spike.land/api/mcp/g/development"),
         { params: Promise.resolve({ gatewaySlug: "development" }) }
       );
       expect(vgGetRes.status).toBe(200);
@@ -459,7 +459,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
       expect(vgMeta.tools).toContain("code_runner");
 
       const vgPostRes = await virtualGatewayPost(
-        new Request("https://next.spike.land/api/mcp/g/development", {
+        new Request("https://spike.land/api/mcp/g/development", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jsonrpc: "2.0", id: 33, method: "tools/list", params: {} }),
@@ -471,7 +471,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
 
       // RFC 9728 OAuth 2.1 Protected Resource Metadata (/.well-known/oauth-protected-resource)
       const oauthRes = await oauthResourceGet(
-        new Request("https://next.spike.land/.well-known/oauth-protected-resource")
+        new Request("https://spike.land/.well-known/oauth-protected-resource")
       );
       expect(oauthRes.status).toBe(200);
       const oauthJson = (await oauthRes.json()) as {
@@ -485,7 +485,7 @@ describe("Pure MCP 2026-07-28 Stateless Progressive-Disclosure Relay", () => {
     });
 
     it("GET and OPTIONS /api/mcp return 2026-07-28 diagnostics and CORS headers", async () => {
-      const req = new Request("https://next.spike.land/api/mcp");
+      const req = new Request("https://spike.land/api/mcp");
       const res = await mcpGet(req);
       expect(res.status).toBe(200);
       const json = (await res.json()) as {

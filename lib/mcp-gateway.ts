@@ -1077,7 +1077,7 @@ export const REGISTRY_TOOLS: ToolDefinition[] = [
       } else if (clientType === "claude_code") {
         rawCode = `claude mcp add ${serverKey} -- ${server.id}`;
       } else {
-        rawCode = `curl -X POST https://next.spike.land/api/mcp/proxy/${encodeURIComponent(server.id)}`;
+        rawCode = `curl -X POST https://spike.land/api/mcp/proxy/${encodeURIComponent(server.id)}`;
       }
 
       return {
@@ -1087,7 +1087,7 @@ export const REGISTRY_TOOLS: ToolDefinition[] = [
         clientType,
         snippet,
         codeSnippet: rawCode,
-        proxyUrl: `https://next.spike.land/api/mcp/proxy/${encodeURIComponent(server.id)}`,
+        proxyUrl: `https://spike.land/api/mcp/proxy/${encodeURIComponent(server.id)}`,
         message: `Successfully mounted ${server.name} to workspace. Ready for client integration.`,
       };
     },

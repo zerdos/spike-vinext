@@ -1,7 +1,7 @@
 ================================================================================
 PRODUCT REQUIREMENTS DOCUMENT (PRD)
 spike.land — Open-Source AI-Powered Development Platform
-Reference deployment: https://next.spike.land/   (canonical: https://spike.land)
+Reference deployment: https://spike.land/   (canonical: https://spike.land)
 ================================================================================
 
 Document version : 1.0

@@ -840,7 +840,7 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
       expect(vgTools.map((t) => t.name)).toEqual([...BROWSER_RUN_TOOL_NAMES].sort());
 
       const getRes = await virtualGatewayGet(
-        new Request("https://next.spike.land/api/mcp/g/browser-run"),
+        new Request("https://spike.land/api/mcp/g/browser-run"),
         { params: Promise.resolve({ gatewaySlug: "browser-run" }) }
       );
       expect(getRes.status).toBe(200);
@@ -855,7 +855,7 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
       expect(getJson.tools).toContain("browser_run_crawl_start");
 
       const postRes = await virtualGatewayPost(
-        new Request("https://next.spike.land/api/mcp/g/browser-run", {
+        new Request("https://spike.land/api/mcp/g/browser-run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -884,7 +884,7 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
     });
 
     it("supports Universal Gateway (discover_tools / run_tool) and MCP Registry lookup for cloudflare/browser-run-mcp", async () => {
-      const discoverReq = new Request("https://next.spike.land/api/mcp", {
+      const discoverReq = new Request("https://spike.land/api/mcp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -911,7 +911,7 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
       expect(discoverData.matchedTools).toHaveLength(10);
       expect(discoverData.matchedTools[0].category).toBe("Browser Run");
 
-      const runReq = new Request("https://next.spike.land/api/mcp", {
+      const runReq = new Request("https://spike.land/api/mcp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

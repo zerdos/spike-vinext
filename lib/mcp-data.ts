@@ -796,7 +796,7 @@ export const CLIENT_CONFIGS = [
     code: `{
   "mcpServers": {
     "spike-land": {
-      "url": "https://next.spike.land/api/mcp",
+      "url": "https://spike.land/api/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY",
         "MCP-Protocol-Version": "2026-07-28"
@@ -810,7 +810,7 @@ export const CLIENT_CONFIGS = [
     name: "Claude Code",
     icon: "terminal",
     filename: "Terminal Command",
-    code: `claude mcp add spike-land https://next.spike.land/api/mcp --header "Authorization: Bearer YOUR_API_KEY" --header "MCP-Protocol-Version: 2026-07-28"`,
+    code: `claude mcp add spike-land https://spike.land/api/mcp --header "Authorization: Bearer YOUR_API_KEY" --header "MCP-Protocol-Version: 2026-07-28"`,
   },
   {
     id: "cursor",
@@ -820,7 +820,7 @@ export const CLIENT_CONFIGS = [
     code: `{
   "mcpServers": {
     "spike-land": {
-      "url": "https://next.spike.land/api/mcp",
+      "url": "https://spike.land/api/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY",
         "MCP-Protocol-Version": "2026-07-28"
@@ -837,7 +837,7 @@ export const CLIENT_CONFIGS = [
     code: `{
   "mcpServers": {
     "spike-land-dev": {
-      "url": "https://next.spike.land/api/mcp/g/development",
+      "url": "https://spike.land/api/mcp/g/development",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY",
         "MCP-Protocol-Version": "2026-07-28"
@@ -851,7 +851,7 @@ export const CLIENT_CONFIGS = [
     name: "HTTP / JSON-RPC",
     icon: "globe",
     filename: "curl request",
-    code: `curl -X POST https://next.spike.land/api/mcp \\
+    code: `curl -X POST https://spike.land/api/mcp \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -H "MCP-Protocol-Version: 2026-07-28" \\

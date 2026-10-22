@@ -349,7 +349,7 @@ Tabbed selector offering copy-paste configs:
   {
     "mcpServers": {
       "spike-land": {
-        "url": "https://next.spike.land/api/mcp/sse",
+        "url": "https://spike.land/api/mcp/sse",
         "headers": {
           "Authorization": "Bearer YOUR_API_KEY"
         }
@@ -360,7 +360,7 @@ Tabbed selector offering copy-paste configs:
 - **Claude Desktop (`claude_desktop_config.json`):**
   Provides standard SSE URL or npx wrapper command.
 - **Claude Code CLI:**
-  CLI command: `claude mcp add spike-land https://next.spike.land/api/mcp/sse`
+  CLI command: `claude mcp add spike-land https://spike.land/api/mcp/sse`
 - **Raw HTTP / JSON-RPC:**
   cURL command demonstrating `tools/list` and `tools/call`.
 
