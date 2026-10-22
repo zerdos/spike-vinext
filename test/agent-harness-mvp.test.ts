@@ -589,6 +589,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
       const badEnv: Env = {
         SESSION_KV: mockKV,
         LLM_API_KEY: "", // missing API key will cause default completion handler to throw
+        GEMINI_API_KEY: "",
       };
 
       const req = new Request("https://worker.local/chat", {
@@ -600,7 +601,59 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
       expect(res.status).toBe(500);
       const data = await res.json();
       expect(data.error).toBe("Agent execution failed.");
-      expect(data.details).toContain("Missing LLM_API_KEY");
+      expect(data.details).toContain("Missing GEMINI_API_KEY or LLM_API_KEY");
+    });
+
+    it("works with GEMINI_API_KEY and routes to Google OpenAI-compatible endpoint", async () => {
+      const geminiEnv: Env = {
+        SESSION_KV: mockKV,
+        GEMINI_API_KEY: "mock-gemini-key-12345",
+      };
+
+      let capturedUrl = "";
+      let capturedHeaders: HeadersInit | undefined;
+      let capturedBody: any;
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockImplementation((url, init) => {
+        capturedUrl = String(url);
+        capturedHeaders = init?.headers;
+        capturedBody = init?.body ? JSON.parse(String(init.body)) : null;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    content: "Hello from Gemini!",
+                    role: "assistant",
+                  },
+                  finish_reason: "stop",
+                },
+              ],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          )
+        );
+      });
+
+      try {
+        const req = new Request("https://worker.local/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: "Hello Gemini" }),
+        });
+        const res = await worker.fetch(req, geminiEnv);
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.response).toBe("Hello from Gemini!");
+
+        expect(capturedUrl).toContain("generativelanguage.googleapis.com/v1beta/openai/chat/completions");
+        expect((capturedHeaders as Record<string, string>)["Authorization"]).toBe("Bearer mock-gemini-key-12345");
+        expect(capturedBody.model).toBe("gemini-2.5-flash");
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
     });
   });
 

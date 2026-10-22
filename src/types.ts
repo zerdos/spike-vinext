@@ -17,7 +17,8 @@ declare global {
 
 export interface Env {
   SESSION_KV: KVNamespace;
-  LLM_API_KEY: string;
+  LLM_API_KEY?: string;
+  GEMINI_API_KEY?: string;
   LLM_BASE_URL?: string;
   LLM_MODEL?: string;
   // Dynamic upstream secrets stored as Worker secrets (e.g. env["GITHUB_TOKEN"])
@@ -112,7 +113,8 @@ export type LLMCompletionHandler = (
       parameters: Record<string, unknown>;
     };
   }>,
-  env: Env
+  env: Env,
+  model?: string
 ) => Promise<{
   content: string | null;
   tool_calls?: ToolCall[];

@@ -37,19 +37,45 @@ When the user asks you to interact with an external service or MCP server:
 Never ask the user for raw API keys; reference them using environment secret names if required.`;
 
 /**
- * Default OpenAI-compatible LLM completion handler via standard fetch.
+ * Default LLM completion handler supporting both GEMINI_API_KEY and OpenAI/LLM_API_KEY
+ * via standard fetch.
  */
-export const defaultOpenAICompletionHandler: LLMCompletionHandler = async (
+export const defaultCompletionHandler: LLMCompletionHandler = async (
   messages,
   tools,
-  env
+  env,
+  requestedModel
 ) => {
-  const baseUrl = (env.LLM_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
-  const model = env.LLM_MODEL || "gpt-4o-mini";
-  const apiKey = env.LLM_API_KEY;
+  const isGemini = Boolean(
+    env.GEMINI_API_KEY ||
+      (env.LLM_API_KEY && env.LLM_API_KEY.startsWith("AIza")) ||
+      (requestedModel && requestedModel.toLowerCase().includes("gemini")) ||
+      (env.LLM_MODEL && env.LLM_MODEL.toLowerCase().includes("gemini"))
+  );
+
+  const apiKey = (env.GEMINI_API_KEY || env.LLM_API_KEY) as string | undefined;
 
   if (!apiKey) {
-    throw new Error("Missing LLM_API_KEY in Worker environment.");
+    throw new Error(
+      "Missing GEMINI_API_KEY or LLM_API_KEY in Worker environment."
+    );
+  }
+
+  const defaultBaseUrl = isGemini
+    ? "https://generativelanguage.googleapis.com/v1beta/openai"
+    : "https://api.openai.com/v1";
+  const baseUrl = (env.LLM_BASE_URL || defaultBaseUrl).replace(/\/$/, "");
+
+  const defaultModel = isGemini ? "gemini-2.5-flash" : "gpt-4o-mini";
+  const model = requestedModel || env.LLM_MODEL || defaultModel;
+
+  const bodyPayload: Record<string, unknown> = {
+    model,
+    messages,
+  };
+  if (tools.length > 0) {
+    bodyPayload.tools = tools;
+    bodyPayload.tool_choice = "auto";
   }
 
   const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -58,12 +84,7 @@ export const defaultOpenAICompletionHandler: LLMCompletionHandler = async (
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      messages,
-      tools,
-      tool_choice: "auto",
-    }),
+    body: JSON.stringify(bodyPayload),
   });
 
   if (!res.ok) {
@@ -79,6 +100,8 @@ export const defaultOpenAICompletionHandler: LLMCompletionHandler = async (
     tool_calls: choice?.tool_calls,
   };
 };
+
+export const defaultOpenAICompletionHandler = defaultCompletionHandler;
 
 export interface AgentLoopOptions {
   llmHandler?: LLMCompletionHandler;
@@ -98,7 +121,7 @@ export async function executeAgentLoop(
 ): Promise<ChatResponse> {
   const sessionId = request.sessionId || `sess_${crypto.randomUUID()}`;
   const maxSteps = options?.maxSteps ?? MAX_LOOP_STEPS;
-  const llmHandler = options?.llmHandler ?? defaultOpenAICompletionHandler;
+  const llmHandler = options?.llmHandler ?? defaultCompletionHandler;
 
   // 1. Load session state from Cloudflare KV
   const sessionState: SessionState = await getSessionState(sessionId, env);
@@ -127,7 +150,7 @@ export async function executeAgentLoop(
     turns++;
 
     // Call LLM
-    const completion = await llmHandler(messages, META_MCP_TOOLS, env);
+    const completion = await llmHandler(messages, META_MCP_TOOLS, env, request.model);
 
     const toolCalls: ToolCall[] = completion.tool_calls || [];
 
@@ -205,7 +228,7 @@ export async function executeAgentLoop(
     // If we've reached maxSteps - 1, in the next iteration we can ask the LLM for a final synthesis
     if (step === maxSteps - 1) {
       // One final completion to summarize if loop limit reached
-      const finalComp = await llmHandler(messages, [], env);
+      const finalComp = await llmHandler(messages, [], env, request.model);
       finalResponse = finalComp.content || "";
       messages.push({
         role: "assistant",
