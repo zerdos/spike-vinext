@@ -20,6 +20,7 @@ export interface Env {
   OPENROUTER_API_KEY?: string;
   LLM_API_KEY?: string;
   GEMINI_API_KEY?: string;
+  SERPAPI_API_KEY?: string;
   LLM_BASE_URL?: string;
   LLM_MODEL?: string;
   // Dynamic upstream secrets stored as Worker secrets (e.g. env["GITHUB_TOKEN"])

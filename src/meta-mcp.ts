@@ -17,6 +17,9 @@ import {
   isValidNamespace,
   validateUpstreamUrl,
   detectPlaintextSecret,
+  resolveServerUrlAndAuth,
+  redactSecretFromText,
+  parseMcpResponseText,
 } from "./security.js";
 
 export const MAX_PAYLOAD_CHARS = 32768; // 32 KB character limit
@@ -25,6 +28,64 @@ export const EXECUTION_TIMEOUT_MS = 15000; // 15s timeout
 export const SESSION_TTL_SECONDS = 86400; // 24 hours
 export const MAX_DISCOVERED_TOOLS = 3;
 export const MAX_DESCRIPTION_LENGTH = 300;
+
+export const SERPAPI_DEFAULT_SERVER: MountedServer = {
+  namespace: "serpapi",
+  url: "https://mcp.serpapi.com/YOUR_SERPAPI_API_KEY/mcp",
+  authSecretName: "SERPAPI_API_KEY",
+  tools: [
+    {
+      namespacedName: "serpapi.search",
+      upstreamName: "search",
+      namespace: "serpapi",
+      description:
+        "Universal search tool supporting all SerpApi engines (google_light, google, bing, duckduckgo, youtube, scholar, ebay, amazon) and result types.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          params: {
+            type: "object",
+            description:
+              "Engine-specific query parameters passed to SerpApi (e.g. { q: 'cloudflare workers', engine: 'google_light', location: 'United States', output: 'md' }).",
+            properties: {
+              q: {
+                type: "string",
+                description: "Search query string.",
+              },
+              engine: {
+                type: "string",
+                description:
+                  "Search engine to query (default: 'google_light'). Examples: 'google', 'google_light', 'google_news', 'google_scholar', 'google_maps', 'google_finance', 'google_patents', 'bing', 'duckduckgo', 'youtube', 'ebay', 'amazon'.",
+              },
+              location: {
+                type: "string",
+                description:
+                  "Optional geographic location for localized search results (e.g. 'Austin, TX').",
+              },
+              output: {
+                type: "string",
+                enum: ["json", "md"],
+                description:
+                  "Response format: omit or 'json' for structured JSON, or 'md' for token-efficient Markdown.",
+              },
+            },
+            required: ["q"],
+            additionalProperties: true,
+          },
+          mode: {
+            type: "string",
+            enum: ["complete", "compact"],
+            default: "compact",
+            description:
+              "Response verbosity mode when returning JSON: 'compact' strips noisy metadata to save context tokens; 'complete' returns full raw metadata.",
+          },
+        },
+        required: ["params"],
+      },
+    },
+  ],
+  mountedAt: 0,
+};
 
 // The 8 Extended Tools exposed to LLM
 export const META_MCP_TOOLS = [
@@ -253,16 +314,16 @@ export async function getSessionState(
   env: Env
 ): Promise<SessionState> {
   const key = `session:${sessionId}`;
+  let state: SessionState | undefined;
+
   if (env.SESSION_KV) {
     try {
       const existing = await env.SESSION_KV.get(key, "json");
       if (existing && typeof existing === "object") {
-        const state = {
+        state = {
           sessionId,
           mountedServers: (existing as SessionState).mountedServers || {},
         };
-        inMemorySessionStore.set(sessionId, state);
-        return state;
       }
     } catch {
       // Fallback on error or empty
@@ -270,16 +331,27 @@ export async function getSessionState(
   }
 
   // Memory store fallback
-  if (inMemorySessionStore.has(sessionId)) {
-    return inMemorySessionStore.get(sessionId)!;
+  if (!state && inMemorySessionStore.has(sessionId)) {
+    state = inMemorySessionStore.get(sessionId)!;
   }
 
-  const newState: SessionState = {
-    sessionId,
-    mountedServers: {},
-  };
-  inMemorySessionStore.set(sessionId, newState);
-  return newState;
+  if (!state) {
+    state = {
+      sessionId,
+      mountedServers: {},
+    };
+  }
+
+  // Pre-register SERPAPI_DEFAULT_SERVER if env.SERPAPI_API_KEY is present and not already mounted
+  if (env.SERPAPI_API_KEY && !state.mountedServers["serpapi"]) {
+    state.mountedServers["serpapi"] = {
+      ...SERPAPI_DEFAULT_SERVER,
+      mountedAt: Date.now(),
+    };
+  }
+
+  inMemorySessionStore.set(sessionId, state);
+  return state;
 }
 
 export async function saveSessionState(
@@ -340,8 +412,34 @@ export async function mountMcpServer(
     };
   }
 
-  // 3. SSRF and protocol check
-  const ssrfCheck = validateUpstreamUrl(input.url, {
+  // 3. Resolve URL and secrets
+  const authRes = resolveServerUrlAndAuth(
+    input.url,
+    input.authSecretName,
+    env,
+    input.namespace
+  );
+  if (authRes.error) {
+    return {
+      error: {
+        code: -32602,
+        message: authRes.error,
+      },
+    };
+  }
+
+  // Reject plaintext secrets in the template URL
+  if (detectPlaintextSecret(authRes.templateUrl)) {
+    return {
+      error: {
+        code: -32602,
+        message: "Security Error: URL contains what appears to be a plaintext secret.",
+      },
+    };
+  }
+
+  // 4. SSRF and protocol check on resolved URL
+  const ssrfCheck = validateUpstreamUrl(authRes.resolvedUrl, {
     allowLocalhost: options?.allowLocalhost,
   });
   if (!ssrfCheck.valid) {
@@ -353,36 +451,16 @@ export async function mountMcpServer(
     };
   }
 
-  // 4. Resolve authSecretName from env
-  let bearerToken: string | undefined;
-  let secretKeyName: string | undefined;
-  if (input.authSecretName) {
-    secretKeyName = input.authSecretName.startsWith("env:")
-      ? input.authSecretName.slice(4)
-      : input.authSecretName;
-
-    const val = env[secretKeyName];
-    if (typeof val === "string") {
-      bearerToken = val;
-    } else {
-      return {
-        error: {
-          code: -32602,
-          message: `Worker secret '${secretKeyName}' not found in environment.`,
-        },
-      };
-    }
-  }
-
   // 5. Send JSON-RPC 2.0 tools/list request with 5,000 ms timeout
+  const isSerpApi = input.namespace === "serpapi" || input.url.includes("serpapi");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Accept: "application/json",
+    Accept: isSerpApi ? "application/json, text/event-stream" : "application/json",
   };
-  if (bearerToken) {
-    headers["Authorization"] = bearerToken.startsWith("Bearer ")
-      ? bearerToken
-      : `Bearer ${bearerToken}`;
+  if (authRes.bearerToken) {
+    headers["Authorization"] = authRes.bearerToken.startsWith("Bearer ")
+      ? authRes.bearerToken
+      : `Bearer ${authRes.bearerToken}`;
   }
 
   let res: Response;
@@ -390,7 +468,7 @@ export async function mountMcpServer(
   const timeoutId = setTimeout(() => controller.abort(), HANDSHAKE_TIMEOUT_MS);
 
   try {
-    res = await fetchImpl(input.url, {
+    res = await fetchImpl(authRes.resolvedUrl, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -407,35 +485,53 @@ export async function mountMcpServer(
       (err as { name?: string })?.name === "AbortError" ||
       String(err).includes("timed out") ||
       controller.signal.aborted;
+    const rawMsg = isTimeout
+      ? `Upstream handshake timed out after ${HANDSHAKE_TIMEOUT_MS}ms.`
+      : `Failed to connect to upstream MCP server: ${String(err)}`;
     return {
       error: {
         code: -32000,
-        message: isTimeout
-          ? `Upstream handshake timed out after ${HANDSHAKE_TIMEOUT_MS}ms.`
-          : `Failed to connect to upstream MCP server: ${String(err)}`,
+        message: redactSecretFromText(rawMsg, authRes.secretValue),
       },
     };
   } finally {
     clearTimeout(timeoutId);
   }
 
-  let body: any;
-  let parseFailed = false;
-  try {
-    body = await res.json();
-  } catch {
-    parseFailed = true;
+  const mcpSessionId = res.headers.get("mcp-session-id");
+  if (mcpSessionId) {
+    headers["Mcp-Session-Id"] = mcpSessionId;
   }
 
-  if (parseFailed) {
-    if (!res.ok) {
-      return {
-        error: {
-          code: -32000,
-          message: `Upstream MCP server returned HTTP ${res.status}: ${res.statusText}`,
-        },
-      };
-    }
+  let rawText = "";
+  try {
+    rawText = await res.text();
+  } catch (err) {
+    return {
+      error: {
+        code: -32000,
+        message: redactSecretFromText(`Failed to read response: ${String(err)}`, authRes.secretValue),
+      },
+    };
+  }
+
+  let body: any = parseMcpResponseText(rawText, res.headers.get("content-type") || "", 1);
+
+  if (!res.ok) {
+    return {
+      error: {
+        code: (body?.error && body.error.code !== -32700) ? body.error.code : -32000,
+        message: redactSecretFromText(
+          (body?.error && body.error.code !== -32700 && body.error.message)
+            ? body.error.message
+            : `Upstream MCP server returned HTTP ${res.status}: ${res.statusText}`,
+          authRes.secretValue
+        ),
+      },
+    };
+  }
+
+  if (body?._rawText && !body?.result && !body?.error) {
     return {
       error: {
         code: -32700,
@@ -450,7 +546,7 @@ export async function mountMcpServer(
     // If upstream requires initialize handshake first, perform initialize then retry tools/list
     if (errMsg.includes("not initialized")) {
       try {
-        const initRes = await fetchImpl(input.url, {
+        const initRes = await fetchImpl(authRes.resolvedUrl, {
           method: "POST",
           headers,
           body: JSON.stringify({
@@ -465,8 +561,13 @@ export async function mountMcpServer(
           }),
         });
 
+        const initSessionId = initRes.headers.get("mcp-session-id");
+        if (initSessionId) {
+          headers["Mcp-Session-Id"] = initSessionId;
+        }
+
         if (initRes.ok) {
-          const retryRes = await fetchImpl(input.url, {
+          const retryRes = await fetchImpl(authRes.resolvedUrl, {
             method: "POST",
             headers,
             body: JSON.stringify({
@@ -477,7 +578,8 @@ export async function mountMcpServer(
             }),
           });
           if (retryRes.ok) {
-            const retryBody = (await retryRes.json()) as any;
+            const retryText = await retryRes.text();
+            const retryBody = parseMcpResponseText(retryText, retryRes.headers.get("content-type") || "", 3);
             if (retryBody?.result?.tools) {
               body = retryBody;
             }
@@ -493,9 +595,11 @@ export async function mountMcpServer(
     return {
       error: {
         code: body?.error?.code || -32000,
-        message:
+        message: redactSecretFromText(
           body?.error?.message ||
-          `Upstream MCP server returned HTTP ${res.status}: ${res.statusText}`,
+            `Upstream MCP server returned HTTP ${res.status}: ${res.statusText}`,
+          authRes.secretValue
+        ),
       },
     };
   }
@@ -504,7 +608,10 @@ export async function mountMcpServer(
     return {
       error: {
         code: body.error.code || -32000,
-        message: body.error.message || "Upstream MCP server returned an error.",
+        message: redactSecretFromText(
+          body.error.message || "Upstream MCP server returned an error.",
+          authRes.secretValue
+        ),
       },
     };
   }
@@ -524,11 +631,11 @@ export async function mountMcpServer(
     inputSchema: t.inputSchema || { type: "object", properties: {} },
   }));
 
-  // 7. Save to sessionState and KV
+  // 7. Save to sessionState and KV using TEMPLATE URL
   sessionState.mountedServers[input.namespace] = {
     namespace: input.namespace,
-    url: input.url,
-    authSecretName: secretKeyName,
+    url: authRes.templateUrl,
+    authSecretName: authRes.secretKeyName,
     tools: mountedTools,
     mountedAt: Date.now(),
   };
@@ -719,23 +826,42 @@ export async function runTool(
     };
   }
 
-  // 4. Resolve auth header if server has authSecretName
-  let bearerToken: string | undefined;
-  if (server.authSecretName) {
-    const val = env[server.authSecretName];
-    if (typeof val === "string") {
-      bearerToken = val;
-    }
+  // Resolve URL and auth secrets
+  const authRes = resolveServerUrlAndAuth(
+    server.url,
+    server.authSecretName,
+    env,
+    namespace
+  );
+  if (authRes.error) {
+    return {
+      error: {
+        code: -32602,
+        message: authRes.error,
+      },
+    };
+  }
+
+  const ssrfCheck = validateUpstreamUrl(authRes.resolvedUrl, {
+    allowLocalhost: options?.allowLocalhost,
+  });
+  if (!ssrfCheck.valid) {
+    return {
+      error: {
+        code: -32602,
+        message: ssrfCheck.error || "SSRF validation failed.",
+      },
+    };
   }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Accept: "application/json",
+    Accept: "application/json, text/event-stream",
   };
-  if (bearerToken) {
-    headers["Authorization"] = bearerToken.startsWith("Bearer ")
-      ? bearerToken
-      : `Bearer ${bearerToken}`;
+  if (authRes.bearerToken) {
+    headers["Authorization"] = authRes.bearerToken.startsWith("Bearer ")
+      ? authRes.bearerToken
+      : `Bearer ${authRes.bearerToken}`;
   }
 
   // 5. Dispatch JSON-RPC 2.0 tools/call with 15,000 ms timeout
@@ -744,7 +870,7 @@ export async function runTool(
 
   let res: Response;
   try {
-    res = await fetchImpl(server.url, {
+    res = await fetchImpl(authRes.resolvedUrl, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -764,12 +890,13 @@ export async function runTool(
       (err as { name?: string })?.name === "AbortError" ||
       String(err).includes("timed out") ||
       controller.signal.aborted;
+    const rawMsg = isTimeout
+      ? `Upstream tool call timed out after ${EXECUTION_TIMEOUT_MS}ms.`
+      : `Failed to execute upstream tool: ${String(err)}`;
     return {
       error: {
         code: -32000,
-        message: isTimeout
-          ? `Upstream tool call timed out after ${EXECUTION_TIMEOUT_MS}ms.`
-          : `Failed to execute upstream tool: ${String(err)}`,
+        message: redactSecretFromText(rawMsg, authRes.secretValue),
       },
     };
   } finally {
@@ -787,31 +914,53 @@ export async function runTool(
   }
 
   if (!res.ok) {
+    const errorMsg = redactSecretFromText(
+      `Upstream tool execution returned HTTP ${res.status}: ${text}`,
+      authRes.secretValue
+    );
     return {
       error: {
         code: -32000,
-        message: `Upstream tool execution returned HTTP ${res.status}: ${text}`,
+        message: errorMsg,
       },
     };
   }
 
   if (isTruncated) {
-    return { result: text };
+    return { result: redactSecretFromText(text, authRes.secretValue) };
   }
 
-  // Attempt to parse JSON response
-  try {
-    const json = JSON.parse(text);
-    if (json.error) {
-      return {
-        error: {
-          code: json.error.code || -32000,
-          message: json.error.message || "Upstream tool returned error.",
-        },
-      };
-    }
-    return { result: json.result ?? json };
-  } catch {
-    return { result: text };
+  // Attempt to parse JSON / SSE response
+  const json = parseMcpResponseText(text, res.headers.get("content-type") || "");
+  if (json.error) {
+    return {
+      error: {
+        code: json.error.code || -32000,
+        message: redactSecretFromText(
+          json.error.message || "Upstream tool returned error.",
+          authRes.secretValue
+        ),
+      },
+    };
   }
+
+  let resPayload = json.result ?? json;
+  if (
+    resPayload &&
+    typeof resPayload === "object" &&
+    Array.isArray(resPayload.content) &&
+    resPayload.content.length === 1 &&
+    typeof resPayload.content[0]?.text === "string"
+  ) {
+    try {
+      const inner = JSON.parse(resPayload.content[0].text);
+      if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+        resPayload = { ...inner, ...resPayload };
+      }
+    } catch {
+      // Plain text or markdown
+    }
+  }
+
+  return { result: resPayload };
 }

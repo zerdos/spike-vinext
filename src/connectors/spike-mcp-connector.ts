@@ -1,6 +1,12 @@
 import { CodemodeConnector, ConnectorTools, ConnectorTool, ToolExecuteContext } from "@cloudflare/codemode";
 import { Env, MountedServer, ToolApprovalPolicy } from "../types.js";
-import { validateUpstreamUrl, detectPlaintextSecret } from "../security.js";
+import {
+  validateUpstreamUrl,
+  detectPlaintextSecret,
+  resolveServerUrlAndAuth,
+  redactSecretFromText,
+  parseMcpResponseText,
+} from "../security.js";
 import { MAX_PAYLOAD_CHARS, EXECUTION_TIMEOUT_MS } from "../meta-mcp.js";
 
 export interface SpikeMcpConnectorOptions {
@@ -17,6 +23,20 @@ export interface SpikeMcpConnectorOptions {
 
 export function isMutatingMcpTool(name: string): boolean {
   const lower = name.toLowerCase();
+  const readOnlyExact = [
+    "search",
+    "query",
+    "find",
+    "read",
+    "inspect",
+    "check",
+    "describe",
+    "list",
+    "get",
+  ];
+  if (readOnlyExact.includes(lower)) {
+    return false;
+  }
   const readOnlyPrefixes = [
     "get_",
     "list_",
@@ -125,42 +145,52 @@ export class SpikeMcpConnector extends CodemodeConnector {
         requiresApproval,
         replay: "log",
         execute: async (args: any, ctx?: ToolExecuteContext) => {
-          // 1. SSRF & URL Validation
-          const urlValidation = validateUpstreamUrl(this.server.url, {
-            allowLocalhost: this.options?.allowLocalhost,
-          });
-          if (!urlValidation.valid) {
-            throw new Error(`SSRF validation failed: ${urlValidation.error}`);
-          }
-
-          // 2. Plaintext Secret Detection
+          // 1. Plaintext Secret Detection
           if (detectPlaintextSecret(args)) {
             throw new Error(
               "Plaintext secret detected in arguments: raw credentials must never enter tool calls."
             );
           }
 
-          // 3. Resolve Bearer Auth Secret on Host
+          // 2. Resolve URL and secrets
+          const authRes = resolveServerUrlAndAuth(
+            this.server.url,
+            this.server.authSecretName,
+            this.env as Env,
+            this.server.namespace
+          );
+          if (authRes.error) {
+            throw new Error(authRes.error);
+          }
+
+          // 3. SSRF & URL Validation on resolved URL
+          const urlValidation = validateUpstreamUrl(authRes.resolvedUrl, {
+            allowLocalhost: this.options?.allowLocalhost,
+          });
+          if (!urlValidation.valid) {
+            throw new Error(`SSRF validation failed: ${urlValidation.error}`);
+          }
+
+          // 4. Request Headers
+          const isSerpApi =
+            this.server.namespace === "serpapi" ||
+            this.server.url.includes("serpapi");
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
-            Accept: "application/json",
+            Accept: isSerpApi
+              ? "application/json, text/event-stream"
+              : "application/json",
             "MCP-Protocol-Version": "2024-11-05",
             ...((this.server as any).customHeaders || {}),
           };
-          if (!headers["Accept"]) {
-            headers["Accept"] = "application/json";
+
+          if (authRes.bearerToken) {
+            headers.Authorization = authRes.bearerToken.startsWith("Bearer ")
+              ? authRes.bearerToken
+              : `Bearer ${authRes.bearerToken}`;
           }
 
-          if (this.server.authSecretName) {
-            const secretVal = (this.env as any)[this.server.authSecretName];
-            if (typeof secretVal === "string" && secretVal.length > 0) {
-              headers.Authorization = secretVal.startsWith("Bearer ")
-                ? secretVal
-                : `Bearer ${secretVal}`;
-            }
-          }
-
-          // 4. Dispatch JSON-RPC tools/call
+          // 5. Dispatch JSON-RPC tools/call
           const controller = new AbortController();
           const timeoutId = setTimeout(
             () => controller.abort(),
@@ -168,7 +198,7 @@ export class SpikeMcpConnector extends CodemodeConnector {
           );
 
           try {
-            const res = await fetchImpl(this.server.url, {
+            const res = await fetchImpl(authRes.resolvedUrl, {
               method: "POST",
               headers,
               body: JSON.stringify({
@@ -183,28 +213,57 @@ export class SpikeMcpConnector extends CodemodeConnector {
               signal: controller.signal,
             });
 
+            const rawText = await res.text();
             if (!res.ok) {
-              const text = await res.text();
-              throw new Error(
-                `Upstream MCP server HTTP ${res.status}: ${text.slice(0, 500)}`
+              const scrubbed = redactSecretFromText(
+                rawText.slice(0, 500),
+                authRes.secretValue
               );
+              throw new Error(`Upstream MCP server HTTP ${res.status}: ${scrubbed}`);
             }
 
-            const body = (await res.json()) as any;
+            const body = parseMcpResponseText(
+              rawText,
+              res.headers.get("content-type") || ""
+            );
             if (body?.error) {
-              throw new Error(
-                body.error.message ||
-                  `Upstream error code ${body.error.code || -32000}`
+              const scrubbed = redactSecretFromText(
+                body.error.message || `Upstream error code ${body.error.code || -32000}`,
+                authRes.secretValue
               );
+              throw new Error(scrubbed);
             }
 
-            const result = body?.result;
+            let result = body?.result ?? body;
+            if (
+              result &&
+              typeof result === "object" &&
+              Array.isArray(result.content) &&
+              result.content.length === 1 &&
+              typeof result.content[0]?.text === "string"
+            ) {
+              try {
+                const inner = JSON.parse(result.content[0].text);
+                if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+                  result = { ...inner, ...result };
+                }
+              } catch {
+                // Plain text or markdown
+              }
+            }
+
             // Cap payload characters
             const serialized = JSON.stringify(result);
             if (serialized && serialized.length > MAX_PAYLOAD_CHARS) {
               return JSON.parse(serialized.slice(0, MAX_PAYLOAD_CHARS));
             }
             return result;
+          } catch (err: unknown) {
+            const msg = redactSecretFromText(
+              String(err instanceof Error ? err.message : err),
+              authRes.secretValue
+            );
+            throw new Error(msg);
           } finally {
             clearTimeout(timeoutId);
           }

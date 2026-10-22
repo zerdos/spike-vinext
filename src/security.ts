@@ -3,6 +3,8 @@
  * PRD Section 6.1 & 7
  */
 
+import { Env } from "./types.js";
+
 export const NAMESPACE_REGEX = /^[a-z0-9_]{2,16}$/;
 
 export function isValidNamespace(namespace: string): boolean {
@@ -176,4 +178,162 @@ export function validateUpstreamUrl(
   }
 
   return { valid: true };
+}
+
+/**
+ * Resolves URL placeholders such as `YOUR_SERPAPI_API_KEY`, `{SERPAPI_API_KEY}`,
+ * or `${SERPAPI_API_KEY}` using Worker environment secrets at request time.
+ * (PRD Section 5.2 & 6.2)
+ */
+export function resolveServerUrlAndAuth(
+  rawUrl: string,
+  authSecretName: string | undefined,
+  env: Env,
+  namespace?: string
+): {
+  resolvedUrl: string;
+  templateUrl: string;
+  secretKeyName?: string;
+  bearerToken?: string;
+  secretValue?: string;
+  error?: string;
+} {
+  let inferredSecretName = authSecretName?.startsWith("env:")
+    ? authSecretName.slice(4)
+    : authSecretName;
+
+  // Detect YOUR_<NAME>_KEY, YOUR_<NAME>_API_KEY, ${<SECRET_NAME>}, or {<SECRET_NAME>} in URL
+  const placeholderMatch =
+    rawUrl.match(/YOUR_([A-Z0-9_]+)_KEY/) ||
+    rawUrl.match(/\$\{([A-Z0-9_]+)\}/) ||
+    rawUrl.match(/\{([A-Z0-9_]+)\}/);
+
+  if (!inferredSecretName && placeholderMatch) {
+    const captured = placeholderMatch[1];
+    inferredSecretName = rawUrl.includes(`YOUR_${captured}_KEY`)
+      ? `${captured}_KEY`
+      : captured;
+  }
+
+  if (
+    !inferredSecretName &&
+    (rawUrl.includes("mcp.serpapi.com") || namespace === "serpapi") &&
+    env.SERPAPI_API_KEY
+  ) {
+    inferredSecretName = "SERPAPI_API_KEY";
+  }
+
+  let secretValue: string | undefined;
+  if (inferredSecretName) {
+    const val = env[inferredSecretName];
+    if (typeof val === "string" && val.trim().length > 0) {
+      secretValue = val.trim();
+    } else if (authSecretName || placeholderMatch) {
+      return {
+        resolvedUrl: rawUrl,
+        templateUrl: rawUrl,
+        secretKeyName: inferredSecretName,
+        error: `Worker secret '${inferredSecretName}' not found in environment.`,
+      };
+    }
+  }
+
+  let resolvedUrl = rawUrl;
+  let templateUrl = rawUrl;
+
+  if (secretValue && inferredSecretName) {
+    // If the user passed the literal secret in the URL from local config, scrub it for storage
+    if (rawUrl.includes(secretValue)) {
+      templateUrl = rawUrl.replaceAll(secretValue, `YOUR_${inferredSecretName}`);
+    }
+    // Replace placeholder tokens with the actual secret value for upstream fetch
+    resolvedUrl = templateUrl
+      .replaceAll(`YOUR_${inferredSecretName}`, encodeURIComponent(secretValue))
+      .replaceAll(`\${${inferredSecretName}}`, encodeURIComponent(secretValue))
+      .replaceAll(`{${inferredSecretName}}`, encodeURIComponent(secretValue));
+  }
+
+  // Only attach Authorization Bearer header if the secret wasn't already embedded in the URL path
+  const isEmbeddedInUrl = secretValue
+    ? resolvedUrl.includes(encodeURIComponent(secretValue))
+    : false;
+
+  return {
+    resolvedUrl,
+    templateUrl,
+    secretKeyName: inferredSecretName,
+    bearerToken: !isEmbeddedInUrl ? secretValue : undefined,
+    secretValue,
+  };
+}
+
+/**
+ * Scrubs any occurrence of the raw secret from strings (logs, error messages, URLs).
+ * (PRD Section 5.2 item 4 & 7)
+ */
+export function redactSecretFromText(
+  text: string,
+  secretValue?: string
+): string {
+  if (!text || !secretValue || typeof secretValue !== "string" || secretValue.length < 4) {
+    return text;
+  }
+  return text
+    .replaceAll(secretValue, "[REDACTED]")
+    .replaceAll(encodeURIComponent(secretValue), "[REDACTED]");
+}
+
+/**
+ * Parses Streamable HTTP responses handling both application/json and text/event-stream (SSE).
+ * (PRD Section 5.3)
+ */
+export function parseMcpResponseText(
+  rawText: string,
+  contentType = "",
+  expectedId?: string | number
+): any {
+  const isSSE =
+    contentType.toLowerCase().includes("text/event-stream") ||
+    rawText.startsWith("data:") ||
+    rawText.startsWith("event:") ||
+    rawText.includes("\ndata:");
+
+  if (isSSE) {
+    const lines = rawText.split("\n");
+    let candidateJson: any = null;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("data:")) {
+        const dataStr = trimmed.slice(5).trim();
+        if (dataStr && dataStr !== "[DONE]") {
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (expectedId !== undefined && parsed?.id === expectedId) {
+              return parsed;
+            }
+            if (parsed && (parsed.result || parsed.error || parsed.jsonrpc)) {
+              candidateJson = parsed;
+            }
+          } catch {
+            // Ignore non-JSON SSE frames
+          }
+        }
+      }
+    }
+    if (candidateJson) {
+      return candidateJson;
+    }
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return {
+      _rawText: rawText,
+      error: {
+        code: -32700,
+        message: "Failed to parse JSON response from upstream MCP server.",
+      },
+    };
+  }
 }

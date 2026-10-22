@@ -6,8 +6,11 @@ import {
   truncateResult,
   Executor,
 } from "@cloudflare/codemode";
+
+export type { CodemodeRuntimeHandle };
 import { BrowserRunConnector } from "./connectors/browser-connector.js";
 import { SpikeMcpConnector } from "./connectors/spike-mcp-connector.js";
+import { SERPAPI_DEFAULT_SERVER } from "./meta-mcp.js";
 import { Env, SessionState, ToolApprovalPolicy, WorkerLoaderBinding } from "./types.js";
 import { DatabaseSync } from "node:sqlite";
 import vm from "node:vm";
@@ -259,7 +262,17 @@ export function createSpikeCodemodeRuntime(
     handlers: options?.browserHandlers,
   });
 
-  const mcpConnectors = Object.values(sessionState.mountedServers || {}).map(
+  const mountedServers: Record<string, any> = {
+    ...(sessionState.mountedServers || {}),
+  };
+  if (env.SERPAPI_API_KEY && !mountedServers["serpapi"]) {
+    mountedServers["serpapi"] = {
+      ...SERPAPI_DEFAULT_SERVER,
+      mountedAt: Date.now(),
+    };
+  }
+
+  const mcpConnectors = Object.values(mountedServers).map(
     (server) =>
       new SpikeMcpConnector(activeCtx, env, server, {
         allowLocalhost: options?.allowLocalhost,
