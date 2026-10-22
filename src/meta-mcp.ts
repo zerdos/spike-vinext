@@ -41,7 +41,7 @@ export const META_MCP_TOOLS = [
           url: {
             type: "string",
             description:
-              "Direct HTTPS MCP endpoint URL (e.g., 'https://mcp.spike.land/mcp' or 'https://api.example.com/mcp').",
+              "Direct HTTPS MCP endpoint URL (e.g., 'https://spike.land/mcp' or 'https://api.example.com/mcp').",
           },
           namespace: {
             type: "string",

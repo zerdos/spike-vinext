@@ -959,7 +959,7 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
 
     it("exposes Browser Run tools in workers/easy-mcp-gateway", async () => {
       const configRes = await easyMcpGatewayWorker.fetch(
-        new Request("https://mcp.spike.land/mcp", {
+        new Request("https://spike.land/mcp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -981,7 +981,7 @@ describe("Cloudflare Browser Run Engine, Worker & MCP Gateway Integration", () =
       expect(disclosed).toHaveLength(18);
 
       const execRes = await easyMcpGatewayWorker.fetch(
-        new Request("https://mcp.spike.land/mcp", {
+        new Request("https://spike.land/mcp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

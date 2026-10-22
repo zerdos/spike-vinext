@@ -38,7 +38,7 @@ wrangler deploy
 
 ### Claude Code:
 ```bash
-claude mcp add spike https://mcp.spike.land/mcp
+claude mcp add spike https://spike.land/mcp
 ```
 
 ### Cursor (`.cursor/mcp.json`):
@@ -46,7 +46,7 @@ claude mcp add spike https://mcp.spike.land/mcp
 {
   "mcpServers": {
     "spike-land": {
-      "url": "https://mcp.spike.land/mcp"
+      "url": "https://spike.land/mcp"
     }
   }
 }

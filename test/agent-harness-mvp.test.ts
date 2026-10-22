@@ -87,11 +87,11 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
     });
 
     it("prevents recursive self-mounting of internal Spike Land gateway", () => {
-      const recursionCheck = validateUpstreamUrl("https://mcp.spike.land/api/mcp");
+      const recursionCheck = validateUpstreamUrl("https://spike.land/api/mcp");
       expect(recursionCheck.valid).toBe(false);
       expect(recursionCheck.error).toContain("Recursion Protection");
 
-      const nonRecursiveCheck = validateUpstreamUrl("https://mcp.spike.land/mcp");
+      const nonRecursiveCheck = validateUpstreamUrl("https://spike.land/mcp");
       expect(nonRecursiveCheck.valid).toBe(true);
     });
 
@@ -135,7 +135,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
       const sessionState: SessionState = { sessionId: "sess_ac2_test", mountedServers: {} };
       const output = await mountMcpServer(
         {
-          url: "https://mcp.spike.land/mcp",
+          url: "https://spike.land/mcp",
           namespace: "huge_srv",
         },
         env,
@@ -168,7 +168,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
       // Raw token passed in authSecretName
       const result = await mountMcpServer(
         {
-          url: "https://mcp.spike.land/mcp",
+          url: "https://spike.land/mcp",
           namespace: "gh",
           authSecretName: rawSecret,
         },
@@ -474,7 +474,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
                 function: {
                   name: "mount_mcp_server",
                   arguments: JSON.stringify({
-                    url: "https://mcp.spike.land/mcp",
+                    url: "https://spike.land/mcp",
                     namespace: "pg",
                   }),
                 },
@@ -798,7 +798,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
 
       const res = await mountMcpServer(
         {
-          url: "https://mcp.spike.land/mcp",
+          url: "https://spike.land/mcp",
           namespace: "test_srv",
           authSecretName: "NON_EXISTENT_KEY",
         },

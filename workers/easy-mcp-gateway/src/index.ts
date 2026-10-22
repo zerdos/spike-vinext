@@ -9,7 +9,7 @@ export interface Env {
 }
 
 const SUPPORTED_VERSIONS = ["2026-07-28", "2025-11-25", "2024-11-05"];
-const CANONICAL_URI = "https://mcp.spike.land/mcp";
+const CANONICAL_URI = "https://spike.land/mcp";
 const HANDLE_SECRET = "spk_edge_hmac_secret_2026_07_28_v2";
 
 function signPayload(str: string): string {

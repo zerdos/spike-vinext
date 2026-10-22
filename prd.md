@@ -82,7 +82,7 @@ Intercepts an upstream MCP server's catalog and caches it in Cloudflare KV.
   "properties": {
     "url": {
       "type": "string",
-      "description": "Direct HTTPS MCP endpoint URL (e.g., 'https://mcp.spike.land/mcp' or 'https://api.example.com/mcp')."
+      "description": "Direct HTTPS MCP endpoint URL (e.g., 'https://spike.land/mcp' or 'https://api.example.com/mcp')."
     },
     "namespace": {
       "type": "string",
