@@ -4,6 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.29.2",
   "dependencies": {
+    "@cloudflare/codemode": "^0.5.5",
     "@cloudflare/workers-response-store": "^1.1.0",
     "@radix-ui/react-slot": "^1.5.0",
     "@vinext/cloudflare": "^1.1.0",
@@ -11,6 +12,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.56.0",
+    "marked": "^18.1.1",
     "react": "latest",
     "react-dom": "latest",
     "react-server-dom-webpack": "^19.3.0",

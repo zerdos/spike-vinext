@@ -333,4 +333,153 @@ describe("ChatPage UI (/chat)", () => {
       expect(screen.getByText(/Spike Land Agent Harness/i)).toBeInTheDocument();
     });
   });
+
+  it("displays formatted md output when agent returns an md file response in a code block", async () => {
+    const mdFileResponse =
+      "Here is the requested README.md documentation:\n\n```markdown:README.md\n# Spike Land Architecture\n\nHigh-performance Meta-MCP Gateway.\n\n## Features\n- Dynamic tool mounting\n- Position-zero caching\n```";
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/api/auth/session")) {
+        return new Response(
+          JSON.stringify({
+            authenticated: true,
+            user: {
+              id: "usr_cust_123",
+              email: "alex@example.com",
+              name: "Alex Customer",
+              role: "customer",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (url.includes("/api/chat")) {
+        return new Response(
+          JSON.stringify({
+            sessionId: "sess_md_test",
+            response: mdFileResponse,
+            messages: [],
+            turns: 1,
+            toolsUsed: ["browser_markdown"],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response("Not found", { status: 404 });
+    });
+
+    const { container } = render(<ChatPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("alex@example.com")).toBeInTheDocument();
+    });
+
+    const textarea = screen.getByRole("textbox", { name: /chat input message/i });
+    fireEvent.change(textarea, { target: { value: "Show me README.md" } });
+    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+
+    // Wait for the formatted response to be rendered
+    await waitFor(() => {
+      expect(screen.getByText("README.md")).toBeInTheDocument();
+      expect(screen.getByText("md file")).toBeInTheDocument();
+    });
+
+    // Verify formatted headings and list items are rendered inside the formatted output
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Spike Land Architecture" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Features" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Dynamic tool mounting")).toBeInTheDocument();
+    expect(screen.getByText("Position-zero caching")).toBeInTheDocument();
+
+    // Verify the Formatted / Raw toggle is available and functional
+    const rawBtn = screen.getByRole("button", { name: /view raw markdown/i });
+    const formattedBtn = screen.getByRole("button", { name: /view formatted markdown/i });
+    expect(rawBtn).toBeInTheDocument();
+    expect(formattedBtn).toBeInTheDocument();
+
+    // Switch to Raw view
+    fireEvent.click(rawBtn);
+    expect(container.querySelector("code")?.textContent).toContain(
+      "# Spike Land Architecture"
+    );
+
+    // Switch back to Formatted view
+    fireEvent.click(formattedBtn);
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Spike Land Architecture" })
+    ).toBeInTheDocument();
+  });
+
+  it("displays formatted md output when agent returns a raw markdown response", async () => {
+    const rawMdResponse = `# Executive Summary
+
+This is **high priority** for the agent.
+
+| Metric | Target |
+|---|---|
+| Latency | <50ms |
+| Tokens | 0% overhead |
+
+> Zero-overhead prompt caching verified.`;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/api/auth/session")) {
+        return new Response(
+          JSON.stringify({
+            authenticated: true,
+            user: {
+              id: "usr_cust_123",
+              email: "alex@example.com",
+              name: "Alex Customer",
+              role: "customer",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (url.includes("/api/chat")) {
+        return new Response(
+          JSON.stringify({
+            sessionId: "sess_raw_md",
+            response: rawMdResponse,
+            messages: [],
+            turns: 1,
+            toolsUsed: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response("Not found", { status: 404 });
+    });
+
+    render(<ChatPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("alex@example.com")).toBeInTheDocument();
+    });
+
+    const textarea = screen.getByRole("textbox", { name: /chat input message/i });
+    fireEvent.change(textarea, { target: { value: "Summarize metrics" } });
+    fireEvent.click(screen.getByRole("button", { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Executive Summary" })
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("high priority")).toHaveClass("font-bold");
+    expect(screen.getByText("Metric")).toBeInTheDocument();
+    expect(screen.getByText("<50ms")).toBeInTheDocument();
+    expect(screen.getByText("Zero-overhead prompt caching verified.")).toBeInTheDocument();
+  });
 });

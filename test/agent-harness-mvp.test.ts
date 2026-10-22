@@ -551,7 +551,16 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.status).toBe("healthy");
-      expect(data.tools).toEqual(["mount_mcp_server", "discover_tools", "run_tool"]);
+      expect(data.tools).toEqual([
+        "mount_mcp_server",
+        "discover_tools",
+        "run_tool",
+        "codemode",
+        "save_codemode_snippet",
+        "list_pending_executions",
+        "resolve_execution_approval",
+        "rollback_execution",
+      ]);
     });
 
     it("rejects non-POST requests to /chat", async () => {

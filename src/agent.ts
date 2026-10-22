@@ -12,6 +12,8 @@ import {
   LLMCompletionHandler,
   SessionState,
   ToolCall,
+  ToolApprovalPolicy,
+  WorkerLoaderBinding,
 } from "./types.js";
 import {
   META_MCP_TOOLS,
@@ -25,19 +27,32 @@ import {
   getInternalNativeTools,
   getDefaultNativeHandlers,
 } from "./native-tools.js";
+import {
+  createSpikeCodemodeRuntime,
+  CodemodeRuntimeHandle,
+} from "./codemode-runtime.js";
+import { Executor } from "@cloudflare/codemode";
 
 export const MAX_LOOP_STEPS = 5;
 
-export const SYSTEM_PROMPT = `You are a helpful AI assistant operating in a Cloudflare Worker environment with Spike Land Meta-MCP capabilities.
-You have access to 3 Meta-MCP gateway tools to dynamically connect to and execute tools on demand:
-1. discover_tools: Search for tools and get their full input parameter schemas. Built-in tools for web browsing, scraping, content extraction, and markdown conversion (under the 'browser' namespace) are already available immediately!
-2. run_tool: Execute tools using namespaced names (e.g. 'browser.markdown', 'browser.content', 'browser.scrape', or 'pg.describe_table').
-3. mount_mcp_server: Mount remote HTTP MCP servers into your session when connecting to an external service or when the user provides an MCP server URL. (Canonical Browser MCP: 'https://spike-browser-run-mcp.spikeland.workers.dev/mcp').
+export const SYSTEM_PROMPT = `You are a helpful AI assistant operating in a Cloudflare Worker environment with Spike Land Meta-MCP and Durable Code Mode capabilities.
+You have access to 8 Meta-MCP & Durable Code Mode tools:
+1. discover_tools: Search tools and saved snippets with format "json_schema" or compact "typescript" signatures. Built-in tools for web browsing, scraping, content extraction, and markdown (under 'browser') are available immediately!
+2. run_tool: Direct execution for simple, single-step tool calls (e.g. 'browser.markdown').
+3. mount_mcp_server: Mount remote HTTP MCP servers into your session (e.g., PostgreSQL, GitHub, Linear).
+4. codemode: Primary orchestration engine! Write and execute an async JavaScript/TypeScript program in an isolated V8 sandbox (\`async () => { ... }\`) to orchestrate multiple tools, loop, filter intermediate payloads in memory, query connectors (e.g. \`await browser.markdown(...)\`, \`await pg.query(...)\`), or use in-sandbox discovery (\`await codemode.search(...)\`, \`await codemode.describe(...)\`, \`await codemode.run(...)\`).
+5. save_codemode_snippet: Save a successful codemode routine into durable SQLite memory for instant future reuse.
+6. list_pending_executions: Check paused executions awaiting human approval.
+7. resolve_execution_approval: Resume ('approve') or cancel ('reject') a paused execution.
+8. rollback_execution: Undo side effects of an execution via connector compensation logic.
 
-When asked to browse the web, read a webpage, or fetch live news from a URL:
-- Always call discover_tools first (e.g. { query: "browser" } or { query: "markdown" }) to inspect available tools and parameter schemas.
-- Then call run_tool with the appropriate namespaced tool name (e.g. 'browser.markdown' with arguments: { url: "https://..." }).
-- Only call mount_mcp_server if you need an external remote MCP server not already provided.
+Tool Selection Guidelines:
+- Use \`run_tool\` for simple, 1-step atomic tool calls (e.g. fetching markdown from a single URL).
+- Use \`codemode\` whenever a task requires:
+  * Chaining 2 or more tools together (e.g. scrape a page and write to database or issue tracker).
+  * Filtering, mapping, or transforming intermediate data before returning it or passing it to the next tool (keeps chat context small and fast).
+  * Branching or conditional logic (e.g. if price > X, create alert).
+  * Calling a saved procedural routine (\`await codemode.run(...)\`).
 Never ask the user for raw API keys; reference them using environment secret names if required.`;
 
 export const DEFAULT_CHAT_MODEL = "deepseek/deepseek-v4.1-flash";
@@ -167,6 +182,16 @@ export interface AgentLoopOptions {
   fetchFn?: typeof fetch;
   maxSteps?: number;
   nativeHandlers?: Record<string, (args: any) => Promise<any> | any>;
+  codemodeRuntime?: CodemodeRuntimeHandle;
+  durableObjectState?: any;
+  approvalPolicy?: ToolApprovalPolicy;
+  revertHandler?: (
+    toolName: string,
+    args: unknown,
+    result: unknown
+  ) => Promise<void> | void;
+  loader?: WorkerLoaderBinding;
+  executor?: Executor;
 }
 
 /**
@@ -197,6 +222,24 @@ export async function executeAgentLoop(
     ...defaultHandlers,
     ...options?.nativeHandlers,
   };
+
+  // 1c. Initialize or resolve Durable Codemode Runtime for this session
+  const codemodeRuntime: CodemodeRuntimeHandle =
+    options?.codemodeRuntime ??
+    createSpikeCodemodeRuntime(
+      options?.durableObjectState,
+      env,
+      sessionState,
+      {
+        allowLocalhost: options?.allowLocalhost,
+        fetchFn: options?.fetchFn,
+        browserHandlers: combinedHandlers,
+        approvalPolicy: options?.approvalPolicy,
+        revertHandler: options?.revertHandler,
+        loader: options?.loader,
+        executor: options?.executor,
+      }
+    );
 
   // 2. Prepare conversation messages
   const messages: ChatMessage[] = [];
@@ -267,7 +310,8 @@ export async function executeAgentLoop(
           }
         );
       } else if (toolName === "discover_tools") {
-        toolResult = discoverTools(parsedArgs, sessionState, nativeTools);
+        const snippets = await codemodeRuntime.snippets().catch(() => []);
+        toolResult = discoverTools(parsedArgs, sessionState, nativeTools, snippets);
       } else if (toolName === "run_tool") {
         toolResult = await runTool(
           parsedArgs,
@@ -279,11 +323,120 @@ export async function executeAgentLoop(
             nativeHandlers: combinedHandlers,
           }
         );
+      } else if (toolName === "codemode") {
+        try {
+          const res = await codemodeRuntime.execute({ code: parsedArgs.code });
+          if (res.status === "paused") {
+            toolResult = {
+              status: "pending_approval",
+              executionId: res.executionId,
+              pending: res.pending,
+              calls: res.calls,
+              message: "Execution paused awaiting human approval for sensitive mutation.",
+            };
+          } else if (res.status === "error") {
+            toolResult = {
+              status: "error",
+              executionId: res.executionId,
+              error: res.error,
+              logs: res.logs,
+              calls: res.calls,
+            };
+          } else {
+            toolResult = {
+              status: "completed",
+              executionId: res.executionId,
+              result: res.result,
+              logs: res.logs,
+              calls: res.calls,
+            };
+          }
+        } catch (err: any) {
+          toolResult = {
+            status: "error",
+            error: err?.message || String(err),
+          };
+        }
+      } else if (toolName === "save_codemode_snippet") {
+        try {
+          let execId = parsedArgs.executionId;
+          if (!execId && parsedArgs.code) {
+            const tempRun = await codemodeRuntime.execute({ code: parsedArgs.code });
+            execId = tempRun.executionId;
+          }
+          if (!execId) {
+            toolResult = {
+              error: "Missing required 'executionId' or 'code' to save snippet from.",
+            };
+          } else {
+            const snippet = await codemodeRuntime.saveSnippet(parsedArgs.name, {
+              executionId: execId,
+              description: parsedArgs.description,
+              inputSchema: parsedArgs.inputSchema,
+            });
+            toolResult = {
+              status: "saved",
+              snippet,
+            };
+          }
+        } catch (err: any) {
+          toolResult = {
+            error: err?.message || String(err),
+          };
+        }
+      } else if (toolName === "list_pending_executions") {
+        try {
+          const pending = await codemodeRuntime.pending(parsedArgs.executionId);
+          toolResult = {
+            pending,
+          };
+        } catch (err: any) {
+          toolResult = {
+            error: err?.message || String(err),
+          };
+        }
+      } else if (toolName === "resolve_execution_approval") {
+        try {
+          if (parsedArgs.decision === "approve") {
+            const approved = await codemodeRuntime.approve({ executionId: parsedArgs.executionId });
+            toolResult = {
+              status: approved.status,
+              result: (approved as any).result,
+              executionId: approved.executionId,
+            };
+          } else {
+            const rejected = await codemodeRuntime.reject({
+              executionId: parsedArgs.executionId,
+              seq: parsedArgs.seq ?? 1,
+            });
+            toolResult = {
+              status: "rejected",
+              success: rejected,
+              executionId: parsedArgs.executionId,
+            };
+          }
+        } catch (err: any) {
+          toolResult = {
+            error: err?.message || String(err),
+          };
+        }
+      } else if (toolName === "rollback_execution") {
+        try {
+          await codemodeRuntime.rollback({ executionId: parsedArgs.executionId });
+          toolResult = {
+            status: "rolled_back",
+            executionId: parsedArgs.executionId,
+          };
+        } catch (err: any) {
+          toolResult = {
+            error: err?.message || String(err),
+          };
+        }
       } else {
         toolResult = {
           error: {
             code: -32601,
-            message: `Unknown gateway tool '${toolName}'. Available tools: mount_mcp_server, discover_tools, run_tool.`,
+            message: `Unknown gateway tool '${toolName}'. Available tools: mount_mcp_server, discover_tools, run_tool, codemode, save_codemode_snippet, list_pending_executions, resolve_execution_approval, rollback_execution.`,
           },
         };
       }

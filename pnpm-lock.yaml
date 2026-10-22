@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@cloudflare/codemode':
+        specifier: ^0.5.5
+        version: 0.5.5(zod@4.6.5)
       '@cloudflare/workers-response-store':
         specifier: ^1.1.0
         version: 1.1.0
@@ -29,6 +32,9 @@ importers:
       lucide-react:
         specifier: ^1.56.0
         version: 1.56.0(@types/react@19.3.0)(react@19.3.0)
+      marked:
+        specifier: ^18.1.1
+        version: 18.1.1
       react:
         specifier: latest
         version: 19.3.0
@@ -129,6 +135,23 @@ packages:
 
   '@cloudflare/build-output-utils@0.9.0':
     resolution: {integrity: sha512-2FMA4XnVj5u7LYJE9j3uSJ+cU4Zn994WiyEOVhbMV7wh7pcwi1rIYafH6kiWaa+Y3Bjvf0ow7JgoDaO05qYVPg==}
+
+  '@cloudflare/codemode@0.5.5':
+    resolution: {integrity: sha512-MQMOisCSXpXO0+cHBRshK2mzzEx3lnm6jk/R8MS3G1BmKnrmaSf7HxNBh058ZGBVzp++DJmWOqaCUJjVTCZJKA==}
+    peerDependencies:
+      '@modelcontextprotocol/sdk': ^1.25.0
+      '@tanstack/ai': '>=0.8.0 <1.0.0'
+      ai: ^6.0.0 || ^7.0.0
+      zod: ^4.0.0
+    peerDependenciesMeta:
+      '@modelcontextprotocol/sdk':
+        optional: true
+      '@tanstack/ai':
+        optional: true
+      ai:
+        optional: true
+      zod:
+        optional: true
 
   '@cloudflare/codemods@0.4.2':
     resolution: {integrity: sha512-oHvDlfhQEIkdf8Mvz4SMgk+6evVlu9rrntRv5KQfRK3H4RkXUmawzYQ7+zdBG0wiWdp/Ku/PqNMWVYAs8T4jrQ==}
@@ -1473,6 +1496,11 @@ packages:
   magic-string@1.4.3:
     resolution: {integrity: sha512-z12OxmaPGE0F4xlpGdjuAUckipLpQlTAuAmyGhNoD7ODpYUzvDfvtxUbjM/jwznyP178oju/KDdyi220wNJ0RQ==}
 
+  marked@18.1.1:
+    resolution: {integrity: sha512-zEGgrtUG8crk+TrMacJSVABU4DYDDkS8uqgU3ohrn/2fW9C2AEfUrO3m6IhpIpQpl7YcVpiXXC9cSMWDANT3dg==}
+    engines: {node: '>= 20'}
+    hasBin: true
+
   mdn-data@2.27.1:
     resolution: {integrity: sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ==}
 
@@ -2040,6 +2068,13 @@ snapshots:
   '@cloudflare/build-output-utils@0.9.0':
     dependencies:
       '@cloudflare/config': 0.24.1
+
+  '@cloudflare/codemode@0.5.5(zod@4.6.5)':
+    dependencies:
+      '@types/json-schema': 7.0.15
+      acorn: 8.19.0
+    optionalDependencies:
+      zod: 4.6.5
 
   '@cloudflare/codemods@0.4.2': {}
 
@@ -3087,6 +3122,8 @@ snapshots:
   magic-string@1.4.3:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  marked@18.1.1: {}
 
   mdn-data@2.27.1: {}
 

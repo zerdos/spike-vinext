@@ -32,6 +32,7 @@ export interface MountedToolDefinition {
   namespace: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  typeDefinition?: string;
 }
 
 export interface MountedServer {
@@ -64,11 +65,40 @@ export interface MountMcpServerOutput {
 
 export interface DiscoverToolsInput {
   query: string;
+  format?: "json_schema" | "typescript";
 }
 
 export interface RunToolInput {
   tool_name: string;
   arguments: Record<string, unknown>;
+}
+
+export interface CodemodeToolInput {
+  code: string;
+  intent?: string;
+}
+
+export interface SaveCodemodeSnippetInput {
+  name: string;
+  description: string;
+  executionId?: string;
+  code?: string;
+  inputSchema?: Record<string, unknown>;
+}
+
+export interface ListPendingExecutionsInput {
+  executionId?: string;
+}
+
+export interface ResolveExecutionApprovalInput {
+  executionId: string;
+  decision: "approve" | "reject";
+  seq?: number;
+  reason?: string;
+}
+
+export interface RollbackExecutionInput {
+  executionId: string;
 }
 
 // LLM & Agent Loop Types
@@ -91,7 +121,7 @@ export interface ToolCall {
 
 export interface ChatRequest {
   sessionId?: string;
-  messages: ChatMessage[];
+  messages?: ChatMessage[];
   message?: string;
   model?: string;
 }
@@ -120,3 +150,6 @@ export type LLMCompletionHandler = (
   content: string | null;
   tool_calls?: ToolCall[];
 }>;
+
+export * from "./types/codemode.js";
+

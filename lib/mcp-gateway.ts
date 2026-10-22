@@ -23,6 +23,16 @@ import {
   searchMountedToolsInSession,
   executeProxiedMountedTool,
 } from "./mcp-runtime-mounting";
+import { createSpikeCodemodeRuntime, getCachedCodemodeRuntime } from "@/src/codemode-runtime";
+import { getSessionState } from "@/src/meta-mcp";
+
+export const CODEMODE_TOOL_NAMES = [
+  "codemode",
+  "save_codemode_snippet",
+  "list_pending_executions",
+  "resolve_execution_approval",
+  "rollback_execution",
+] as const;
 
 export {
   BROWSER_RUN_TOOLS,
@@ -1945,6 +1955,160 @@ export const BROKER_2026_TOOLS: ToolDefinition[] = [
   },
 ];
 
+async function getRuntimeForMcp(ctx?: RequestContext) {
+  const sessionId = ctx?.sessionId || "default-session";
+  const cached = getCachedCodemodeRuntime(sessionId);
+  if (cached) return cached;
+  const env = (ctx?.browserEnv || {}) as any;
+  const sessionState = await getSessionState(sessionId, env);
+  return createSpikeCodemodeRuntime(null, env, sessionState);
+}
+
+export const CODEMODE_TOOLS: ToolDefinition[] = [
+  {
+    name: "codemode",
+    category: "Code Mode",
+    tier: "free",
+    riskTier: "elevated-write",
+    annotations: { readOnlyHint: false, idempotentHint: false },
+    uiResourceUri: "ui://spike-land/codemode/execute",
+    description:
+      "Execute a JavaScript/TypeScript async program inside an isolated sandbox to orchestrate multiple tools, filter intermediate data, run conditional logic, or invoke saved snippets.",
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        code: {
+          type: "string",
+          description: "Async arrow function expression to execute in sandbox, e.g. async () => { ... }",
+        },
+        intent: {
+          type: "string",
+          description: "Summary of code intent for audit trail",
+        },
+      },
+      required: ["code"],
+    },
+    handler: async (args, ctx) => {
+      const runtime = await getRuntimeForMcp(ctx);
+      const res = await runtime.execute({ code: String(args.code) });
+      return res;
+    },
+  },
+  {
+    name: "save_codemode_snippet",
+    category: "Code Mode",
+    tier: "free",
+    riskTier: "low-readonly",
+    annotations: { readOnlyHint: false },
+    uiResourceUri: "ui://spike-land/codemode/snippet",
+    description:
+      "Promote a working codemode execution or routine into a durable, reusable tool stored in SQLite.",
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Unique name for the snippet" },
+        description: { type: "string", description: "Snippet description" },
+        executionId: { type: "string", description: "Optional execution ID to save from" },
+        code: { type: "string", description: "Optional async function code" },
+        inputSchema: { type: "object", description: "Optional JSON Schema for snippet args" },
+      },
+      required: ["name", "description"],
+    },
+    handler: async (args, ctx) => {
+      const runtime = await getRuntimeForMcp(ctx);
+      let execId = args.executionId;
+      if (!execId && args.code) {
+        const temp = await runtime.execute({ code: String(args.code) });
+        execId = temp.executionId;
+      }
+      if (!execId) throw new Error("Missing required executionId or code to save snippet from.");
+      return await runtime.saveSnippet(String(args.name), {
+        executionId: String(execId),
+        description: String(args.description),
+        inputSchema: args.inputSchema as any,
+      });
+    },
+  },
+  {
+    name: "list_pending_executions",
+    category: "Code Mode",
+    tier: "free",
+    riskTier: "low-readonly",
+    annotations: { readOnlyHint: true },
+    uiResourceUri: "ui://spike-land/codemode/pending",
+    description: "Inspect all paused Code Mode executions awaiting human confirmation or review.",
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        executionId: { type: "string", description: "Optional execution ID to filter by" },
+      },
+    },
+    handler: async (args, ctx) => {
+      const runtime = await getRuntimeForMcp(ctx);
+      return await runtime.pending(args?.executionId ? String(args.executionId) : undefined);
+    },
+  },
+  {
+    name: "resolve_execution_approval",
+    category: "Code Mode",
+    tier: "free",
+    riskTier: "critical-admin",
+    annotations: { readOnlyHint: false },
+    uiResourceUri: "ui://spike-land/codemode/approval",
+    description:
+      "Resume or abort a paused Code Mode execution after human confirmation. 'approve' replays prior steps from durable log and executes the paused step; 'reject' aborts it.",
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        executionId: { type: "string", description: "Execution ID" },
+        decision: { type: "string", description: "'approve' to proceed or 'reject' to abort", enum: ["approve", "reject"] },
+        seq: { type: "number", description: "Step sequence number" },
+        reason: { type: "string", description: "Optional audit reason" },
+      },
+      required: ["executionId", "decision"],
+    },
+    handler: async (args, ctx) => {
+      const runtime = await getRuntimeForMcp(ctx);
+      if (args.decision === "approve") {
+        return await runtime.approve({ executionId: String(args.executionId) });
+      } else {
+        const success = await runtime.reject({
+          executionId: String(args.executionId),
+          seq: typeof args.seq === "number" ? args.seq : 1,
+        });
+        return { status: "rejected", success, executionId: args.executionId };
+      }
+    },
+  },
+  {
+    name: "rollback_execution",
+    category: "Code Mode",
+    tier: "free",
+    riskTier: "elevated-write",
+    annotations: { readOnlyHint: false },
+    uiResourceUri: "ui://spike-land/codemode/rollback",
+    description:
+      "Invoke compensation logic (revert) in reverse sequence order for any completed or partially failed execution.",
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        executionId: { type: "string", description: "Execution ID to roll back" },
+      },
+      required: ["executionId"],
+    },
+    handler: async (args, ctx) => {
+      const runtime = await getRuntimeForMcp(ctx);
+      await runtime.rollback({ executionId: String(args.executionId) });
+      return { status: "rolled_back", executionId: args.executionId };
+    },
+  },
+];
+
 // Initialize ALL_TOOLS catalogue
 function initializeCatalog() {
   // 1. Gateway tools
@@ -1969,6 +2133,10 @@ function initializeCatalog() {
   }
   // 4c. Runtime MCP Server Mounting tools (PRD Section 5.1)
   for (const t of RUNTIME_MOUNT_TOOLS) {
+    ALL_TOOLS[t.name] = t;
+  }
+  // 4d. Durable Code Mode tools
+  for (const t of CODEMODE_TOOLS) {
     ALL_TOOLS[t.name] = t;
   }
 
@@ -2083,23 +2251,30 @@ initializeCatalog();
 // Pattern C: URI-Scoped Virtual Gateway Resolver (/api/mcp/g/{gateway_slug})
 export function getVirtualGatewayTools(gatewaySlug: string): ToolDefinition[] {
   const slugLower = gatewaySlug.toLowerCase();
-  const matchedCat = MCP_CATEGORIES.find(
-    (c) =>
-      c.id.toLowerCase() === slugLower ||
-      c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slugLower ||
-      c.id.toLowerCase().includes(slugLower)
-  );
-
   const tools: ToolDefinition[] = [];
-  if (matchedCat) {
-    for (const t of matchedCat.tools) {
-      if (ALL_TOOLS[t.name]) {
-        tools.push(ALL_TOOLS[t.name]);
-      }
-    }
+
+  if (slugLower === "codemode") {
+    tools.push(...CODEMODE_TOOLS);
+  } else if (slugLower === "all") {
+    tools.push(...Object.values(ALL_TOOLS));
   } else {
-    // Fallback to Broker 2026 tools if slug is unknown
-    tools.push(...BROKER_2026_TOOLS);
+    const matchedCat = MCP_CATEGORIES.find(
+      (c) =>
+        c.id.toLowerCase() === slugLower ||
+        c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slugLower ||
+        c.id.toLowerCase().includes(slugLower)
+    );
+
+    if (matchedCat) {
+      for (const t of matchedCat.tools) {
+        if (ALL_TOOLS[t.name]) {
+          tools.push(ALL_TOOLS[t.name]);
+        }
+      }
+    } else {
+      // Fallback to Broker 2026 tools if slug is unknown
+      tools.push(...BROKER_2026_TOOLS);
+    }
   }
 
   // SEP-2549: Deterministic alphabetical ordering for Position-Zero LLM cache stability

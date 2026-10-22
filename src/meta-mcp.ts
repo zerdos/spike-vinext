@@ -26,8 +26,9 @@ export const SESSION_TTL_SECONDS = 86400; // 24 hours
 export const MAX_DISCOVERED_TOOLS = 3;
 export const MAX_DESCRIPTION_LENGTH = 300;
 
-// The 3 Gateway Tools exposed to LLM
+// The 8 Extended Tools exposed to LLM
 export const META_MCP_TOOLS = [
+  // Tier 1: Meta-MCP Gateway
   {
     type: "function" as const,
     function: {
@@ -63,14 +64,20 @@ export const META_MCP_TOOLS = [
     function: {
       name: "discover_tools",
       description:
-        "Searches cached tool descriptions and names in the current KV session and returns full JSON schemas for matching tools.",
+        "Searches cached tool descriptions, names, and saved snippets in the current session. Returns full JSON schemas or TypeScript signatures for matching tools.",
       parameters: {
         type: "object",
         properties: {
           query: {
             type: "string",
             description:
-              "Keywords or namespace prefix to search for (e.g., 'pg describe table').",
+              "Keywords or namespace prefix to search for (e.g., 'pg describe table', 'browser markdown').",
+          },
+          format: {
+            type: "string",
+            enum: ["json_schema", "typescript"],
+            description:
+              "Optional format: 'json_schema' (default) or 'typescript' for concise .d.ts type signatures to write codemode programs.",
           },
         },
         required: ["query"],
@@ -81,13 +88,13 @@ export const META_MCP_TOOLS = [
     type: "function" as const,
     function: {
       name: "run_tool",
-      description: "Executes a discovered tool by its namespaced name.",
+      description: "Executes a single discovered tool directly by its namespaced name (e.g. 'browser.markdown').",
       parameters: {
         type: "object",
         properties: {
           tool_name: {
             type: "string",
-            description: "Namespaced tool name (e.g., 'pg.describe_table').",
+            description: "Namespaced tool name (e.g., 'pg.describe_table', 'browser.markdown').",
           },
           arguments: {
             type: "object",
@@ -95,6 +102,145 @@ export const META_MCP_TOOLS = [
           },
         },
         required: ["tool_name", "arguments"],
+      },
+    },
+  },
+
+  // Tier 2: Durable Code Mode Execution & Composable Memory
+  {
+    type: "function" as const,
+    function: {
+      name: "codemode",
+      description:
+        "Execute a JavaScript/TypeScript async program inside an isolated sandbox to orchestrate multiple tools, filter intermediate data, run conditional logic, or invoke saved snippets. Inside the sandbox, call tools via global namespaces (e.g. `await browser.markdown({ url })`, `await pg.query({ sql })`) or use `await codemode.search({ query })`, `await codemode.describe({ target })`, and `await codemode.run({ name, args })`.",
+      parameters: {
+        type: "object",
+        properties: {
+          code: {
+            type: "string",
+            description:
+              "An async arrow function expression, e.g. `async () => { const md = await browser.markdown({ url: 'https://example.com' }); return md.slice(0, 500); }`",
+          },
+          intent: {
+            type: "string",
+            description:
+              "Short human-readable summary of what this code plan does (logged in the durable execution audit trail).",
+          },
+        },
+        required: ["code"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "save_codemode_snippet",
+      description:
+        "Promote a working codemode execution or routine into a durable, reusable tool stored in SQLite.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            pattern: "^[a-z0-9_]{2,32}$",
+            description:
+              "Unique identifier for the reusable snippet (e.g., 'audit_landing_page_seo').",
+          },
+          description: {
+            type: "string",
+            description:
+              "Clear description of what the snippet does and when future turns should call it.",
+          },
+          executionId: {
+            type: "string",
+            description:
+              "Optional ID of a completed codemode execution to promote directly into a snippet.",
+          },
+          code: {
+            type: "string",
+            description:
+              "Async function source code if creating or parameterizing the snippet directly.",
+          },
+          inputSchema: {
+            type: "object",
+            description:
+              "Optional JSON Schema describing the `args` object accepted by this snippet.",
+          },
+        },
+        required: ["name", "description"],
+      },
+    },
+  },
+
+  // Tier 3: Durable Governance, Approvals & Rollbacks
+  {
+    type: "function" as const,
+    function: {
+      name: "list_pending_executions",
+      description:
+        "Inspect all paused Code Mode executions awaiting human confirmation or review.",
+      parameters: {
+        type: "object",
+        properties: {
+          executionId: {
+            type: "string",
+            description: "Optional specific execution ID to filter by.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "resolve_execution_approval",
+      description:
+        "Resume or abort a paused Code Mode execution after human confirmation. 'approve' replays prior steps and executes the paused step; 'reject' terminates it.",
+      parameters: {
+        type: "object",
+        properties: {
+          executionId: {
+            type: "string",
+            description:
+              "The durable execution ID returned when the codemode run paused for approval.",
+          },
+          decision: {
+            type: "string",
+            enum: ["approve", "reject"],
+            description:
+              "'approve' replays prior steps from durable log and executes the paused step; 'reject' terminates the execution.",
+          },
+          seq: {
+            type: "number",
+            description:
+              "Sequence number of the pending step (required when decision is 'reject').",
+          },
+          reason: {
+            type: "string",
+            description:
+              "Optional audit note explaining why the execution was approved or rejected.",
+          },
+        },
+        required: ["executionId", "decision"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "rollback_execution",
+      description:
+        "Wraps compensation logic (revert) in reverse sequence order for any completed or partially failed execution whose connectors support state reversal.",
+      parameters: {
+        type: "object",
+        properties: {
+          executionId: {
+            type: "string",
+            description:
+              "The execution ID whose side effects should be compensated/reverted.",
+          },
+        },
+        required: ["executionId"],
       },
     },
   },
@@ -399,13 +545,37 @@ export async function mountMcpServer(
   };
 }
 
+export function schemaToTypeScriptType(schema: Record<string, unknown> | undefined): string {
+  if (!schema || typeof schema !== "object") return "any";
+  if (schema.type === "string") return "string";
+  if (schema.type === "number" || schema.type === "integer") return "number";
+  if (schema.type === "boolean") return "boolean";
+  if (schema.type === "array") {
+    const itemType = schemaToTypeScriptType(schema.items as Record<string, unknown>);
+    return `${itemType}[]`;
+  }
+  if (schema.type === "object" || schema.properties) {
+    const props = (schema.properties as Record<string, any>) || {};
+    const required = new Set((schema.required as string[]) || []);
+    const entries = Object.entries(props).map(([key, val]) => {
+      const isReq = required.has(key);
+      const propType = schemaToTypeScriptType(val);
+      return `${key}${isReq ? "" : "?"}: ${propType}`;
+    });
+    if (entries.length === 0) return "Record<string, unknown>";
+    return `{ ${entries.join("; ")} }`;
+  }
+  return "any";
+}
+
 /**
  * 6.2 Keyword Discovery (discover_tools)
  */
 export function discoverTools(
   input: DiscoverToolsInput,
   sessionState: SessionState,
-  nativeTools: MountedToolDefinition[] = []
+  nativeTools: MountedToolDefinition[] = [],
+  snippets: Array<{ name: string; description: string; inputSchema?: any }> = []
 ): MountedToolDefinition[] {
   const query = (input.query || "").trim().toLowerCase();
   if (!query) return [];
@@ -416,6 +586,17 @@ export function discoverTools(
   const allTools: MountedToolDefinition[] = [...nativeTools];
   for (const server of Object.values(sessionState.mountedServers || {})) {
     allTools.push(...server.tools);
+  }
+
+  // Include saved snippets
+  for (const snippet of snippets) {
+    allTools.push({
+      namespacedName: `codemode.${snippet.name}`,
+      upstreamName: snippet.name,
+      namespace: "codemode",
+      description: snippet.description,
+      inputSchema: (snippet.inputSchema as Record<string, unknown>) || { type: "object", properties: {} },
+    });
   }
 
   const scored: Array<{ tool: MountedToolDefinition; score: number }> = [];
@@ -454,8 +635,16 @@ export function discoverTools(
   // Sort descending by score
   scored.sort((a, b) => b.score - a.score);
 
-  // Return top 3 full JSON schemas
-  return scored.slice(0, MAX_DISCOVERED_TOOLS).map((s) => s.tool);
+  // Return top 3 full JSON schemas or TypeScript signatures
+  const results = scored.slice(0, MAX_DISCOVERED_TOOLS).map((s) => ({ ...s.tool }));
+
+  if (input.format === "typescript") {
+    for (const tool of results) {
+      tool.typeDefinition = `${tool.namespacedName}(args: ${schemaToTypeScriptType(tool.inputSchema)}): Promise<any>;`;
+    }
+  }
+
+  return results;
 }
 
 /**

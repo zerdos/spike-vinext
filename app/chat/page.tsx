@@ -74,83 +74,10 @@ const SUGGESTED_PROMPTS = [
   },
 ];
 
-function CodeBlock({ code, language }: { code: string; language?: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Ignore clipboard write failures
-    }
-  };
-
-  return (
-    <div className="my-2 rounded-md border-2 border-[#111315] bg-[#111315] text-[#F5F4F0] overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-[#1F2428] border-b border-[#30363D] text-[11px] font-mono">
-        <span className="text-[#C8C5BC] uppercase font-semibold">
-          {language || "code"}
-        </span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex items-center gap-1 text-[#C8C5BC] hover:text-[#F5F4F0] transition-colors"
-          aria-label="Copy code to clipboard"
-        >
-          {copied ? (
-            <>
-              <Check className="w-3.5 h-3.5 text-[#0D7A5F]" />
-              <span className="text-[#0D7A5F]">Copied</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-3.5 h-3.5" />
-              <span>Copy</span>
-            </>
-          )}
-        </button>
-      </div>
-      <pre className="p-3 overflow-x-auto text-xs font-mono leading-relaxed">
-        <code>{code}</code>
-      </pre>
-    </div>
-  );
-}
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 function FormattedContent({ content }: { content: string }) {
-  // Split content by fenced code blocks (```lang ... ```)
-  const segments = content.split(/(```[\s\S]*?```)/g);
-
-  return (
-    <div className="space-y-2 text-sm leading-relaxed break-words">
-      {segments.map((segment, idx) => {
-        if (segment.startsWith("```") && segment.endsWith("```")) {
-          const inner = segment.slice(3, -3);
-          const firstLineBreak = inner.indexOf("\n");
-          let lang = "";
-          let code = inner;
-          if (firstLineBreak !== -1) {
-            const firstLine = inner.slice(0, firstLineBreak).trim();
-            if (/^[a-z0-9_-]+$/i.test(firstLine)) {
-              lang = firstLine;
-              code = inner.slice(firstLineBreak + 1);
-            }
-          }
-          return <CodeBlock key={idx} code={code.trim()} language={lang} />;
-        }
-
-        if (!segment.trim()) return null;
-
-        return (
-          <p key={idx} className="whitespace-pre-wrap">
-            {segment}
-          </p>
-        );
-      })}
-    </div>
-  );
+  return <MarkdownRenderer content={content} />;
 }
 
 export default function ChatPage() {

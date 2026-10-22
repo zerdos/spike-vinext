@@ -1,4 +1,4 @@
-import { bindings, defineConfig, defineWorker, triggers } from "cf/config";
+import { bindings, defineConfig, defineWorker, exports, triggers } from "cf/config";
 import { createWorkersResponseStoreServiceBindingConfig } from "@vinext/cloudflare/cache/config";
 
 const responseStore = await createWorkersResponseStoreServiceBindingConfig({
@@ -26,6 +26,9 @@ export default defineConfig({
       triggers.fetch({ pattern: "spike.land/*", zone: "spike.land" }),
       triggers.fetch({ pattern: "www.spike.land/*", zone: "spike.land" }),
     ],
+    exports: {
+      CodemodeAgent: exports.durableObject({ storage: "sqlite" }),
+    },
     env: {
       ...responseStore.applicationWorker.env,
       ASSETS: bindings.assets(),
@@ -36,6 +39,11 @@ export default defineConfig({
       }),
       SESSION_KV: bindings.kv({
         id: "adf12f5b631b445086eb029abae41b24",
+      }),
+      LOADER: bindings.workerLoader(),
+      CODEMODE_AGENT: bindings.durableObject({
+        worker: "spike-vinext",
+        exportName: "CodemodeAgent",
       }),
     },
   }),

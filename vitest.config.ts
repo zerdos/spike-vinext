@@ -9,6 +9,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./test/setup.ts"],
     include: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    server: {
+      deps: {
+        inline: ["@cloudflare/codemode"],
+      },
+    },
   },
   resolve: {
     alias: {
