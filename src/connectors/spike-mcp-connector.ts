@@ -143,13 +143,20 @@ export class SpikeMcpConnector extends CodemodeConnector {
           // 3. Resolve Bearer Auth Secret on Host
           const headers: Record<string, string> = {
             "Content-Type": "application/json",
+            Accept: "application/json",
             "MCP-Protocol-Version": "2024-11-05",
+            ...((this.server as any).customHeaders || {}),
           };
+          if (!headers["Accept"]) {
+            headers["Accept"] = "application/json";
+          }
 
           if (this.server.authSecretName) {
             const secretVal = (this.env as any)[this.server.authSecretName];
             if (typeof secretVal === "string" && secretVal.length > 0) {
-              headers.Authorization = `Bearer ${secretVal}`;
+              headers.Authorization = secretVal.startsWith("Bearer ")
+                ? secretVal
+                : `Bearer ${secretVal}`;
             }
           }
 

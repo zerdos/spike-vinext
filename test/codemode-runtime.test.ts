@@ -335,4 +335,71 @@ describe("Durable Code Mode Runtime (AC1 - AC6)", () => {
       expect(data.hasSecret).toBe(false);
     }
   });
+
+  it("sends Accept: application/json header on MCP connector calls to prevent HTTP 406", async () => {
+    const ctx = createMockDurableObjectState();
+    const env: Env = {
+      SESSION_KV: undefined as any,
+      DB_SECRET: "my-token",
+    };
+
+    const sessionState: SessionState = {
+      sessionId: `test-sess-${crypto.randomUUID()}`,
+      mountedServers: {
+        api: {
+          namespace: "api",
+          url: "https://api-mcp.example.com/mcp",
+          authSecretName: "DB_SECRET",
+          tools: [
+            {
+              namespacedName: "api.get_data",
+              upstreamName: "get_data",
+              namespace: "api",
+              description: "Fetch data",
+              inputSchema: { type: "object", properties: {} },
+            },
+          ],
+          mountedAt: Date.now(),
+        },
+      },
+    };
+
+    let receivedHeaders: Record<string, string> = {};
+    const strictFetch = vi.fn().mockImplementation((url, init) => {
+      receivedHeaders = init.headers;
+      // Simulate strict server requiring Accept: application/json (returns HTTP 406 otherwise)
+      if (init.headers?.["Accept"] !== "application/json") {
+        return Promise.resolve(
+          new Response("Not Acceptable: Accept application/json required", { status: 406 })
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: { data: "success" },
+          })
+        )
+      );
+    });
+
+    const runtime = createSpikeCodemodeRuntime(ctx, env, sessionState, {
+      fetchFn: strictFetch as any,
+      allowLocalhost: true,
+      loader: new MockWorkerLoader(),
+    });
+
+    const code = `async () => {
+      return await api.get_data({});
+    }`;
+
+    const res = await runtime.execute({ code });
+    expect(res.status).toBe("completed");
+    if (res.status === "completed") {
+      expect(res.result).toEqual({ data: "success" });
+    }
+    expect(receivedHeaders["Accept"]).toBe("application/json");
+    expect(receivedHeaders["Authorization"]).toBe("Bearer my-token");
+  });
 });
