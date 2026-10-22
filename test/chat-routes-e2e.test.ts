@@ -90,4 +90,14 @@ describe("Chat API Routes & Health End-to-End (/api/chat, /health, /api/health)"
     const data = await res.json();
     expect(data.error).toBe("Missing required 'messages' array or 'message' string.");
   });
+
+  it("resolves GEMINI_API_KEY from .dev.vars if process.env has no key", async () => {
+    delete (process.env as Record<string, string | undefined>).GEMINI_API_KEY;
+    delete (process.env as Record<string, string | undefined>).LLM_API_KEY;
+    const req = new Request("https://spike.land/api/health", { method: "GET" });
+    const res = await apiHealthGet(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.provider).toBe("gemini");
+  });
 });

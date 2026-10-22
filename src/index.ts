@@ -8,6 +8,8 @@ import { Env, ChatRequest } from "./types.js";
 import { executeAgentLoop } from "./agent.js";
 import { META_MCP_TOOLS } from "./meta-mcp.js";
 import { env as cfEnv } from "cloudflare:workers";
+import fs from "node:fs";
+import path from "node:path";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -15,8 +17,37 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Session-Id",
 };
 
+function loadDevVars(): Partial<Env> {
+  try {
+    if (typeof process !== "undefined" && typeof process.cwd === "function") {
+      const devVarsPath = path.resolve(process.cwd(), ".dev.vars");
+      if (fs.existsSync(devVarsPath)) {
+        const content = fs.readFileSync(devVarsPath, "utf-8");
+        const parsed: Record<string, string> = {};
+        for (const line of content.split("\n")) {
+          const trimmed = line.trim();
+          if (trimmed && !trimmed.startsWith("#")) {
+            const idx = trimmed.indexOf("=");
+            if (idx > 0) {
+              const k = trimmed.slice(0, idx).trim();
+              const v = trimmed.slice(idx + 1).trim();
+              parsed[k] = v;
+            }
+          }
+        }
+        return parsed as Partial<Env>;
+      }
+    }
+  } catch {
+    // Ignored in non-filesystem or edge environments
+  }
+  return {};
+}
+
 export function resolveEnv(passedEnv?: Partial<Env>): Env {
+  const devVars = loadDevVars();
   return {
+    ...devVars,
     ...process.env,
     ...(typeof cfEnv === "object" ? cfEnv : {}),
     ...passedEnv,

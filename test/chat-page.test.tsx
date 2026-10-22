@@ -232,6 +232,48 @@ describe("ChatPage UI (/chat)", () => {
         screen.getByText(/Agent capacity spike\. Please try again\./i)
       ).toBeInTheDocument();
     });
+
+    // Now test Retry Last Request: mock chat returning success on retry
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("/api/auth/session")) {
+        return new Response(
+          JSON.stringify({
+            authenticated: true,
+            user: {
+              id: "usr_cust_123",
+              email: "alex@example.com",
+              name: "Alex Customer",
+              role: "customer",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (url.includes("/api/chat")) {
+        return new Response(
+          JSON.stringify({
+            sessionId: "sess_recovered",
+            response: "Recovered successfully on retry!",
+            messages: [],
+            turns: 1,
+            toolsUsed: [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response("Not found", { status: 404 });
+    });
+
+    const retryBtn = screen.getByRole("button", { name: /retry last request/i });
+    fireEvent.click(retryBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Agent Execution Error")).not.toBeInTheDocument();
+      expect(screen.getByText("Recovered successfully on retry!")).toBeInTheDocument();
+    });
   });
 
   it("resets conversation and generates a new session ID when clicking New Session", async () => {

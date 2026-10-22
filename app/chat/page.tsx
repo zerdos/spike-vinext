@@ -249,9 +249,22 @@ export default function ChatPage() {
     }
   };
 
+  // Retry last request without duplicating message history
+  const handleRetryLastRequest = () => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUserMsg) return;
+    handleSendMessage(lastUserMsg.content, true);
+  };
+
   // Send message to /api/chat
-  const handleSendMessage = async (textToSend?: string) => {
-    const rawText = textToSend !== undefined ? textToSend : inputMessage;
+  const handleSendMessage = async (textToSend?: string, isRetry = false) => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    const rawText =
+      textToSend !== undefined
+        ? textToSend
+        : isRetry && lastUserMsg
+        ? lastUserMsg.content
+        : inputMessage;
     const text = rawText.trim();
     if (!text || isSubmitting) return;
 
@@ -263,16 +276,27 @@ export default function ChatPage() {
       minute: "2-digit",
     });
 
-    const newUserMessage: DisplayMessage = {
-      id: userMessageId,
-      role: "user",
-      content: text,
-      timestamp: now,
-    };
-
-    const nextMessages = [...messages, newUserMessage];
-    setMessages(nextMessages);
-    setInputMessage("");
+    let nextMessages: DisplayMessage[];
+    if (
+      isRetry &&
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "user" &&
+      messages[messages.length - 1].content === text
+    ) {
+      nextMessages = messages;
+    } else {
+      const newUserMessage: DisplayMessage = {
+        id: userMessageId,
+        role: "user",
+        content: text,
+        timestamp: now,
+      };
+      nextMessages = [...messages, newUserMessage];
+      setMessages(nextMessages);
+      if (!isRetry) {
+        setInputMessage("");
+      }
+    }
     setIsSubmitting(true);
 
     try {
@@ -696,7 +720,7 @@ export default function ChatPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSendMessage()}
+                          onClick={() => handleRetryLastRequest()}
                           className="h-7 text-xs font-mono"
                         >
                           Retry Last Request
