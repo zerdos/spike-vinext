@@ -237,6 +237,26 @@ describe("SerpApi MCP Integration (PRD: prds/serpapi.md)", () => {
   });
 
   describe("AC2: Zero-Turn Auto-Availability & Discovery", () => {
+    it("auto-populates serpapi by default even when SERPAPI_API_KEY is not in env", async () => {
+      const mockKV = createMockKV();
+      const env: Env = {
+        SESSION_KV: mockKV,
+      };
+
+      const sessionState = await getSessionState("default-sess-1", env);
+      expect(sessionState.mountedServers["serpapi"]).toBeDefined();
+      expect(sessionState.mountedServers["serpapi"].tools[0].namespacedName).toBe("serpapi.search");
+
+      // Discover in JSON schema format
+      const discoveredJson = discoverTools({ query: "serpapi search" }, sessionState);
+      expect(discoveredJson.length).toBeGreaterThan(0);
+      expect(discoveredJson[0].namespacedName).toBe("serpapi.search");
+
+      // Discover in TypeScript format
+      const discoveredTs = discoverTools({ query: "serpapi search", format: "typescript" }, sessionState);
+      expect(discoveredTs[0].typeDefinition).toContain("serpapi.search(args:");
+    });
+
     it("auto-populates serpapi when SERPAPI_API_KEY is present in env", async () => {
       const mockKV = createMockKV();
       const env: Env = {
@@ -440,5 +460,30 @@ describe("SerpApi MCP Integration (PRD: prds/serpapi.md)", () => {
         expect(result.firstTitle).toBeTypeOf("string");
       }
     }, 20000);
+  });
+
+  describe("Progressive Gateway Integration (lib/mcp-gateway & lib/mcp-data)", () => {
+    it("includes SerpApi in MCP_REGISTRY_SERVERS and default installed servers", async () => {
+      const { MCP_REGISTRY_SERVERS } = await import("../lib/mcp-registry-data.js");
+      const { ALL_TOOLS } = await import("../lib/mcp-gateway.js");
+      const { MCP_CATEGORIES } = await import("../lib/mcp-data.js");
+
+      // Verify registry data
+      const serpRegistry = MCP_REGISTRY_SERVERS.find(
+        (s) => s.id === "serpapi/serpapi-mcp" || s.id.includes("serpapi")
+      );
+      expect(serpRegistry).toBeDefined();
+      expect(serpRegistry?.name).toContain("SerpApi");
+
+      // Verify categories
+      const serpCategory = MCP_CATEGORIES.find((c) => c.id === "serpapi");
+      expect(serpCategory).toBeDefined();
+      expect(serpCategory?.tools.some((t) => t.name === "serpapi_search")).toBe(true);
+
+      // Verify catalog tools
+      expect(ALL_TOOLS["serpapi_search"]).toBeDefined();
+      expect(ALL_TOOLS["serpapi.search"]).toBeDefined();
+      expect(typeof ALL_TOOLS["serpapi_search"].handler).toBe("function");
+    });
   });
 });

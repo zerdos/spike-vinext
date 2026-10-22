@@ -265,7 +265,7 @@ export function createSpikeCodemodeRuntime(
   const mountedServers: Record<string, any> = {
     ...(sessionState.mountedServers || {}),
   };
-  if (env.SERPAPI_API_KEY && !mountedServers["serpapi"]) {
+  if (!mountedServers["serpapi"]) {
     mountedServers["serpapi"] = {
       ...SERPAPI_DEFAULT_SERVER,
       mountedAt: Date.now(),

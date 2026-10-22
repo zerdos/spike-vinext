@@ -217,15 +217,16 @@ export function resolveServerUrlAndAuth(
 
   if (
     !inferredSecretName &&
-    (rawUrl.includes("mcp.serpapi.com") || namespace === "serpapi") &&
-    env.SERPAPI_API_KEY
+    (rawUrl.includes("mcp.serpapi.com") || namespace === "serpapi")
   ) {
     inferredSecretName = "SERPAPI_API_KEY";
   }
 
   let secretValue: string | undefined;
   if (inferredSecretName) {
-    const val = env[inferredSecretName];
+    const val =
+      env[inferredSecretName] ||
+      (typeof process !== "undefined" ? process.env?.[inferredSecretName] : undefined);
     if (typeof val === "string" && val.trim().length > 0) {
       secretValue = val.trim();
     } else if (authSecretName || placeholderMatch) {

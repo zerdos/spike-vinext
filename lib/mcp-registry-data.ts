@@ -240,5 +240,26 @@ export const MCP_REGISTRY_SERVERS: RegistryServerRecord[] = [
       },
     },
   },
+  {
+    id: "serpapi/serpapi-mcp",
+    name: "SerpApi Official MCP Server",
+    description: "Multi-engine web search across Google, Bing, DuckDuckGo, YouTube, Google Scholar, eBay, Amazon with localized results and Markdown/JSON output.",
+    homepage: "https://serpapi.com",
+    repository: "https://github.com/serpapi/serpapi-mcp",
+    registrySource: "official",
+    transport: "http",
+    installCount: 35000,
+    tags: ["search", "web", "google", "bing", "scholar", "youtube", "serpapi", "official"],
+    env: {
+      SERPAPI_API_KEY: { description: "SerpApi API key", required: true },
+    },
+    tools: ["search", "serpapi_search", "serpapi.search"],
+    configTemplate: {
+      url: "https://mcp.serpapi.com/YOUR_SERPAPI_API_KEY/mcp",
+      headers: {
+        "Accept": "application/json, text/event-stream",
+      },
+    },
+  },
 ];
 

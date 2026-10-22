@@ -342,8 +342,8 @@ export async function getSessionState(
     };
   }
 
-  // Pre-register SERPAPI_DEFAULT_SERVER if env.SERPAPI_API_KEY is present and not already mounted
-  if (env.SERPAPI_API_KEY && !state.mountedServers["serpapi"]) {
+  // Pre-register SERPAPI_DEFAULT_SERVER by default if not already mounted
+  if (!state.mountedServers["serpapi"]) {
     state.mountedServers["serpapi"] = {
       ...SERPAPI_DEFAULT_SERVER,
       mountedAt: Date.now(),

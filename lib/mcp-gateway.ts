@@ -25,6 +25,8 @@ import {
 } from "./mcp-runtime-mounting";
 import { createSpikeCodemodeRuntime, getCachedCodemodeRuntime } from "@/src/codemode-runtime";
 import { getSessionState } from "@/src/meta-mcp";
+import { parseMcpResponseText, redactSecretFromText } from "@/src/security";
+import { env as cfEnv } from "cloudflare:workers";
 
 export const CODEMODE_TOOL_NAMES = [
   "codemode",
@@ -114,6 +116,13 @@ installedServers.set("cloudflare/browser-run-mcp", {
   transport: "http",
   status: "active",
   installedAt: Date.now() - 1800000,
+});
+installedServers.set("serpapi", {
+  id: "serpapi",
+  name: "SerpApi Official MCP Server",
+  transport: "http",
+  status: "active",
+  installedAt: Date.now() - 900000,
 });
 
 // Deterministic Edge HMAC / FNV-1a Signing for SEP-2567 Workspace Handles & SEP-2322 MRTR Envelopes
@@ -2243,6 +2252,140 @@ function initializeCatalog() {
       imageUrl: `https://edge-cdn.spike.land/generated/${encodeURIComponent(String(args.prompt || ""))}.png`,
       model: "@cf/black-forest-labs/flux-1-schnell",
     }),
+  };
+
+  // 7. SerpApi Search tools
+  const serpApiHandler = async (args: Record<string, unknown>, ctx?: RequestContext) => {
+    let apiKey =
+      (typeof args.apiKey === "string" ? args.apiKey : undefined) ||
+      (ctx?.browserEnv as any)?.SERPAPI_API_KEY ||
+      (typeof cfEnv === "object" ? (cfEnv as any).SERPAPI_API_KEY : undefined) ||
+      (typeof process !== "undefined" ? process.env?.SERPAPI_API_KEY : undefined);
+
+    if (!apiKey) {
+      return {
+        status: "error",
+        error: "SERPAPI_API_KEY not configured in environment or secrets.",
+      };
+    }
+
+    let params: Record<string, unknown>;
+    let mode = "compact";
+
+    if (args.params && typeof args.params === "object" && !Array.isArray(args.params)) {
+      params = { ...(args.params as Record<string, unknown>) };
+      if (typeof args.mode === "string") mode = String(args.mode);
+    } else {
+      const { mode: m, ...rest } = args;
+      params = rest;
+      if (typeof m === "string") mode = String(m);
+    }
+
+    if (!params.engine) {
+      params.engine = "google_light";
+    }
+
+    const payload = {
+      jsonrpc: "2.0",
+      id: `serp_${Date.now()}`,
+      method: "tools/call",
+      params: {
+        name: "search",
+        arguments: {
+          params,
+          mode,
+        },
+      },
+    };
+
+    try {
+      const url = `https://mcp.serpapi.com/${encodeURIComponent(apiKey)}/mcp`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      const parsed = parseMcpResponseText(text, res.headers.get("content-type") || "");
+      if (parsed.error) {
+        return {
+          status: "error",
+          error: redactSecretFromText(parsed.error.message || "Upstream SerpApi error", apiKey),
+        };
+      }
+
+      let resPayload = parsed.result ?? parsed;
+      if (
+        resPayload &&
+        typeof resPayload === "object" &&
+        Array.isArray(resPayload.content) &&
+        resPayload.content.length === 1 &&
+        typeof resPayload.content[0]?.text === "string"
+      ) {
+        try {
+          const inner = JSON.parse(resPayload.content[0].text);
+          if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+            resPayload = { ...inner, ...resPayload };
+          }
+        } catch {
+          // Markdown or plain text
+        }
+      }
+      return resPayload;
+    } catch (err: unknown) {
+      return {
+        status: "error",
+        error: redactSecretFromText(String((err as Error)?.message || err), apiKey),
+      };
+    }
+  };
+
+  ALL_TOOLS["serpapi_search"] = {
+    name: "serpapi_search",
+    category: "SerpApi Search",
+    description:
+      "Universal search tool supporting all SerpApi engines (google_light, google, bing, duckduckgo, youtube, scholar, ebay, amazon) and result types.",
+    tier: "free",
+    riskTier: "low-readonly",
+    annotations: { readOnlyHint: true, idempotentHint: true },
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        q: { type: "string", description: "Search query string" },
+        engine: {
+          type: "string",
+          description:
+            "Search engine to query (default: 'google_light'). Examples: google, google_light, bing, duckduckgo, youtube, scholar, ebay, amazon",
+        },
+        location: {
+          type: "string",
+          description: "Optional geographic location for localized results (e.g. 'Austin, TX' or 'Brighton, UK')",
+        },
+        output: {
+          type: "string",
+          description: "Response format: omit or 'json' for structured JSON, or 'md' for token-efficient Markdown",
+        },
+        mode: {
+          type: "string",
+          description: "Response verbosity: 'compact' or 'complete' (default: 'compact')",
+        },
+        params: {
+          type: "object",
+          description: "Engine-specific query parameters passed to SerpApi",
+        },
+      },
+    },
+    handler: serpApiHandler,
+  };
+
+  ALL_TOOLS["serpapi.search"] = {
+    ...ALL_TOOLS["serpapi_search"],
+    name: "serpapi.search",
   };
 }
 

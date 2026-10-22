@@ -785,6 +785,34 @@ export const MCP_CATEGORIES: ToolCategory[] = [
       },
     ],
   },
+  {
+    id: "serpapi",
+    name: "SerpApi Search",
+    count: 1,
+    icon: "search",
+    tools: [
+      {
+        name: "serpapi_search",
+        description:
+          "Universal search tool supporting all SerpApi engines (google_light, google, bing, duckduckgo, youtube, scholar, ebay, amazon) and result types.",
+        category: "SerpApi Search",
+        parameters: {
+          q: { type: "string", description: "Search query string", required: true },
+          engine: { type: "string", description: "Search engine to query (default: 'google_light'). Examples: google, google_light, bing, duckduckgo, youtube, scholar, ebay, amazon" },
+          location: { type: "string", description: "Optional geographic location for localized results (e.g. 'Austin, TX' or 'Brighton, UK')" },
+          output: { type: "string", description: "Response format: omit or 'json' for structured JSON, or 'md' for token-efficient Markdown" },
+          mode: { type: "string", description: "Response verbosity: 'compact' or 'complete' (default: 'compact')" },
+          params: { type: "object", description: "Optional nested engine-specific query parameters" },
+        },
+        mockResponse: {
+          search_metadata: { status: "Success" },
+          organic_results: [
+            { position: 1, title: "Search Result", link: "https://example.com", snippet: "Result snippet..." },
+          ],
+        },
+      },
+    ],
+  },
 ];
 
 export const CLIENT_CONFIGS = [
