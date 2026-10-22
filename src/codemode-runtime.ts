@@ -87,7 +87,12 @@ export class MockWorkerLoader implements WorkerLoaderBinding {
  * SQLite-backed Mock DurableObjectState for tests and standalone worker sessions.
  */
 export function createMockDurableObjectState(dbPath = ":memory:"): any {
-  const db = new DatabaseSync(dbPath);
+  let db: any = null;
+  try {
+    db = new DatabaseSync(dbPath);
+  } catch {
+    db = null;
+  }
   const facetInstances = new Map<string, any>();
 
   const ctx: any = {
@@ -96,36 +101,46 @@ export function createMockDurableObjectState(dbPath = ":memory:"): any {
       sql: {
         exec: (sql: string, ...params: any[]) => {
           const trimmed = sql.trim();
-          if (trimmed.includes(";") && !params.length) {
-            db.exec(trimmed);
-            return {
-              rowsWritten: 0,
-              rowsRead: 0,
-              toArray: () => [],
-              [Symbol.iterator]: function* () {},
-            };
+          if (db) {
+            if (trimmed.includes(";") && !params.length) {
+              db.exec(trimmed);
+              return {
+                rowsWritten: 0,
+                rowsRead: 0,
+                toArray: () => [],
+                [Symbol.iterator]: function* () {},
+              };
+            }
+            if (/^\s*SELECT/i.test(trimmed)) {
+              const stmt = db.prepare(trimmed);
+              const rows = stmt.all(...params) as Record<string, unknown>[];
+              return {
+                rowsWritten: 0,
+                rowsRead: rows.length,
+                toArray: () => rows,
+                [Symbol.iterator]: function* () {
+                  yield* rows;
+                },
+              };
+            } else {
+              const stmt = db.prepare(trimmed);
+              const info = stmt.run(...params);
+              return {
+                rowsWritten: Number(info.changes),
+                rowsRead: 0,
+                toArray: () => [],
+                [Symbol.iterator]: function* () {},
+              };
+            }
           }
-          if (/^\s*SELECT/i.test(trimmed)) {
-            const stmt = db.prepare(trimmed);
-            const rows = stmt.all(...params) as Record<string, unknown>[];
-            return {
-              rowsWritten: 0,
-              rowsRead: rows.length,
-              toArray: () => rows,
-              [Symbol.iterator]: function* () {
-                yield* rows;
-              },
-            };
-          } else {
-            const stmt = db.prepare(trimmed);
-            const info = stmt.run(...params);
-            return {
-              rowsWritten: Number(info.changes),
-              rowsRead: 0,
-              toArray: () => [],
-              [Symbol.iterator]: function* () {},
-            };
-          }
+
+          // Fallback when DatabaseSync is not available in workerd worker context
+          return {
+            rowsWritten: 0,
+            rowsRead: 0,
+            toArray: () => [],
+            [Symbol.iterator]: function* () {},
+          };
         },
       },
     },
@@ -164,29 +179,80 @@ export function createSpikeCodemodeRuntime(
   sessionState: SessionState,
   options?: CreateSpikeCodemodeRuntimeOptions
 ): CodemodeRuntimeHandle {
-  const activeCtx = ctx || createMockDurableObjectState();
+  const rawCtx = ctx || createMockDurableObjectState();
+  const facetInstances = new Map<string, any>();
 
-  // Ensure CodemodeRuntime export and facets exist on ctx
-  if (!activeCtx.exports) {
-    activeCtx.exports = {};
-  }
-  if (!activeCtx.exports.CodemodeRuntime) {
-    activeCtx.exports.CodemodeRuntime = CodemodeRuntime;
-  }
-  if (!activeCtx.facets) {
-    const facetInstances = new Map<string, any>();
-    activeCtx.facets = {
-      get: (name: string, factory: () => { class: any }) => {
-        let inst = facetInstances.get(name);
-        if (!inst) {
-          const { class: RuntimeClass } = factory();
-          inst = new RuntimeClass(activeCtx, env);
-          facetInstances.set(name, inst);
-        }
-        return inst;
-      },
-    };
-  }
+  // Use a proxy wrapper to ensure `facets.get` safely instantiates the CodemodeRuntime class
+  // directly against `rawCtx.storage.sql` without relying on workerd's experimental C++ facets.
+  const activeCtx = new Proxy(rawCtx, {
+    get(target, prop, receiver) {
+      if (prop === "exports") {
+        return { CodemodeRuntime, ...target.exports };
+      }
+      if (prop === "facets") {
+        return {
+          get: (name: string, factory: () => { class: any }) => {
+            let inst = facetInstances.get(name);
+            if (!inst) {
+              const { class: RuntimeClass } = factory();
+              try {
+                inst = new RuntimeClass(rawCtx, env);
+              } catch {
+                // If workerd rejects non-native DurableObjectState in constructor,
+                // bypass native DurableObjectBase constructor and bind storage.sql directly
+                inst = Object.create(RuntimeClass.prototype);
+                inst.ctx = rawCtx;
+                inst.env = env;
+                try {
+                  rawCtx.storage.sql.exec(`
+                    CREATE TABLE IF NOT EXISTS cm_executions (
+                      id TEXT PRIMARY KEY,
+                      code TEXT NOT NULL,
+                      status TEXT NOT NULL,
+                      result TEXT,
+                      error TEXT,
+                      logs TEXT,
+                      connectors TEXT,
+                      created_at INTEGER NOT NULL,
+                      updated_at INTEGER NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS cm_executions_status
+                      ON cm_executions (status, created_at);
+                    CREATE TABLE IF NOT EXISTS cm_log (
+                      execution_id TEXT NOT NULL,
+                      seq INTEGER NOT NULL,
+                      connector TEXT NOT NULL,
+                      method TEXT NOT NULL,
+                      args TEXT,
+                      result TEXT,
+                      status TEXT NOT NULL,
+                      requires_approval INTEGER NOT NULL,
+                      ephemeral INTEGER NOT NULL,
+                      created_at INTEGER NOT NULL,
+                      PRIMARY KEY (execution_id, seq)
+                    );
+                    CREATE TABLE IF NOT EXISTS cm_snippets (
+                      name TEXT PRIMARY KEY,
+                      description TEXT NOT NULL,
+                      code TEXT NOT NULL,
+                      saved_at INTEGER NOT NULL,
+                      input_schema TEXT,
+                      connectors TEXT
+                    );
+                  `);
+                } catch {
+                  // Tables may already exist or storage mock handled
+                }
+              }
+              facetInstances.set(name, inst);
+            }
+            return inst;
+          },
+        };
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  });
 
   // 1. Build connectors
   const browserConnector = new BrowserRunConnector(activeCtx, env, {

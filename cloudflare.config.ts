@@ -16,7 +16,7 @@ export default defineConfig({
   worker: defineWorker({
     ...responseStore.applicationWorker,
     name: "spike-vinext",
-    entrypoint: "vinext/server/fetch-handler",
+    entrypoint: "./worker/index.ts",
     compatibilityDate: "2026-10-13",
     compatibilityFlags: ["nodejs_compat"],
     workersDev: true,
@@ -28,6 +28,7 @@ export default defineConfig({
     ],
     exports: {
       CodemodeAgent: exports.durableObject({ storage: "sqlite" }),
+      CodemodeRuntime: exports.durableObject({ storage: "sqlite" }),
     },
     env: {
       ...responseStore.applicationWorker.env,

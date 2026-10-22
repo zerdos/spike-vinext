@@ -224,9 +224,24 @@ export async function executeAgentLoop(
   };
 
   // 1c. Initialize or resolve Durable Codemode Runtime for this session
-  const codemodeRuntime: CodemodeRuntimeHandle =
-    options?.codemodeRuntime ??
-    createSpikeCodemodeRuntime(
+  let codemodeRuntime: CodemodeRuntimeHandle;
+  if (options?.codemodeRuntime) {
+    codemodeRuntime = options.codemodeRuntime;
+  } else if (env.CODEMODE_AGENT && typeof env.CODEMODE_AGENT.idFromName === "function") {
+    const doId = env.CODEMODE_AGENT.idFromName(sessionState.sessionId);
+    const stub = env.CODEMODE_AGENT.get(doId);
+    codemodeRuntime = {
+      execute: (code: string) => stub.execute(sessionState, code),
+      pending: () => stub.pending(sessionState),
+      approve: (params: { executionId: string }) => stub.approve(sessionState, params.executionId),
+      reject: (params: { executionId: string; reason?: string }) => stub.reject(sessionState, params.executionId, params.reason),
+      rollback: (params: { executionId: string }) => stub.rollback(sessionState, params.executionId),
+      snippets: () => stub.snippets(sessionState),
+      saveSnippet: (params: { name: string; code: string; description?: string }) =>
+        stub.saveSnippet(sessionState, params.name, params.code, params.description),
+    } as unknown as CodemodeRuntimeHandle;
+  } else {
+    codemodeRuntime = createSpikeCodemodeRuntime(
       options?.durableObjectState,
       env,
       sessionState,
@@ -240,6 +255,7 @@ export async function executeAgentLoop(
         executor: options?.executor,
       }
     );
+  }
 
   // 2. Prepare conversation messages
   const messages: ChatMessage[] = [];

@@ -65,6 +65,22 @@ async function resolveRuntime(sessionId: string | undefined, env: Env): Promise<
   const cached = getCachedCodemodeRuntime(sid);
   if (cached) return cached;
   const sessionState: SessionState = await getSessionState(sid, env);
+
+  if (env.CODEMODE_AGENT && typeof env.CODEMODE_AGENT.idFromName === "function") {
+    const doId = env.CODEMODE_AGENT.idFromName(sid);
+    const stub = env.CODEMODE_AGENT.get(doId);
+    return {
+      execute: (code: string) => stub.execute(sessionState, code),
+      pending: () => stub.pending(sessionState),
+      approve: (params: { executionId: string }) => stub.approve(sessionState, params.executionId),
+      reject: (params: { executionId: string; reason?: string }) => stub.reject(sessionState, params.executionId, params.reason),
+      rollback: (params: { executionId: string }) => stub.rollback(sessionState, params.executionId),
+      snippets: () => stub.snippets(sessionState),
+      saveSnippet: (params: { name: string; code: string; description?: string }) =>
+        stub.saveSnippet(sessionState, params.name, params.code, params.description),
+    } as unknown as CodemodeRuntimeHandle;
+  }
+
   return createSpikeCodemodeRuntime(null, env, sessionState);
 }
 
@@ -152,7 +168,10 @@ export default {
       }
 
       try {
-        const result = await executeAgentLoop(payload, resolvedEnv);
+        const codemodeRuntime = await resolveRuntime(payload.sessionId, resolvedEnv);
+        const result = await executeAgentLoop(payload, resolvedEnv, {
+          codemodeRuntime,
+        });
         return Response.json(result, {
           status: 200,
           headers: {

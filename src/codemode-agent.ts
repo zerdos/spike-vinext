@@ -28,4 +28,39 @@ export class CodemodeAgent extends DurableObject {
     }
     return runtime;
   }
+
+  async execute(sessionState: SessionState, code: string, options?: CreateSpikeCodemodeRuntimeOptions) {
+    const runtime = this.getRuntime(sessionState, options);
+    return await runtime.execute(code);
+  }
+
+  async pending(sessionState: SessionState) {
+    const runtime = this.getRuntime(sessionState);
+    return await runtime.pending();
+  }
+
+  async approve(sessionState: SessionState, executionId: string) {
+    const runtime = this.getRuntime(sessionState);
+    return await runtime.approve({ executionId });
+  }
+
+  async reject(sessionState: SessionState, executionId: string, reason?: string) {
+    const runtime = this.getRuntime(sessionState);
+    return await runtime.reject({ executionId, reason });
+  }
+
+  async rollback(sessionState: SessionState, executionId: string) {
+    const runtime = this.getRuntime(sessionState);
+    return await runtime.rollback({ executionId });
+  }
+
+  async snippets(sessionState: SessionState) {
+    const runtime = this.getRuntime(sessionState);
+    return await runtime.snippets();
+  }
+
+  async saveSnippet(sessionState: SessionState, name: string, code: string, description?: string) {
+    const runtime = this.getRuntime(sessionState);
+    return await runtime.saveSnippet({ name, code, description });
+  }
 }
