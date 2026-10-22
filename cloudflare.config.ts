@@ -34,6 +34,9 @@ export default defineConfig({
         id: "013edfbd-5b02-4543-8b73-af5d9721fe0e",
         name: "spike-waitlist",
       }),
+      SESSION_KV: bindings.kv({
+        id: "adf12f5b631b445086eb029abae41b24",
+      }),
     },
   }),
 });

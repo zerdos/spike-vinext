@@ -36,9 +36,15 @@ When the user asks you to interact with an external service or MCP server:
 - Call run_tool with the appropriate arguments.
 Never ask the user for raw API keys; reference them using environment secret names if required.`;
 
+const GEMINI_DEFAULT_MODELS = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-2.5-flash",
+];
+
 /**
  * Default LLM completion handler supporting both GEMINI_API_KEY and OpenAI/LLM_API_KEY
- * via standard fetch.
+ * via standard fetch with automatic capacity fallback for high-demand spikes (503/429).
  */
 export const defaultCompletionHandler: LLMCompletionHandler = async (
   messages,
@@ -66,39 +72,63 @@ export const defaultCompletionHandler: LLMCompletionHandler = async (
     : "https://api.openai.com/v1";
   const baseUrl = (env.LLM_BASE_URL || defaultBaseUrl).replace(/\/$/, "");
 
-  const defaultModel = isGemini ? "gemini-2.5-flash" : "gpt-4o-mini";
-  const model = requestedModel || env.LLM_MODEL || defaultModel;
+  const modelsToTry = requestedModel
+    ? [requestedModel]
+    : isGemini
+    ? env.LLM_MODEL
+      ? [env.LLM_MODEL]
+      : GEMINI_DEFAULT_MODELS
+    : [env.LLM_MODEL || "gpt-4o-mini"];
 
-  const bodyPayload: Record<string, unknown> = {
-    model,
-    messages,
-  };
-  if (tools.length > 0) {
-    bodyPayload.tools = tools;
-    bodyPayload.tool_choice = "auto";
+  let lastError: Error | null = null;
+
+  for (let i = 0; i < modelsToTry.length; i++) {
+    const model = modelsToTry[i];
+    const bodyPayload: Record<string, unknown> = {
+      model,
+      messages,
+    };
+    if (tools.length > 0) {
+      bodyPayload.tools = tools;
+      bodyPayload.tool_choice = "auto";
+    }
+
+    try {
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(bodyPayload),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        // If 503 (high demand) or 429 (rate limit) and we have fallback models left, try next
+        if ((res.status === 503 || res.status === 429) && i < modelsToTry.length - 1) {
+          lastError = new Error(`Model ${model} returned HTTP ${res.status}: ${errorText}`);
+          continue;
+        }
+        throw new Error(`LLM provider returned HTTP ${res.status}: ${errorText}`);
+      }
+
+      const data = (await res.json()) as any;
+      const choice = data?.choices?.[0]?.message;
+
+      return {
+        content: choice?.content ?? null,
+        tool_calls: choice?.tool_calls,
+      };
+    } catch (err: unknown) {
+      lastError = err as Error;
+      if (i === modelsToTry.length - 1) {
+        throw lastError;
+      }
+    }
   }
 
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(bodyPayload),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`LLM provider returned HTTP ${res.status}: ${errorText}`);
-  }
-
-  const data = (await res.json()) as any;
-  const choice = data?.choices?.[0]?.message;
-
-  return {
-    content: choice?.content ?? null,
-    tool_calls: choice?.tool_calls,
-  };
+  throw lastError || new Error("Failed to get completion from LLM provider.");
 };
 
 export const defaultOpenAICompletionHandler = defaultCompletionHandler;

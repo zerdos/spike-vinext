@@ -100,6 +100,8 @@ export const META_MCP_TOOLS = [
   },
 ];
 
+const inMemorySessionStore = new Map<string, SessionState>();
+
 export async function getSessionState(
   sessionId: string,
   env: Env
@@ -109,19 +111,29 @@ export async function getSessionState(
     try {
       const existing = await env.SESSION_KV.get(key, "json");
       if (existing && typeof existing === "object") {
-        return {
+        const state = {
           sessionId,
           mountedServers: (existing as SessionState).mountedServers || {},
         };
+        inMemorySessionStore.set(sessionId, state);
+        return state;
       }
     } catch {
       // Fallback on error or empty
     }
   }
-  return {
+
+  // Memory store fallback
+  if (inMemorySessionStore.has(sessionId)) {
+    return inMemorySessionStore.get(sessionId)!;
+  }
+
+  const newState: SessionState = {
     sessionId,
     mountedServers: {},
   };
+  inMemorySessionStore.set(sessionId, newState);
+  return newState;
 }
 
 export async function saveSessionState(
@@ -129,10 +141,15 @@ export async function saveSessionState(
   env: Env
 ): Promise<void> {
   const key = `session:${sessionState.sessionId}`;
+  inMemorySessionStore.set(sessionState.sessionId, sessionState);
   if (env.SESSION_KV) {
-    await env.SESSION_KV.put(key, JSON.stringify(sessionState), {
-      expirationTtl: SESSION_TTL_SECONDS,
-    });
+    try {
+      await env.SESSION_KV.put(key, JSON.stringify(sessionState), {
+        expirationTtl: SESSION_TTL_SECONDS,
+      });
+    } catch {
+      // Non-fatal if KV put fails
+    }
   }
 }
 
@@ -275,6 +292,50 @@ export async function mountMcpServer(
         message: "Failed to parse JSON response from upstream MCP server.",
       },
     };
+  }
+
+  if (body?.error) {
+    const errMsg = String(body.error.message || "").toLowerCase();
+    // If upstream requires initialize handshake first, perform initialize then retry tools/list
+    if (errMsg.includes("not initialized")) {
+      try {
+        const initRes = await fetchImpl(input.url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 2,
+            method: "initialize",
+            params: {
+              protocolVersion: "2024-11-05",
+              capabilities: {},
+              clientInfo: { name: "spike-agent-harness", version: "1.0.0" },
+            },
+          }),
+        });
+
+        if (initRes.ok) {
+          const retryRes = await fetchImpl(input.url, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 3,
+              method: "tools/list",
+              params: {},
+            }),
+          });
+          if (retryRes.ok) {
+            const retryBody = (await retryRes.json()) as any;
+            if (retryBody?.result?.tools) {
+              body = retryBody;
+            }
+          }
+        }
+      } catch {
+        // Fall through to error reporting below if retry fails
+      }
+    }
   }
 
   if (body?.error) {

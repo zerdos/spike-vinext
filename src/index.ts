@@ -7,6 +7,7 @@
 import { Env, ChatRequest } from "./types.js";
 import { executeAgentLoop } from "./agent.js";
 import { META_MCP_TOOLS } from "./meta-mcp.js";
+import { env as cfEnv } from "cloudflare:workers";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -14,8 +15,17 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Session-Id",
 };
 
+export function resolveEnv(passedEnv?: Partial<Env>): Env {
+  return {
+    ...process.env,
+    ...(typeof cfEnv === "object" ? cfEnv : {}),
+    ...passedEnv,
+  } as Env;
+}
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env?: Env): Promise<Response> {
+    const resolvedEnv = resolveEnv(env);
     const url = new URL(request.url);
 
     // 1. CORS Preflight
@@ -27,13 +37,22 @@ export default {
     }
 
     // 2. Health & Info Endpoint
-    if (url.pathname === "/" || url.pathname === "/health") {
+    if (
+      url.pathname === "/" ||
+      url.pathname === "/health" ||
+      url.pathname === "/api/health"
+    ) {
       return Response.json(
         {
           name: "spike-land-agent-harness-mvp",
           status: "healthy",
           runtime: "Cloudflare Workers",
           tools: META_MCP_TOOLS.map((t) => t.function.name),
+          provider: resolvedEnv.GEMINI_API_KEY
+            ? "gemini"
+            : resolvedEnv.LLM_API_KEY
+            ? "openai"
+            : "none",
           version: "1.0.0-mvp",
         },
         {
@@ -46,7 +65,7 @@ export default {
       );
     }
 
-    // 3. Stateless Agent Loop Endpoint: POST /chat
+    // 3. Stateless Agent Loop Endpoint: POST /chat or /api/chat
     if (url.pathname === "/chat" || url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return Response.json(
@@ -73,7 +92,7 @@ export default {
       }
 
       try {
-        const result = await executeAgentLoop(payload, env);
+        const result = await executeAgentLoop(payload, resolvedEnv);
         return Response.json(result, {
           status: 200,
           headers: {
