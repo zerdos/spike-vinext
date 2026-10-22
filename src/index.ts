@@ -5,7 +5,7 @@
  */
 
 import { Env, ChatRequest } from "./types.js";
-import { executeAgentLoop } from "./agent.js";
+import { executeAgentLoop, DEFAULT_CHAT_MODEL } from "./agent.js";
 import { META_MCP_TOOLS } from "./meta-mcp.js";
 import { env as cfEnv } from "cloudflare:workers";
 import fs from "node:fs";
@@ -79,11 +79,18 @@ export default {
           status: "healthy",
           runtime: "Cloudflare Workers",
           tools: META_MCP_TOOLS.map((t) => t.function.name),
-          provider: resolvedEnv.GEMINI_API_KEY
+          provider: resolvedEnv.OPENROUTER_API_KEY
+            ? "openrouter"
+            : resolvedEnv.GEMINI_API_KEY
             ? "gemini"
             : resolvedEnv.LLM_API_KEY
             ? "openai"
             : "none",
+          defaultModel: resolvedEnv.OPENROUTER_API_KEY
+            ? (resolvedEnv.LLM_MODEL || DEFAULT_CHAT_MODEL)
+            : resolvedEnv.GEMINI_API_KEY
+            ? (resolvedEnv.LLM_MODEL || "gemini-flash-latest")
+            : (resolvedEnv.LLM_MODEL || DEFAULT_CHAT_MODEL),
           version: "1.0.0-mvp",
         },
         {
@@ -120,6 +127,14 @@ export default {
           { error: "Missing required 'messages' array or 'message' string." },
           { status: 400, headers: CORS_HEADERS }
         );
+      }
+
+      if (!payload.model) {
+        if (resolvedEnv.OPENROUTER_API_KEY || (!resolvedEnv.GEMINI_API_KEY && !resolvedEnv.LLM_API_KEY)) {
+          payload.model = resolvedEnv.LLM_MODEL || DEFAULT_CHAT_MODEL;
+        } else if (resolvedEnv.LLM_MODEL) {
+          payload.model = resolvedEnv.LLM_MODEL;
+        }
       }
 
       try {

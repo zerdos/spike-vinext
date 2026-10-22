@@ -17,6 +17,7 @@ declare global {
 
 export interface Env {
   SESSION_KV: KVNamespace;
+  OPENROUTER_API_KEY?: string;
   LLM_API_KEY?: string;
   GEMINI_API_KEY?: string;
   LLM_BASE_URL?: string;

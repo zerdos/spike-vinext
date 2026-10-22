@@ -19,7 +19,8 @@ describe("Chat API Routes & Health End-to-End (/api/chat, /health, /api/health)"
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.status).toBe("healthy");
-    expect(data.provider).toBe("gemini");
+    expect(data.provider).toBe("openrouter");
+    expect(data.defaultModel).toBe("deepseek/deepseek-v4.1-flash");
     expect(data.tools).toEqual(["mount_mcp_server", "discover_tools", "run_tool"]);
   });
 
@@ -91,13 +92,15 @@ describe("Chat API Routes & Health End-to-End (/api/chat, /health, /api/health)"
     expect(data.error).toBe("Missing required 'messages' array or 'message' string.");
   });
 
-  it("resolves GEMINI_API_KEY from .dev.vars if process.env has no key", async () => {
+  it("resolves OPENROUTER_API_KEY from .dev.vars if process.env has no key", async () => {
+    delete (process.env as Record<string, string | undefined>).OPENROUTER_API_KEY;
     delete (process.env as Record<string, string | undefined>).GEMINI_API_KEY;
     delete (process.env as Record<string, string | undefined>).LLM_API_KEY;
     const req = new Request("https://spike.land/api/health", { method: "GET" });
     const res = await apiHealthGet(req);
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.provider).toBe("gemini");
+    expect(data.provider).toBe("openrouter");
+    expect(data.defaultModel).toBe("deepseek/deepseek-v4.1-flash");
   });
 });

@@ -588,6 +588,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
     it("handles agent execution failure gracefully with HTTP 500", async () => {
       const badEnv: Env = {
         SESSION_KV: mockKV,
+        OPENROUTER_API_KEY: "",
         LLM_API_KEY: "", // missing API key will cause default completion handler to throw
         GEMINI_API_KEY: "",
       };
@@ -601,12 +602,13 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
       expect(res.status).toBe(500);
       const data = await res.json();
       expect(data.error).toBe("Agent execution failed.");
-      expect(data.details).toContain("Missing GEMINI_API_KEY or LLM_API_KEY");
+      expect(data.details).toContain("Missing OPENROUTER_API_KEY, GEMINI_API_KEY, or LLM_API_KEY");
     });
 
     it("works with GEMINI_API_KEY and routes to Google OpenAI-compatible endpoint", async () => {
       const geminiEnv: Env = {
         SESSION_KV: mockKV,
+        OPENROUTER_API_KEY: "",
         GEMINI_API_KEY: "mock-gemini-key-12345",
       };
 
@@ -651,6 +653,60 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
         expect(capturedUrl).toContain("generativelanguage.googleapis.com/v1beta/openai/chat/completions");
         expect((capturedHeaders as Record<string, string>)["Authorization"]).toBe("Bearer mock-gemini-key-12345");
         expect(capturedBody.model).toBe("gemini-flash-latest");
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("works with OPENROUTER_API_KEY and defaults to deepseek/deepseek-v4.1-flash on OpenRouter endpoint", async () => {
+      let capturedUrl = "";
+      let capturedHeaders: HeadersInit = {};
+      let capturedBody: any = {};
+
+      const openRouterEnv: Env = {
+        SESSION_KV: mockKV,
+        OPENROUTER_API_KEY: "mock-openrouter-key-9999",
+      };
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockImplementation((url, init) => {
+        capturedUrl = String(url);
+        capturedHeaders = init?.headers;
+        capturedBody = JSON.parse(init?.body as string);
+
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    role: "assistant",
+                    content: "Hello from DeepSeek via OpenRouter!",
+                  },
+                  finish_reason: "stop",
+                },
+              ],
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          )
+        );
+      });
+
+      try {
+        const req = new Request("https://worker.local/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: "Hello OpenRouter" }),
+        });
+        const res = await worker.fetch(req, openRouterEnv);
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.response).toBe("Hello from DeepSeek via OpenRouter!");
+
+        expect(capturedUrl).toContain("openrouter.ai/api/v1/chat/completions");
+        expect((capturedHeaders as Record<string, string>)["Authorization"]).toBe("Bearer mock-openrouter-key-9999");
+        expect((capturedHeaders as Record<string, string>)["HTTP-Referer"]).toBe("https://spike.land");
+        expect(capturedBody.model).toBe("deepseek/deepseek-v4.1-flash");
       } finally {
         globalThis.fetch = originalFetch;
       }

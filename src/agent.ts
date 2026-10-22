@@ -40,6 +40,8 @@ When asked to browse the web, read a webpage, or fetch live news from a URL:
 - Only call mount_mcp_server if you need an external remote MCP server not already provided.
 Never ask the user for raw API keys; reference them using environment secret names if required.`;
 
+export const DEFAULT_CHAT_MODEL = "deepseek/deepseek-v4.1-flash";
+
 const GEMINI_DEFAULT_MODELS = [
   "gemini-flash-latest",
   "gemini-2.5-flash",
@@ -48,7 +50,7 @@ const GEMINI_DEFAULT_MODELS = [
 ];
 
 /**
- * Default LLM completion handler supporting both GEMINI_API_KEY and OpenAI/LLM_API_KEY
+ * Default LLM completion handler supporting OPENROUTER_API_KEY, GEMINI_API_KEY, and OpenAI/LLM_API_KEY
  * via standard fetch with automatic capacity fallback for high-demand spikes (503/429).
  */
 export const defaultCompletionHandler: LLMCompletionHandler = async (
@@ -57,33 +59,48 @@ export const defaultCompletionHandler: LLMCompletionHandler = async (
   env,
   requestedModel
 ) => {
-  const isGemini = Boolean(
+  const isOpenRouter = Boolean(
+    env.OPENROUTER_API_KEY ||
+      (requestedModel && requestedModel.includes("/")) ||
+      (env.LLM_MODEL && env.LLM_MODEL.includes("/")) ||
+      (env.LLM_BASE_URL && env.LLM_BASE_URL.includes("openrouter.ai"))
+  );
+
+  const isGemini = !isOpenRouter && Boolean(
     env.GEMINI_API_KEY ||
       (env.LLM_API_KEY && env.LLM_API_KEY.startsWith("AIza")) ||
       (requestedModel && requestedModel.toLowerCase().includes("gemini")) ||
       (env.LLM_MODEL && env.LLM_MODEL.toLowerCase().includes("gemini"))
   );
 
-  const apiKey = (env.GEMINI_API_KEY || env.LLM_API_KEY) as string | undefined;
+  const apiKey = (
+    isOpenRouter
+      ? (env.OPENROUTER_API_KEY || env.LLM_API_KEY || env.GEMINI_API_KEY)
+      : (env.GEMINI_API_KEY || env.LLM_API_KEY)
+  ) as string | undefined;
 
   if (!apiKey) {
     throw new Error(
-      "Missing GEMINI_API_KEY or LLM_API_KEY in Worker environment."
+      "Missing OPENROUTER_API_KEY, GEMINI_API_KEY, or LLM_API_KEY in Worker environment."
     );
   }
 
-  const defaultBaseUrl = isGemini
+  const defaultBaseUrl = isOpenRouter
+    ? "https://openrouter.ai/api/v1"
+    : isGemini
     ? "https://generativelanguage.googleapis.com/v1beta/openai"
     : "https://api.openai.com/v1";
   const baseUrl = (env.LLM_BASE_URL || defaultBaseUrl).replace(/\/$/, "");
 
   const modelsToTry = requestedModel
     ? [requestedModel]
+    : isOpenRouter
+    ? [env.LLM_MODEL || DEFAULT_CHAT_MODEL]
     : isGemini
     ? env.LLM_MODEL
       ? [env.LLM_MODEL]
       : GEMINI_DEFAULT_MODELS
-    : [env.LLM_MODEL || "gpt-4o-mini"];
+    : [env.LLM_MODEL || DEFAULT_CHAT_MODEL];
 
   let lastError: Error | null = null;
 
@@ -99,12 +116,18 @@ export const defaultCompletionHandler: LLMCompletionHandler = async (
     }
 
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      if (isOpenRouter) {
+        headers["HTTP-Referer"] = "https://spike.land";
+        headers["X-Title"] = "Spike Land";
+      }
+
       const res = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify(bodyPayload),
       });
 
@@ -158,6 +181,12 @@ export async function executeAgentLoop(
   const maxSteps = options?.maxSteps ?? MAX_LOOP_STEPS;
   const llmHandler = options?.llmHandler ?? defaultCompletionHandler;
 
+  const defaultModel =
+    env.OPENROUTER_API_KEY || (!env.GEMINI_API_KEY && !env.LLM_API_KEY)
+      ? (env.LLM_MODEL || DEFAULT_CHAT_MODEL)
+      : env.LLM_MODEL;
+  const requestedModel = request.model || defaultModel;
+
   // 1. Load session state from Cloudflare KV
   const sessionState: SessionState = await getSessionState(sessionId, env);
 
@@ -193,7 +222,7 @@ export async function executeAgentLoop(
     turns++;
 
     // Call LLM
-    const completion = await llmHandler(messages, META_MCP_TOOLS, env, request.model);
+    const completion = await llmHandler(messages, META_MCP_TOOLS, env, requestedModel);
 
     const toolCalls: ToolCall[] = completion.tool_calls || [];
 
@@ -271,7 +300,7 @@ export async function executeAgentLoop(
     // If we've reached maxSteps - 1, in the next iteration we can ask the LLM for a final synthesis
     if (step === maxSteps - 1) {
       // One final completion to summarize if loop limit reached
-      const finalComp = await llmHandler(messages, [], env, request.model);
+      const finalComp = await llmHandler(messages, [], env, requestedModel);
       finalResponse = finalComp.content || "";
       messages.push({
         role: "assistant",
