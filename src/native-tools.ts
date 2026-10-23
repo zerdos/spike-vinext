@@ -5,6 +5,7 @@
 
 import { MountedToolDefinition, Env } from "./types.js";
 import { executeQuickAction, BROWSER_RUN_TOOLS, BrowserRunEnv } from "../lib/browser-run.js";
+import { MeetingNotesConnector } from "./connectors/meeting-notes-connector.js";
 
 /**
  * Returns built-in native tools exposed to the agent loop via `discover_tools`.
@@ -34,6 +35,21 @@ export function getInternalNativeTools(): MountedToolDefinition[] {
         inputSchema: tool.inputSchema as Record<string, unknown>,
       });
     }
+  }
+
+  // Meeting notes native tools (namespace: "meetings")
+  const dummyEnv: any = {};
+  const meetingConnector = new MeetingNotesConnector(null, dummyEnv);
+  const meetingTools = meetingConnector.getToolMap();
+
+  for (const [toolName, toolDef] of Object.entries(meetingTools)) {
+    tools.push({
+      namespacedName: `meetings.${toolName}`,
+      upstreamName: toolName,
+      namespace: "meetings",
+      description: toolDef.description,
+      inputSchema: (toolDef.inputSchema as Record<string, unknown>) || {},
+    });
   }
 
   return tools;
@@ -82,6 +98,17 @@ export function getDefaultNativeHandlers(
     handlers[`browser.${key}`] = handler;
     handlers[`browser_run.${key}`] = handler;
     handlers[key] = handler;
+  }
+
+  // Meeting notes handlers
+  const meetingConnector = new MeetingNotesConnector(null, env);
+  const meetingTools = meetingConnector.getToolMap();
+  for (const [toolName, toolDef] of Object.entries(meetingTools)) {
+    const handler = async (args: any) => {
+      return await toolDef.execute(args);
+    };
+    handlers[`meetings.${toolName}`] = handler;
+    handlers[toolName] = handler;
   }
 
   return handlers;

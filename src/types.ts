@@ -135,6 +135,92 @@ export interface ChatResponse {
   toolsUsed: string[];
 }
 
+// Meeting Notes & Knowledge Base Domain Types (PRD: prds/meetingNotes.md)
+export type MeetingStatus = "scheduled" | "in_progress" | "completed" | "archived";
+export type QuestionStatus = "open" | "answered" | "deferred";
+export type ActionItemStatus = "pending" | "in_progress" | "done" | "cancelled";
+
+export interface TranscriptSegment {
+  id: string;
+  speaker?: string;
+  timestamp?: string; // e.g. "00:04:12" or ISO
+  text: string;
+  createdAt: number;
+}
+
+export interface MeetingSummary {
+  executiveSummary: string;
+  keyDecisions: string[];
+  takeaways: string[];
+  topics: string[];
+  updatedAt: number;
+}
+
+export interface MeetingQuestion {
+  id: string;
+  meetingId: string;
+  question: string;
+  askedBy?: string;
+  answeredBy?: string;
+  answer?: string;
+  status: QuestionStatus;
+  tags?: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MeetingActionItem {
+  id: string;
+  meetingId: string;
+  task: string;
+  owner?: string;
+  dueDate?: string; // YYYY-MM-DD
+  status: ActionItemStatus;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MeetingNoteRecord {
+  id: string;
+  title: string;
+  meetingDate: string; // Canonical "YYYY-MM-DD"
+  startTime?: string;
+  endTime?: string;
+  status: MeetingStatus;
+  participants: string[];
+  tags: string[];
+  locationOrUrl?: string;
+  summary?: MeetingSummary;
+  transcriptText: string;
+  transcriptSegments: TranscriptSegment[];
+  questions: MeetingQuestion[];
+  actionItems: MeetingActionItem[];
+  notesMarkdown?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface MeetingIndexItem {
+  id: string;
+  title: string;
+  meetingDate: string;
+  startTime?: string;
+  status: MeetingStatus;
+  participants: string[];
+  tags: string[];
+  hasTranscript: boolean;
+  hasSummary: boolean;
+  questionCount: number;
+  openQuestionCount: number;
+  actionItemCount: number;
+  updatedAt: number;
+}
+
+export interface MeetingSummaryPreview extends MeetingIndexItem {
+  executiveSummary?: string;
+  transcriptLength: number;
+}
+
 export type LLMCompletionHandler = (
   messages: ChatMessage[],
   tools: Array<{

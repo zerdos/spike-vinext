@@ -9,6 +9,7 @@ import {
 
 export type { CodemodeRuntimeHandle };
 import { BrowserRunConnector } from "./connectors/browser-connector.js";
+import { MeetingNotesConnector } from "./connectors/meeting-notes-connector.js";
 import { SpikeMcpConnector } from "./connectors/spike-mcp-connector.js";
 import { SERPAPI_DEFAULT_SERVER } from "./meta-mcp.js";
 import { Env, SessionState, ToolApprovalPolicy, WorkerLoaderBinding } from "./types.js";
@@ -27,6 +28,7 @@ export interface CreateSpikeCodemodeRuntimeOptions {
   allowLocalhost?: boolean;
   fetchFn?: typeof fetch;
   browserHandlers?: Record<string, (args: any) => Promise<any> | any>;
+  meetingHandlers?: Record<string, (args: any) => Promise<any> | any>;
   transformResult?: (result: unknown) => unknown;
 }
 
@@ -262,6 +264,11 @@ export function createSpikeCodemodeRuntime(
     handlers: options?.browserHandlers,
   });
 
+  const meetingNotesConnector = new MeetingNotesConnector(activeCtx, env, {
+    handlers: options?.meetingHandlers,
+    revertHandler: options?.revertHandler,
+  });
+
   const mountedServers: Record<string, any> = {
     ...(sessionState.mountedServers || {}),
   };
@@ -297,7 +304,7 @@ export function createSpikeCodemodeRuntime(
     ctx: activeCtx,
     name: `session-${sessionState.sessionId}`,
     executor,
-    connectors: [browserConnector, ...mcpConnectors],
+    connectors: [browserConnector, meetingNotesConnector, ...mcpConnectors],
     transformResult:
       options?.transformResult ||
       ((res) => truncateResult(res, { maxChars: 32768 })),

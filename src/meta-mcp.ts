@@ -14,6 +14,10 @@ import {
   SessionState,
 } from "./types.js";
 import {
+  getInternalNativeTools,
+  getDefaultNativeHandlers,
+} from "./native-tools.js";
+import {
   isValidNamespace,
   validateUpstreamUrl,
   detectPlaintextSecret,
@@ -681,7 +685,7 @@ export function schemaToTypeScriptType(schema: Record<string, unknown> | undefin
 export function discoverTools(
   input: DiscoverToolsInput,
   sessionState: SessionState,
-  nativeTools: MountedToolDefinition[] = [],
+  nativeTools: MountedToolDefinition[] = getInternalNativeTools(),
   snippets: Array<{ name: string; description: string; inputSchema?: any }> = []
 ): MountedToolDefinition[] {
   const query = (input.query || "").trim().toLowerCase();
@@ -690,7 +694,11 @@ export function discoverTools(
   const queryTokens = query.split(/\s+/).filter(Boolean);
 
   // Aggregate all candidate tools
-  const allTools: MountedToolDefinition[] = [...nativeTools];
+  const effectiveNativeTools =
+    Array.isArray(nativeTools) && nativeTools.length > 0
+      ? nativeTools
+      : getInternalNativeTools();
+  const allTools: MountedToolDefinition[] = [...effectiveNativeTools];
   for (const server of Object.values(sessionState.mountedServers || {})) {
     allTools.push(...server.tools);
   }
@@ -781,11 +789,13 @@ export async function runTool(
   }
 
   // 2. Check native tools handler if registered (supports exact name e.g. "browser.markdown" or bare "markdown" / "browser_run_markdown")
-  if (options?.nativeHandlers) {
+  const handlers = options?.nativeHandlers || getDefaultNativeHandlers(env);
+  if (handlers) {
     const handler =
-      options.nativeHandlers[input.tool_name] ||
-      options.nativeHandlers[`browser.${input.tool_name}`] ||
-      options.nativeHandlers[`browser_run.${input.tool_name}`];
+      handlers[input.tool_name] ||
+      handlers[`browser.${input.tool_name}`] ||
+      handlers[`browser_run.${input.tool_name}`] ||
+      handlers[`meetings.${input.tool_name}`];
     if (handler) {
       try {
         const res = await handler(input.arguments);

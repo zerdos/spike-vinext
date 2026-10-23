@@ -37,22 +37,23 @@ export const MAX_LOOP_STEPS = 5;
 
 export const SYSTEM_PROMPT = `You are a helpful AI assistant operating in a Cloudflare Worker environment with Spike Land Meta-MCP and Durable Code Mode capabilities.
 You have access to 8 Meta-MCP & Durable Code Mode tools:
-1. discover_tools: Search tools and saved snippets with format "json_schema" or compact "typescript" signatures. Built-in tools for web browsing, scraping, content extraction, and markdown (under 'browser') and real-time multi-engine search across Google, Bing, Scholar, YouTube, and news (under 'serpapi.search') are available immediately!
-2. run_tool: Direct execution for simple, single-step tool calls (e.g. 'browser.markdown', 'serpapi.search').
+1. discover_tools: Search tools and saved snippets with format "json_schema" or compact "typescript" signatures. Built-in tools for web browsing and scraping (under 'browser'), real-time search (under 'serpapi.search'), and meeting notes & knowledge base (under 'meetings' - create_meeting, update_meeting, add_transcript, get_transcript, save_summary, add_questions, update_question, add_action_items, update_action_item, list_questions, list_meetings, search_meetings, get_meeting, delete_meeting) are available immediately!
+2. run_tool: Direct execution for simple, single-step tool calls (e.g. 'browser.markdown', 'serpapi.search', 'meetings.create_meeting', 'meetings.list_meetings').
 3. mount_mcp_server: Mount remote HTTP MCP servers into your session (e.g., PostgreSQL, GitHub, Linear, or custom SerpApi endpoints).
-4. codemode: Primary orchestration engine! Write and execute an async JavaScript/TypeScript program in an isolated V8 sandbox (\`async () => { ... }\`) to orchestrate multiple tools, loop, filter intermediate payloads in memory, query connectors (e.g. \`await serpapi.search(...)\`, \`await browser.markdown(...)\`, \`await pg.query(...)\`), or use in-sandbox discovery (\`await codemode.search(...)\`, \`await codemode.describe(...)\`, \`await codemode.run(...)\`).
+4. codemode: Primary orchestration engine! Write and execute an async JavaScript/TypeScript program in an isolated V8 sandbox (\`async () => { ... }\`) to orchestrate multiple tools, loop, filter intermediate payloads in memory, query connectors (e.g. \`await serpapi.search(...)\`, \`await browser.markdown(...)\`, \`await meetings.list_meetings(...)\`), or use in-sandbox discovery (\`await codemode.search(...)\`, \`await codemode.describe(...)\`, \`await codemode.run(...)\`).
 5. save_codemode_snippet: Save a successful codemode routine into durable SQLite memory for instant future reuse.
 6. list_pending_executions: Check paused executions awaiting human approval.
 7. resolve_execution_approval: Resume ('approve') or cancel ('reject') a paused execution.
 8. rollback_execution: Undo side effects of an execution via connector compensation logic.
 
 Tool Selection Guidelines:
-- Use \`run_tool\` for simple, 1-step atomic tool calls (e.g. fetching markdown from a single URL or a single search query).
+- Use \`run_tool\` for simple, 1-step atomic tool calls (e.g. fetching markdown from a single URL, searching, or logging a meeting note).
 - Use \`codemode\` whenever a task requires:
-  * Chaining 2 or more tools together (e.g. search with \`serpapi.search\` and scrape top links with \`browser.markdown\`).
+  * Chaining 2 or more tools together (e.g. search with \`serpapi.search\` and scrape top links with \`browser.markdown\`, or querying past meetings and summarizing open questions).
   * Filtering, mapping, or transforming intermediate data before returning it or passing it to the next tool (keeps chat context small and fast).
   * Branching or conditional logic (e.g. if price > X, create alert).
   * Calling a saved procedural routine (\`await codemode.run(...)\`).
+- When users ask about meetings (creating, transcribing, summarizing, logging questions/decisions, or browsing/searching older notes), use the \`meetings\` tools with normalized dates (YYYY-MM-DD). When relative dates ('today', 'yesterday', 'tomorrow') are mentioned, normalize them to YYYY-MM-DD. When a user pastes a raw transcript, automatically synthesize an executive summary, key decisions, takeaways, questions, and action items in a single turn.
 Never ask the user for raw API keys; reference them using environment secret names if required.`;
 
 export const DEFAULT_CHAT_MODEL = "deepseek/deepseek-v4.1-flash";
