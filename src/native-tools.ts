@@ -39,7 +39,8 @@ export function getInternalNativeTools(): MountedToolDefinition[] {
 
   // Meeting notes native tools (namespace: "meetings")
   const dummyEnv: any = {};
-  const meetingConnector = new MeetingNotesConnector(null, dummyEnv);
+  const dummyCtx: any = {};
+  const meetingConnector = new MeetingNotesConnector(dummyCtx, dummyEnv);
   const meetingTools = meetingConnector.getToolMap();
 
   for (const [toolName, toolDef] of Object.entries(meetingTools)) {
@@ -101,7 +102,8 @@ export function getDefaultNativeHandlers(
   }
 
   // Meeting notes handlers
-  const meetingConnector = new MeetingNotesConnector(null, env);
+  const dummyCtx: any = {};
+  const meetingConnector = new MeetingNotesConnector(dummyCtx, env);
   const meetingTools = meetingConnector.getToolMap();
   for (const [toolName, toolDef] of Object.entries(meetingTools)) {
     const handler = async (args: any) => {

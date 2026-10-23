@@ -91,7 +91,9 @@ export class SpikeMcpConnector extends CodemodeConnector {
     server: MountedServer,
     options?: SpikeMcpConnectorOptions
   ) {
-    super(ctx, env);
+    const validCtx = ctx && typeof ctx === "object" ? ctx : {};
+    const validEnv = env && typeof env === "object" ? env : ({} as Env);
+    super(validCtx, validEnv);
     this.server = server;
     this.options = options;
   }

@@ -12,12 +12,16 @@ export class CodemodeAgent extends DurableObject {
   private runtimeMap = new Map<string, any>();
 
   constructor(ctx: any, env: any) {
-    super(ctx, env);
+    const validCtx = ctx && typeof ctx === "object" ? ctx : {};
+    const validEnv = env && typeof env === "object" ? env : {};
+    super(validCtx, validEnv);
     const anyCtx = this.ctx as any;
-    if (!anyCtx.exports) {
+    if (anyCtx && !anyCtx.exports) {
       anyCtx.exports = {};
     }
-    anyCtx.exports.CodemodeRuntime = CodemodeRuntime;
+    if (anyCtx?.exports) {
+      anyCtx.exports.CodemodeRuntime = CodemodeRuntime;
+    }
   }
 
   getRuntime(sessionState: SessionState, options?: CreateSpikeCodemodeRuntimeOptions) {

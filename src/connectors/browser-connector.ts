@@ -14,7 +14,9 @@ export class BrowserRunConnector extends CodemodeConnector {
     env: Env,
     options?: BrowserRunConnectorOptions
   ) {
-    super(ctx, env);
+    const validCtx = ctx && typeof ctx === "object" ? ctx : {};
+    const validEnv = env && typeof env === "object" ? env : ({} as Env);
+    super(validCtx, validEnv);
     this.customHandlers = options?.handlers;
   }
 

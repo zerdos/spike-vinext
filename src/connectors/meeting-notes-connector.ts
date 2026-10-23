@@ -34,7 +34,9 @@ export class MeetingNotesConnector extends CodemodeConnector {
   ) => Promise<void> | void;
 
   constructor(ctx: any, env: Env, options?: MeetingNotesConnectorOptions) {
-    super(ctx, env);
+    const validCtx = ctx && typeof ctx === "object" ? ctx : {};
+    const validEnv = env && typeof env === "object" ? env : ({} as Env);
+    super(validCtx, validEnv);
     this.store = options?.store || getMeetingNotesStore(ctx, env);
     this.customHandlers = options?.handlers;
     this.revertHandler = options?.revertHandler;
