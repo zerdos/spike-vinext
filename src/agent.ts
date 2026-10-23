@@ -56,7 +56,7 @@ Tool Selection Guidelines:
 - When users ask about meetings (creating, transcribing, summarizing, logging questions/decisions, or browsing/searching older notes), use the \`meetings\` tools with normalized dates (YYYY-MM-DD). When relative dates ('today', 'yesterday', 'tomorrow') are mentioned, normalize them to YYYY-MM-DD. When a user pastes a raw transcript, automatically synthesize an executive summary, key decisions, takeaways, questions, and action items in a single turn.
 Never ask the user for raw API keys; reference them using environment secret names if required.`;
 
-export const DEFAULT_CHAT_MODEL = "deepseek/deepseek-v4.1-flash";
+export const DEFAULT_CHAT_MODEL = "deepseek/deepseek-v4.1-flash-1017";
 
 const GEMINI_DEFAULT_MODELS = [
   "gemini-flash-latest",

@@ -667,7 +667,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
       }
     });
 
-    it("works with OPENROUTER_API_KEY and defaults to deepseek/deepseek-v4.1-flash on OpenRouter endpoint", async () => {
+    it("works with OPENROUTER_API_KEY and defaults to deepseek/deepseek-v4.1-flash-1017 on OpenRouter endpoint", async () => {
       let capturedUrl = "";
       let capturedHeaders: HeadersInit = {};
       let capturedBody: any = {};
@@ -715,7 +715,7 @@ describe("Cloudflare Agent Harness + Spike Land Meta-MCP (MVP)", () => {
         expect(capturedUrl).toContain("openrouter.ai/api/v1/chat/completions");
         expect((capturedHeaders as Record<string, string>)["Authorization"]).toBe("Bearer mock-openrouter-key-9999");
         expect((capturedHeaders as Record<string, string>)["HTTP-Referer"]).toBe("https://spike.land");
-        expect(capturedBody.model).toBe("deepseek/deepseek-v4.1-flash");
+        expect(capturedBody.model).toBe("deepseek/deepseek-v4.1-flash-1017");
       } finally {
         globalThis.fetch = originalFetch;
       }

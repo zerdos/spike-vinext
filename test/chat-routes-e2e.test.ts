@@ -20,7 +20,7 @@ describe("Chat API Routes & Health End-to-End (/api/chat, /health, /api/health)"
     const data = await res.json();
     expect(data.status).toBe("healthy");
     expect(data.provider).toBe("openrouter");
-    expect(data.defaultModel).toBe("deepseek/deepseek-v4.1-flash");
+    expect(data.defaultModel).toBe("deepseek/deepseek-v4.1-flash-1017");
     expect(data.tools).toEqual(
       expect.arrayContaining(["mount_mcp_server", "discover_tools", "run_tool"])
     );
@@ -103,6 +103,6 @@ describe("Chat API Routes & Health End-to-End (/api/chat, /health, /api/health)"
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.provider).toBe("openrouter");
-    expect(data.defaultModel).toBe("deepseek/deepseek-v4.1-flash");
+    expect(data.defaultModel).toBe("deepseek/deepseek-v4.1-flash-1017");
   });
 });

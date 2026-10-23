@@ -17,7 +17,7 @@ function getLiveOpenRouterKey(): string | undefined {
   return undefined;
 }
 
-describe("Live OpenRouter API End-to-End Integration (deepseek/deepseek-v4.1-flash)", () => {
+describe("Live OpenRouter API End-to-End Integration (deepseek/deepseek-v4.1-flash-1017)", () => {
   it("successfully performs live multi-turn tool calling with OpenRouter and DeepSeek flash", async () => {
     const liveKey = getLiveOpenRouterKey();
     if (!liveKey) {

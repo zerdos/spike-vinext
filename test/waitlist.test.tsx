@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import WaitlistPage from "@/app/waitlist/page";
 import { Header } from "@/components/header";
 import { POST as waitlistPost, GET as waitlistGet } from "@/app/api/waitlist/route";
@@ -34,6 +34,42 @@ describe("Waitlist Feature & Top Bar Overhaul", () => {
       const searchBtn = screen.getByRole("button", { name: /search tools/i });
       expect(searchBtn).toBeInTheDocument();
       expect(screen.getByText("Cmd+K")).toBeInTheDocument();
+    });
+
+    it("renders 'Log Out' button instead of 'Join Waitlist' when user is authenticated", async () => {
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/auth/session")) {
+          return new Response(
+            JSON.stringify({
+              authenticated: true,
+              user: { id: "usr_123", email: "developer@spike.land" },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      });
+
+      render(<Header />);
+
+      // Wait for session check to complete
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /log out/i })).toBeInTheDocument();
+      });
+
+      // Join waitlist should no longer be present
+      expect(screen.queryByText(/join waitlist/i)).not.toBeInTheDocument();
+
+      // Click Log Out
+      const logOutBtn = screen.getByRole("button", { name: /log out/i });
+      await act(async () => {
+        fireEvent.click(logOutBtn);
+      });
+      expect(globalThis.fetch).toHaveBeenCalledWith("/api/auth/signout", expect.objectContaining({ method: "POST" }));
     });
   });
 
@@ -95,8 +131,15 @@ describe("Waitlist Feature & Top Bar Overhaul", () => {
     });
 
     it("handles submission and displays digital boarding pass ticket", async () => {
-      vi.spyOn(globalThis, "fetch").mockResolvedValue(
-        new Response(
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/auth/session")) {
+          return new Response(JSON.stringify({ authenticated: false, user: null }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(
           JSON.stringify({
             success: true,
             ticket: {
@@ -107,8 +150,8 @@ describe("Waitlist Feature & Top Bar Overhaul", () => {
             },
           }),
           { status: 201, headers: { "Content-Type": "application/json" } }
-        )
-      );
+        );
+      });
 
       render(<WaitlistPage />);
 
