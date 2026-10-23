@@ -81,6 +81,19 @@ describe("Landing Page (MCP Server - Spike Land)", () => {
 
     expect(screen.getByText("Interactive Playground")).toBeInTheDocument();
     expect(screen.getAllByText("Platform Core").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Code Mode").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Meeting Notes").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Browser Run").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("MCP Registry").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("SerpApi Search").length).toBeGreaterThan(0);
+
+    // Verify mock-only categories are NOT in the playground
+    expect(screen.queryByText("AI & Creative")).not.toBeInTheDocument();
+    expect(screen.queryByText("First-Party Apps")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agents & Automation")).not.toBeInTheDocument();
+    expect(screen.queryByText("Content & Media")).not.toBeInTheDocument();
+    expect(screen.queryByText("Marketing & Growth")).not.toBeInTheDocument();
+    expect(screen.queryByText("Commerce & Admin")).not.toBeInTheDocument();
 
     // Execute tool button
     const executeButton = screen.getByRole("button", { name: /Execute Tool/i });

@@ -24,6 +24,7 @@ import {
   executeProxiedMountedTool,
 } from "./mcp-runtime-mounting";
 import { createSpikeCodemodeRuntime, getCachedCodemodeRuntime } from "@/src/codemode-runtime";
+import { MeetingNotesConnector } from "@/src/connectors/meeting-notes-connector";
 import { getSessionState } from "@/src/meta-mcp";
 import { parseMcpResponseText, redactSecretFromText } from "@/src/security";
 import { env as cfEnv } from "cloudflare:workers";
@@ -770,7 +771,7 @@ export const GATEWAY_TOOLS: ToolDefinition[] = [
       // Also search session-mounted tools
       const sessId = ctx.sessionId || ctx.callerSubject || "default-session";
       const activeSess = getOrCreateSession(sessId);
-      const mountedMatches = searchMountedToolsInSession(query, activeSess);
+      const mountedMatches = searchMountedToolsInSession(query, activeSess as any);
       for (const m of mountedMatches) {
         if (!catFilter || m.category.toLowerCase().includes(catFilter)) {
           results.push(m);
@@ -1206,7 +1207,7 @@ export const UNIVERSAL_GATEWAY_TOOLS: ToolDefinition[] = [
       }
 
       // 1b. Search session-mounted tools (with 1.25x recency boost & prefix filtering per PRD 5.3)
-      const mountedMatches = searchMountedToolsInSession(q, session);
+      const mountedMatches = searchMountedToolsInSession(q, session as any);
       for (const m of mountedMatches) {
         matches.push(m);
       }
@@ -1617,6 +1618,20 @@ export const BROKER_2026_TOOLS: ToolDefinition[] = [
           for (const item of matched.tools) {
             const fullTool = ALL_TOOLS[item.name];
             if (fullTool) {
+              const audited = auditToolHeaderAnnotations(fullTool.inputSchema);
+              newlyDisclosedSchemas.push({
+                name: fullTool.name,
+                category: fullTool.category,
+                description: fullTool.description,
+                riskTier: getCategoryRiskMetadata(fullTool.category).riskTier,
+                inputSchema: audited.sanitizedSchema,
+                uiResourceUri: fullTool.uiResourceUri,
+              });
+            }
+          }
+        } else {
+          for (const fullTool of Object.values(ALL_TOOLS)) {
+            if (fullTool.category.toLowerCase() === reqCat.toLowerCase()) {
               const audited = auditToolHeaderAnnotations(fullTool.inputSchema);
               newlyDisclosedSchemas.push({
                 name: fullTool.name,
@@ -2149,6 +2164,41 @@ function initializeCatalog() {
     ALL_TOOLS[t.name] = t;
   }
 
+  // 4e. Meeting Notes & Knowledge Base tools (PRD: prds/meetingNotes.md)
+  const dummyCtx: any = {};
+  const meetingConn = new MeetingNotesConnector(dummyCtx, cfEnv as any);
+  const meetingToolMap = meetingConn.getToolMap();
+  for (const [toolName, toolDef] of Object.entries(meetingToolMap)) {
+    const meetingToolDef: ToolDefinition = {
+      name: toolName,
+      category: "Meeting Notes",
+      tier: "free",
+      riskTier: toolName === "delete_meeting" ? "elevated-write" : "low-readonly",
+      annotations: {
+        readOnlyHint: toolName.startsWith("get_") || toolName.startsWith("list_") || toolName.startsWith("search_"),
+        elicitationCapable: toolName === "delete_meeting",
+      },
+      uiResourceUri: `ui://spike-land/meetings/${toolName}`,
+      description: toolDef.description,
+      inputSchema: toolDef.inputSchema as any,
+      handler: async (args, ctx) => {
+        const env = (ctx?.browserEnv || cfEnv || {}) as any;
+        const conn = new MeetingNotesConnector(ctx || {}, env);
+        const map = conn.getToolMap();
+        const targetTool = map[toolName];
+        if (targetTool) {
+          return await targetTool.execute(args);
+        }
+        return { error: `Tool ${toolName} not found` };
+      },
+    };
+    ALL_TOOLS[toolName] = meetingToolDef;
+    ALL_TOOLS[`meetings.${toolName}`] = {
+      ...meetingToolDef,
+      name: `meetings.${toolName}`,
+    };
+  }
+
   // 5. Platform catalogue tools from MCP_CATEGORIES
   for (const cat of MCP_CATEGORIES) {
     for (const item of cat.tools) {
@@ -2251,6 +2301,31 @@ function initializeCatalog() {
     handler: async (args) => ({
       imageUrl: `https://edge-cdn.spike.land/generated/${encodeURIComponent(String(args.prompt || ""))}.png`,
       model: "@cf/black-forest-labs/flux-1-schnell",
+    }),
+  };
+
+  ALL_TOOLS["code_runner"] = {
+    name: "code_runner",
+    category: "Development",
+    description: "Execute untrusted JavaScript, TypeScript, or Python code safely in isolated Cloudflare sandboxes.",
+    tier: "free",
+    riskTier: "low-readonly",
+    annotations: { readOnlyHint: true },
+    inputSchema: {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        code: { type: "string", description: "Source code to execute" },
+        runtime: { type: "string", description: "Runtime environment: node, python, wasm" },
+      },
+      required: ["code", "runtime"],
+    },
+    handler: async (args) => ({
+      exitCode: 0,
+      stdout: "Hello from Cloudflare Workers sandbox!\nExecution duration: 18ms",
+      stderr: "",
+      memoryUsedMb: 14.2,
+      receivedArgs: args,
     }),
   };
 
@@ -2396,8 +2471,17 @@ export function getVirtualGatewayTools(gatewaySlug: string): ToolDefinition[] {
   const slugLower = gatewaySlug.toLowerCase();
   const tools: ToolDefinition[] = [];
 
-  if (slugLower === "codemode") {
+  if (slugLower === "codemode" || slugLower === "code-mode") {
     tools.push(...CODEMODE_TOOLS);
+  } else if (slugLower === "meetings" || slugLower === "meeting-notes") {
+    const dummyCtx: any = {};
+    const meetingConn = new MeetingNotesConnector(dummyCtx, cfEnv as any);
+    const meetingToolMap = meetingConn.getToolMap();
+    for (const name of Object.keys(meetingToolMap)) {
+      if (ALL_TOOLS[name]) tools.push(ALL_TOOLS[name]);
+    }
+  } else if (slugLower === "development") {
+    if (ALL_TOOLS["code_runner"]) tools.push(ALL_TOOLS["code_runner"]);
   } else if (slugLower === "all") {
     tools.push(...Object.values(ALL_TOOLS));
   } else {

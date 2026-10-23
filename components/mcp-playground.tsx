@@ -64,63 +64,102 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   layers: Layers,
   "code-xml": CodeXml,
-  sparkles: Sparkles,
   "file-text": FileText,
-  "trending-up": TrendingUp,
-  "credit-card": CreditCard,
-  "gamepad-2": Gamepad2,
-  users: Users,
   globe: Globe,
+  server: Server,
+  search: Search,
+  terminal: Terminal,
 };
 
 const PARAM_PRESETS: Record<string, string> = {
-  query: "image",
-  category: "AI & Creative",
+  query: "postgres",
+  category: "Platform Core",
   workspace_handle: "spk_hdl_v2...",
-  domain_filter: "development",
-  enable_categories: '["Development"]',
+  domain_filter: "browser-run",
+  enable_categories: '["Browser Run", "Code Mode", "Meeting Notes"]',
   disable_categories: "[]",
-  tool_name: "code_runner",
-  arguments: '{"code": "console.log(1 + 1)", "runtime": "node"}',
+  tool_name: "browser_run_content",
+  arguments: '{"url": "https://spike.land"}',
   result_cursor_handle: "spk_res_v2.7f6e5d4c",
-  jsonpath_or_filter: "$.rows[0]",
-  prompt: "Swiss railway station split-flap departure board, architectural daylight",
-  aspectRatio: "16:9",
-  imageUrl: "https://spike.land/assets/demo.png",
-  instruction: "Add crisp vermilion route markers",
-  factor: "4",
-  fileUrl: "https://spike.land/whitepaper.pdf",
-  extractTables: "true",
-  content: "# Spike Land MCP Architecture\n\nProgressive context disclosure loads tool schemas on demand.",
-  url: "https://spike.land/mcp",
-  baseUrl: "https://spike.land",
-  customerId: "cus_test_9841f",
-  action: "create_canvas",
-  intent: "Optimize JSON-RPC dispatch loop for edge isolates",
-  task: "Audit cache hit ratio across global edge regions",
-  memoryScope: "production_agent_core",
-  schedule: "0 0 * * *",
-  targetTool: "usage_meter",
+  jsonpath_or_filter: "$.result",
+  source: "https://mcp.linear.app/sse",
+  namespace: "linear",
+  transport: "auto",
+  authSecretRef: "vault:LINEAR_API_KEY",
+  code: "async () => {\n  const res = await tools.browser_run_content({ url: 'https://spike.land' });\n  return res;\n}",
+  intent: "Render and inspect homepage using Browser Run",
+  name: "spike_scraper",
+  description: "Scrape and extract rendered DOM from spike.land",
+  executionId: "exec_sample_9841",
+  decision: "approved",
+  reason: "Authorized production tool run",
+  url: "https://spike.land",
+  html: "<!DOCTYPE html><html><body><h1>Spike Land</h1></body></html>",
+  q: "Claude 3.7 Sonnet MCP 2026",
+  engine: "google_light",
+  location: "Austin, TX",
+  output: "json",
+  mode: "compact",
   serverId: "modelcontextprotocol/server-postgres",
   clientType: "cursor",
   registry: "all",
   limit: "5",
-  rawDiff: "diff --git a/src/index.ts b/src/index.ts\n--- a/src/index.ts\n+++ b/src/index.ts\n@@ -1,3 +1,4 @@\n+import { Hono } from 'hono';\n const app = new Hono();",
-  code: "console.log('Spike Land edge worker active at LHR');",
-  runtime: "node",
-  source: "export default { fetch: (req) => new Response('Hello Edge') };",
-  enabledOnly: "false",
-  sql: "SELECT id, metric, value FROM platform_metrics LIMIT 5;",
+  jobId: "crawl_sample_123",
+  sessionId: "cf_sess_1f989210",
+  method: "Page.navigate",
+  params: '{"url": "https://spike.land"}',
+  elements: '[{"selector": "h1"}]',
+  prompt: "Extract the headline and feature list",
+  screenshotOptions: '{"fullPage": true, "type": "png"}',
+  pdfOptions: '{"format": "A4", "landscape": false}',
+  viewport: '{"width": 1280, "height": 720}',
+  gotoOptions: '{"waitUntil": "networkidle0", "timeout": 30000}',
+  waitForSelector: '{"selector": "h1", "timeout": 5000}',
+  operation: "version",
+  readonly: "false",
+  keep_alive: "60000",
+  stealth: "true",
+  adblock: "true",
+  country: "US",
+  closeAfter: "true",
+  includeHistory: "true",
+  includeLimits: "true",
+  depth: "1",
+  formats: '["markdown"]',
+  render: "true",
+  visibleLinksOnly: "false",
+  excludeExternalLinks: "false",
+  title: "Q4 Product Roadmap Sync",
+  meetingDate: "2026-10-23",
+  startTime: "14:00 UTC",
+  participants: '["Alice", "Bob", "Zoltan"]',
+  tags: '["roadmap", "architecture"]',
+  transcript: "Alice: Let us review the Q4 release plan.\nBob: Sounds good, SQLite migrations are ready.",
+  meetingId: "mtg_20261023_a1b2",
+  executiveSummary: "Reviewed Q4 roadmap and agreed on SQLite migration timelines.",
+  keyDecisions: '["Ship SQLite migrations in sprint 42", "Target 100% test coverage"]',
+  takeaways: '["Zero cold-starts on edge workers"]',
+  topics: '["Migrations", "Performance"]',
+  questions: '[{"question": "Does KV fallback support FTS?", "askedBy": "Bob", "status": "open"}]',
+  questionId: "q_1",
+  actionItems: '[{"task": "Run benchmark tests", "owner": "Alice", "dueDate": "2026-10-25"}]',
+  actionItemId: "act_1",
+  dateFrom: "2026-10-01",
+  dateTo: "2026-10-31",
+  append: "false",
+  includeTranscript: "true",
 };
 
 const POPULAR_TOOLS = [
   { name: "list_capability_categories", categoryId: "platform-core" },
-  { name: "configure_active_categories", categoryId: "platform-core" },
   { name: "inspect_tool_schema", categoryId: "platform-core" },
-  { name: "execute_tool", categoryId: "platform-core" },
-  { name: "inspect_result_slice", categoryId: "platform-core" },
-  { name: "code_runner", categoryId: "development" },
-  { name: "generate_image", categoryId: "ai-creative" },
+  { name: "mount_mcp_server", categoryId: "platform-core" },
+  { name: "codemode", categoryId: "code-mode" },
+  { name: "create_meeting", categoryId: "meeting-notes" },
+  { name: "browser_run_content", categoryId: "browser-run" },
+  { name: "browser_run_screenshot", categoryId: "browser-run" },
+  { name: "mcp_registry_search", categoryId: "mcp-registry" },
+  { name: "serpapi_search", categoryId: "serpapi" },
 ];
 
 export function McpPlayground() {
@@ -159,7 +198,8 @@ export function McpPlayground() {
       // Try to load user's configured token from settings if authenticated
       fetch("/api/settings/tokens", { headers: { Accept: "application/json" } })
         .then((res) => (res.ok ? res.json() : null))
-        .then((data: { tokens?: Array<{ tokenValue: string }>; providerTokens?: Record<string, string> } | null) => {
+        .then((rawData: unknown) => {
+          const data = rawData as { tokens?: Array<{ tokenValue: string }>; providerTokens?: Record<string, string> } | null;
           if (!data) return;
           const candidate =
             data.providerTokens?.SPIKE_API_KEY ||
@@ -236,7 +276,10 @@ export function McpPlayground() {
         }),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as {
+        error?: { message?: string };
+        result?: { content?: Array<{ text: string }>; status?: string; namespace?: string; toolCount?: number; sampleTools?: string[]; cliCommand?: string; error?: string };
+      };
       if (data.error) {
         setMountError(data.error.message || String(data.error));
         return;
@@ -249,12 +292,13 @@ export function McpPlayground() {
         } catch {}
       }
 
-      if (resultObj?.status === "mounted") {
+      if (resultObj?.status === "mounted" && resultObj.namespace) {
         const count = resultObj.toolCount || 10;
+        const ns = resultObj.namespace;
         setMountedServers((prev) => [
-          ...prev.filter((s) => s.namespace !== resultObj.namespace),
+          ...prev.filter((s) => s.namespace !== ns),
           {
-            namespace: resultObj.namespace,
+            namespace: ns,
             source: mountSource,
             toolCount: count,
             latencyMs: 38,
