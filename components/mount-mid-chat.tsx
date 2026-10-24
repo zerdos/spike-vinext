@@ -158,11 +158,114 @@ const ADD_A_SERVER_COMPARISON = [
   },
 ];
 
-export function MountMidChat() {
-  const [active, setActive] = useState(1);
+export interface MountMidChatProps {
+  highlightStep?: 1 | 2 | 3;
+  embedded?: boolean;
+}
+
+export function MountMidChat({ highlightStep, embedded = false }: MountMidChatProps = {}) {
+  const initialStep = highlightStep ? Math.max(0, Math.min(2, highlightStep - 1)) : 1;
+  const [active, setActive] = useState(initialStep);
   const step = MOUNT_STEPS[active];
   const tokensSoFar = MOUNT_STEPS.slice(0, active + 1).reduce((sum, s) => sum + s.tokens, 0);
   const isLast = active === MOUNT_STEPS.length - 1;
+
+  if (embedded) {
+    return (
+      <div className="my-8 rounded-xl border-2 border-[#111315] bg-card overflow-hidden shadow-md">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#111315] bg-[#111315] px-4 py-2.5 text-[#F5F4F0]">
+          <div className="flex items-center gap-2">
+            <PlugZap className="h-4 w-4 text-primary" aria-hidden="true" />
+            <span className="font-display text-sm font-bold">
+              Mid-Chat Server Mount Walkthrough
+            </span>
+          </div>
+          <span className="font-mono text-[10px] text-primary bg-primary/10 border border-primary/30 px-2 py-0.5 rounded">
+            Interactive Component • Live Edge Sandbox
+          </span>
+        </div>
+        <div className="p-2 sm:p-4 bg-secondary/20">
+          <Card className="border border-border/60 overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 lg:divide-x-2 lg:divide-border/60">
+              {/* Step list */}
+              <div className="lg:col-span-5 min-w-0 border-b lg:border-b-0 border-border/60 bg-secondary/40">
+                <ol className="divide-y divide-border/40" aria-label="Mounting walkthrough">
+                  {MOUNT_STEPS.map((s, i) => {
+                    const Icon = s.icon;
+                    const isActive = i === active;
+                    return (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          onClick={() => setActive(i)}
+                          aria-pressed={isActive}
+                          className={`w-full text-left px-4 py-3 flex gap-3 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${
+                            isActive ? "bg-card" : "bg-secondary/40 hover:bg-card/70"
+                          }`}
+                        >
+                          <div
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded border font-mono text-xs font-bold ${
+                              isActive
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-card border-border/60 text-muted-foreground"
+                            }`}
+                          >
+                            {i + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-foreground truncate">
+                                {s.label}
+                              </span>
+                              {s.tool && (
+                                <code className="font-mono text-[10px] text-primary bg-primary/10 px-1 rounded">
+                                  {s.tool}
+                                </code>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                              {s.summary}
+                            </p>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+
+              {/* Step details */}
+              <div className="lg:col-span-7 p-4 bg-card flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      Step {active + 1} of 3
+                    </span>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      +{step.tokens} prompt tokens
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-foreground mb-3 leading-relaxed">
+                    {step.behindTheScenes}
+                  </p>
+                  <div className="space-y-2">
+                    <div className="rounded bg-[#111315] p-2 text-[11px] font-mono text-[#F5F4F0] overflow-x-auto">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Sent</div>
+                      <pre className="whitespace-pre-wrap">{step.sent}</pre>
+                    </div>
+                    <div className="rounded bg-[#111315] p-2 text-[11px] font-mono text-emerald-400 overflow-x-auto">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">Received</div>
+                      <pre className="whitespace-pre-wrap">{step.received}</pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section

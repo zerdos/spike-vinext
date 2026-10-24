@@ -81,11 +81,23 @@ const PRESETS: Preset[] = [
   },
 ];
 
-export function TokenSavingsSimulator() {
-  const [developers, setDevelopers] = useState(25);
-  const [turnsPerDay, setTurnsPerDay] = useState(150);
+export interface TokenSavingsSimulatorProps {
+  defaultDevelopers?: number;
+  defaultTurns?: number;
+  highlightModelId?: string;
+  compact?: boolean;
+}
+
+export function TokenSavingsSimulator({
+  defaultDevelopers = 25,
+  defaultTurns = 150,
+  highlightModelId = "claude-sonnet-5-5",
+  compact = false,
+}: TokenSavingsSimulatorProps = {}) {
+  const [developers, setDevelopers] = useState(defaultDevelopers);
+  const [turnsPerDay, setTurnsPerDay] = useState(defaultTurns);
   const [toolsInCatalog, setToolsInCatalog] = useState(455);
-  const [selectedModelId, setSelectedModelId] = useState("claude-sonnet-5-5");
+  const [selectedModelId, setSelectedModelId] = useState(highlightModelId);
   const [copied, setCopied] = useState(false);
 
   const selectedModel = useMemo(

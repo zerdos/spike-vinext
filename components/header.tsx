@@ -15,6 +15,7 @@ import {
   Settings,
   MessageSquare,
   LogOut,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -232,6 +233,14 @@ export function Header() {
               asChild
               className="shrink-0 font-medium text-xs xl:text-sm text-foreground/80 hover:text-foreground"
             >
+              <a href="/blog">Blog</a>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="shrink-0 font-medium text-xs xl:text-sm text-foreground/80 hover:text-foreground"
+            >
               <a href="/#simulator" aria-label="ROI Simulator">
                 <span className="hidden xl:inline">ROI </span>Simulator
               </a>
@@ -414,6 +423,17 @@ export function Header() {
               <a href="/#playground">
                 <Terminal className="h-4 w-4 text-primary shrink-0" />
                 <span>Playground</span>
+              </a>
+            </Button>
+            <Button
+              variant="ghost"
+              className="justify-start gap-2.5 h-10 text-sm font-medium"
+              asChild
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <a href="/blog">
+                <FileText className="h-4 w-4 text-primary shrink-0" />
+                <span>Blog</span>
               </a>
             </Button>
             <Button

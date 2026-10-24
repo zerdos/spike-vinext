@@ -162,10 +162,40 @@ const POPULAR_TOOLS = [
   { name: "serpapi_search", categoryId: "serpapi" },
 ];
 
-export function McpPlayground() {
-  const [openCategoryId, setOpenCategoryId] = useState<string>("platform-core");
-  const [activeTool, setActiveTool] = useState<ToolItem>(MCP_CATEGORIES[0].tools[0]);
-  const [searchQuery, setSearchQuery] = useState("");
+export interface McpPlaygroundProps {
+  initialCategory?: string;
+  initialTool?: string;
+  prefillQuery?: string;
+  title?: string;
+}
+
+export function McpPlayground({
+  initialCategory,
+  initialTool,
+  prefillQuery,
+  title,
+}: McpPlaygroundProps = {}) {
+  const initialSelection = useMemo(() => {
+    if (initialTool) {
+      for (const cat of MCP_CATEGORIES) {
+        const found = cat.tools.find((t) => t.name === initialTool);
+        if (found) return { tool: found, categoryId: cat.id };
+      }
+    }
+    if (initialCategory) {
+      const cat = MCP_CATEGORIES.find((c) => c.id === initialCategory);
+      if (cat && cat.tools.length > 0) {
+        return { tool: cat.tools[0], categoryId: cat.id };
+      }
+    }
+    return { tool: MCP_CATEGORIES[0].tools[0], categoryId: "platform-core" };
+  }, [initialTool, initialCategory]);
+
+  const [openCategoryId, setOpenCategoryId] = useState<string>(
+    initialSelection.categoryId
+  );
+  const [activeTool, setActiveTool] = useState<ToolItem>(initialSelection.tool);
+  const [searchQuery, setSearchQuery] = useState(prefillQuery || "");
   const [viewTab, setViewTab] = useState<string>("response");
 
   const getInitialParamsForTool = (tool: ToolItem): Record<string, string> => {

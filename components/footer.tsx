@@ -99,6 +99,11 @@ export function Footer() {
                   API Reference
                 </a>
               </li>
+              <li>
+                <a className="hover:text-primary transition-colors" href="/blog">
+                  Engineering Blog
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -119,6 +124,11 @@ export function Footer() {
               <li>
                 <a className="hover:text-primary transition-colors" href="/auth/signin">
                   Sign In
+                </a>
+              </li>
+              <li>
+                <a className="hover:text-primary transition-colors" href="/blog/feed.xml">
+                  RSS Feed
                 </a>
               </li>
               <li>
